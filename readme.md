@@ -170,7 +170,12 @@ debug the plugin
 sudo journalctl -u docker.service -f \
   | grep plugin_id
 ```
+or
 
+```bash
+sudo journalctl -u docker.service -f | grep "$(docker plugin ls --format 
+'{{.ID}}')"
+```
 ## Documentation
 
 - **[Multi-Provider Guide](docs/MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers

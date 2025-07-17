@@ -20,21 +20,22 @@ type WebInterface struct {
 // NewWebInterface creates a new web monitoring interface
 func NewWebInterface(monitor *Monitor, port int) *WebInterface {
 	mux := http.NewServeMux()
-	
+
 	wi := &WebInterface{
 		monitor: monitor,
 		server: &http.Server{
-			Addr:    fmt.Sprintf(":%d", port),
-			Handler: mux,
+			Addr:              fmt.Sprintf(":%d", port),
+			Handler:           mux,
+			ReadHeaderTimeout: 5 * time.Second,
 		},
 	}
-	
+
 	// Register routes
 	mux.HandleFunc("/", wi.handleDashboard)
 	mux.HandleFunc("/metrics", wi.handleMetrics)
 	mux.HandleFunc("/health", wi.handleHealth)
 	mux.HandleFunc("/api/metrics", wi.handleAPIMetrics)
-	
+
 	return wi
 }
 
@@ -45,7 +46,7 @@ func (wi *WebInterface) Start() error {
 			log.Errorf("Web interface server error: %v", err)
 		}
 	}()
-	
+
 	log.Printf("Started web monitoring interface on %s", wi.server.Addr)
 	return nil
 }
@@ -61,9 +62,9 @@ func (wi *WebInterface) Stop() error {
 func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	metrics := wi.monitor.GetMetrics()
 	health := wi.monitor.GetHealthStatus()
-	
+
 	tmpl := template.Must(template.New("dashboard").Parse(dashboardTemplate))
-	
+
 	data := struct {
 		Metrics *Metrics
 		Health  map[string]interface{}
@@ -71,7 +72,7 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 		Metrics: metrics,
 		Health:  health,
 	}
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -81,7 +82,7 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 // handleMetrics serves detailed metrics in JSON format
 func (wi *WebInterface) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := wi.monitor.GetMetrics()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -91,7 +92,7 @@ func (wi *WebInterface) handleMetrics(w http.ResponseWriter, r *http.Request) {
 // handleHealth serves health status
 func (wi *WebInterface) handleHealth(w http.ResponseWriter, r *http.Request) {
 	health := wi.monitor.GetHealthStatus()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(health); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -101,28 +102,28 @@ func (wi *WebInterface) handleHealth(w http.ResponseWriter, r *http.Request) {
 // handleAPIMetrics serves metrics in Prometheus format
 func (wi *WebInterface) handleAPIMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := wi.monitor.GetMetrics()
-	
+
 	w.Header().Set("Content-Type", "text/plain")
-	
+
 	// Basic Prometheus-style metrics
 	fmt.Fprintf(w, "# HELP vault_swarm_plugin_goroutines Current number of goroutines\n")
 	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_goroutines gauge\n")
 	fmt.Fprintf(w, "vault_swarm_plugin_goroutines %d\n", metrics.NumGoroutines)
-	
+
 	fmt.Fprintf(w, "# HELP vault_swarm_plugin_memory_bytes Memory usage in bytes\n")
 	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_memory_bytes gauge\n")
 	fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"alloc\"} %d\n", metrics.MemAllocBytes)
 	fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"sys\"} %d\n", metrics.MemSysBytes)
 	fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"heap\"} %d\n", metrics.MemHeapBytes)
-	
+
 	fmt.Fprintf(w, "# HELP vault_swarm_plugin_secret_rotations_total Total number of secret rotations\n")
 	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_secret_rotations_total counter\n")
 	fmt.Fprintf(w, "vault_swarm_plugin_secret_rotations_total %d\n", metrics.SecretRotations)
-	
+
 	fmt.Fprintf(w, "# HELP vault_swarm_plugin_rotation_errors_total Total number of rotation errors\n")
 	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_rotation_errors_total counter\n")
 	fmt.Fprintf(w, "vault_swarm_plugin_rotation_errors_total %d\n", metrics.SecretRotationErrors)
-	
+
 	fmt.Fprintf(w, "# HELP vault_swarm_plugin_gc_total Total number of garbage collections\n")
 	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_gc_total counter\n")
 	fmt.Fprintf(w, "vault_swarm_plugin_gc_total %d\n", metrics.NumGC)

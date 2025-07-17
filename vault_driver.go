@@ -9,16 +9,14 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/docker/go-plugins-helpers/secrets"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
-	
-	"swarm-vault/providers"
-	"swarm-vault/monitoring"
-)
+	"github.com/docker/go-plugins-helpers/secrets"
+	log "github.com/sirupsen/logrus"
 
+	"swarm-vault/monitoring"
+	"swarm-vault/providers"
+)
 
 // VaultDriver implements the secrets.Driver interface with multi-provider support
 type VaultDriver struct {
@@ -35,22 +33,22 @@ type VaultDriver struct {
 
 // VaultConfig holds the configuration for the multi-provider driver
 type VaultConfig struct {
-	ProviderType      string
-	EnableRotation    bool
-	RotationInterval  time.Duration
-	EnableMonitoring  bool
-	MonitoringPort    int
-	Settings          map[string]string
+	ProviderType     string
+	EnableRotation   bool
+	RotationInterval time.Duration
+	EnableMonitoring bool
+	MonitoringPort   int
+	Settings         map[string]string
 }
 
 // NewVaultDriver creates a new VaultDriver instance with multi-provider support
 func NewVaultDriver() (*VaultDriver, error) {
 	// Collect all configuration from environment variables
 	settings := make(map[string]string)
-	
+
 	// Get provider type (default to vault for backward compatibility)
 	providerType := getEnvOrDefault("SECRETS_PROVIDER", "vault")
-	
+
 	// Collect all environment variables for provider configuration
 	for _, env := range os.Environ() {
 		pair := strings.SplitN(env, "=", 2)
@@ -58,14 +56,14 @@ func NewVaultDriver() (*VaultDriver, error) {
 			settings[pair[0]] = pair[1]
 		}
 	}
-	
+
 	config := &VaultConfig{
-		ProviderType:      providerType,
-		EnableRotation:    getEnvOrDefault("VAULT_ENABLE_ROTATION", "true") == "true",
-		RotationInterval:  parseDurationOrDefault(getEnvOrDefault("VAULT_ROTATION_INTERVAL", "10s")),
-		EnableMonitoring:  getEnvOrDefault("ENABLE_MONITORING", "true") == "true",
-		MonitoringPort:    parseIntOrDefault(getEnvOrDefault("MONITORING_PORT", "8080")),
-		Settings:          settings,
+		ProviderType:     providerType,
+		EnableRotation:   getEnvOrDefault("VAULT_ENABLE_ROTATION", "true") == "true",
+		RotationInterval: parseDurationOrDefault(getEnvOrDefault("VAULT_ROTATION_INTERVAL", "10s")),
+		EnableMonitoring: getEnvOrDefault("ENABLE_MONITORING", "true") == "true",
+		MonitoringPort:   parseIntOrDefault(getEnvOrDefault("MONITORING_PORT", "8080")),
+		Settings:         settings,
 	}
 
 	// Create the appropriate provider
@@ -102,7 +100,7 @@ func NewVaultDriver() (*VaultDriver, error) {
 		driver.monitor = monitoring.NewMonitor(30 * time.Second) // Monitor every 30 seconds
 		driver.monitor.SetRotationInterval(config.RotationInterval)
 		driver.monitor.Start()
-		
+
 		// Start web interface
 		driver.webInterface = monitoring.NewWebInterface(driver.monitor, config.MonitoringPort)
 		if err := driver.webInterface.Start(); err != nil {
@@ -124,48 +122,45 @@ func NewVaultDriver() (*VaultDriver, error) {
 	return driver, nil
 }
 
-
-
 // Get method implements the secrets.Driver interface
 func (d *VaultDriver) Get(req secrets.Request) secrets.Response {
-    log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
-    
-    if req.SecretName == "" {
-        return secrets.Response{
-            Err: "secret name is required",
-        }
-    }
+	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
 
-    // Add context with timeout
-    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-    defer cancel()
+	if req.SecretName == "" {
+		return secrets.Response{
+			Err: "secret name is required",
+		}
+	}
 
-    // Get secret from the provider
-    value, err := d.provider.GetSecret(ctx, req)
-    if err != nil {
-        log.Printf("Error getting secret from provider: %v", err)
-        return secrets.Response{
-            Err: fmt.Sprintf("failed to get secret: %v", err),
-        }
-    }
+	// Add context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-    log.Printf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
-    
-    // Track this secret for monitoring if rotation is enabled
-    if d.config.EnableRotation && d.provider.SupportsRotation() {
-        d.trackSecret(req, value)
-    }
+	// Get secret from the provider
+	value, err := d.provider.GetSecret(ctx, req)
+	if err != nil {
+		log.Printf("Error getting secret from provider: %v", err)
+		return secrets.Response{
+			Err: fmt.Sprintf("failed to get secret: %v", err),
+		}
+	}
 
-    // Determine if secret should be reusable
-    doNotReuse := d.shouldNotReuse(req)
+	log.Printf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
 
-    log.Printf("Successfully returning secret value")
-    return secrets.Response{
-        Value:      value,
-        DoNotReuse: doNotReuse,
-    }
+	// Track this secret for monitoring if rotation is enabled
+	if d.config.EnableRotation && d.provider.SupportsRotation() {
+		d.trackSecret(req, value)
+	}
+
+	// Determine if secret should be reusable
+	doNotReuse := d.shouldNotReuse(req)
+
+	log.Printf("Successfully returning secret value")
+	return secrets.Response{
+		Value:      value,
+		DoNotReuse: doNotReuse,
+	}
 }
-
 
 // shouldNotReuse determines if the secret should not be reused
 func (d *VaultDriver) shouldNotReuse(req secrets.Request) bool {
@@ -207,7 +202,7 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 
 	// Calculate hash for change detection
 	hash := fmt.Sprintf("%x", sha256.Sum256(value))
-	
+
 	// Extract secret field from labels based on provider
 	var secretField string
 	switch d.provider.GetProviderName() {
@@ -222,11 +217,11 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 	case "openbao":
 		secretField = req.SecretLabels["openbao_field"]
 	}
-	
+
 	if secretField == "" {
 		secretField = "value" // default field
 	}
-	
+
 	// Build secret path using provider-specific logic
 	var secretPath string
 	switch d.provider.GetProviderName() {
@@ -243,7 +238,7 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 	default:
 		secretPath = req.SecretName
 	}
-	
+
 	secretInfo := &providers.SecretInfo{
 		DockerSecretName: req.SecretName,
 		SecretPath:       secretPath,
@@ -253,7 +248,7 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 		LastUpdated:      time.Now(),
 		Provider:         d.provider.GetProviderName(),
 	}
-	
+
 	// If already tracking, update service names
 	if existing, exists := d.secretTracker[req.SecretName]; exists {
 		// Add service name if not already present
@@ -272,8 +267,8 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 	} else {
 		d.secretTracker[req.SecretName] = secretInfo
 	}
-	
-	log.Printf("Tracking secret: %s -> %s (provider: %s, services: %v)", 
+
+	log.Printf("Tracking secret: %s -> %s (provider: %s, services: %v)",
 		req.SecretName, secretPath, d.provider.GetProviderName(), secretInfo.ServiceNames)
 }
 
@@ -281,9 +276,9 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 func (d *VaultDriver) startMonitoring() {
 	ticker := time.NewTicker(d.config.RotationInterval)
 	defer ticker.Stop()
-	
+
 	log.Printf("Secret monitoring started with interval: %v", d.config.RotationInterval)
-	
+
 	for {
 		select {
 		case <-d.monitorCtx.Done():
@@ -307,14 +302,14 @@ func (d *VaultDriver) checkForSecretChanges() {
 		secrets[k] = v
 	}
 	d.trackerMutex.RUnlock()
-	
+
 	if len(secrets) == 0 {
 		log.Debug("No secrets to monitor")
 		return
 	}
-	
+
 	log.Printf("Checking %d tracked secrets for changes", len(secrets))
-	
+
 	for secretName, secretInfo := range secrets {
 		if d.hasSecretChanged(secretInfo) {
 			log.Printf("Detected change in secret: %s", secretName)
@@ -336,60 +331,66 @@ func (d *VaultDriver) checkForSecretChanges() {
 func (d *VaultDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	changed, err := d.provider.CheckSecretChanged(ctx, secretInfo)
 	if err != nil {
 		log.Errorf("Error checking secret change for %s: %v", secretInfo.DockerSecretName, err)
 		return false
 	}
-	
+
 	return changed
 }
 
 // rotateSecret handles the secret rotation process
 func (d *VaultDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	log.Printf("Starting rotation for secret: %s", secretInfo.DockerSecretName)
-	
+
 	// Create a dummy request to get the new secret value
 	req := secrets.Request{
-		SecretName:    secretInfo.DockerSecretName,
-		SecretLabels:  make(map[string]string),
+		SecretName:   secretInfo.DockerSecretName,
+		SecretLabels: make(map[string]string),
 	}
-	
-	// Set appropriate field label based on provider
+
+	// Set appropriate field and path labels based on provider
 	switch secretInfo.Provider {
 	case "vault":
 		req.SecretLabels["vault_field"] = secretInfo.SecretField
+		// Extract the specific path part from the full path
+		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
 	case "aws":
 		req.SecretLabels["aws_field"] = secretInfo.SecretField
+		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
 	case "gcp":
 		req.SecretLabels["gcp_field"] = secretInfo.SecretField
+		req.SecretLabels["gcp_secret_name"] = secretInfo.SecretPath
 	case "azure":
 		req.SecretLabels["azure_field"] = secretInfo.SecretField
+		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
 	case "openbao":
 		req.SecretLabels["openbao_field"] = secretInfo.SecretField
+		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
 	}
-	
+
 	// Get the new secret value from the provider
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	newValue, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to get updated secret from provider: %v", err)
 	}
-	
+
 	// Update Docker secret (this now handles service updates internally)
 	if err := d.updateDockerSecret(secretInfo.DockerSecretName, newValue); err != nil {
 		return fmt.Errorf("failed to update docker secret: %v", err)
 	}
-	
+
 	// Update tracking information
 	d.trackerMutex.Lock()
 	secretInfo.LastHash = fmt.Sprintf("%x", sha256.Sum256(newValue))
 	secretInfo.LastUpdated = time.Now()
 	d.trackerMutex.Unlock()
-	
+
 	log.Printf("Successfully rotated secret: %s", secretInfo.DockerSecretName)
 	return nil
 }
@@ -398,13 +399,13 @@ func (d *VaultDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 func (d *VaultDriver) updateDockerSecret(secretName string, newValue []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	// List existing secrets to find the one to update
-	secrets, err := d.dockerClient.SecretList(ctx, types.SecretListOptions{})
+	secrets, err := d.dockerClient.SecretList(ctx, swarm.SecretListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list secrets: %v", err)
 	}
-	
+
 	var existingSecret *swarm.Secret
 	for _, secret := range secrets {
 		if secret.Spec.Name == secretName {
@@ -412,14 +413,14 @@ func (d *VaultDriver) updateDockerSecret(secretName string, newValue []byte) err
 			break
 		}
 	}
-	
+
 	if existingSecret == nil {
 		return fmt.Errorf("secret %s not found", secretName)
 	}
-	
+
 	// Generate a unique name for the new secret version
 	newSecretName := fmt.Sprintf("%s-%d", secretName, time.Now().Unix())
-	
+
 	// Create new secret with versioned name and same labels but updated value
 	newSecretSpec := swarm.SecretSpec{
 		Annotations: swarm.Annotations{
@@ -428,28 +429,31 @@ func (d *VaultDriver) updateDockerSecret(secretName string, newValue []byte) err
 		},
 		Data: newValue,
 	}
-	
+
 	// Create the new secret
 	createResponse, err := d.dockerClient.SecretCreate(ctx, newSecretSpec)
 	if err != nil {
 		return fmt.Errorf("failed to create new secret version: %v", err)
 	}
-	
+
 	log.Printf("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
-	
+
 	// Update all services that use this secret to point to the new version
 	if err := d.updateServicesSecretReference(secretName, newSecretName, createResponse.ID); err != nil {
 		// If we can't update services, remove the new secret and return error
-		d.dockerClient.SecretRemove(ctx, createResponse.ID)
+		err := d.dockerClient.SecretRemove(ctx, createResponse.ID)
+		if err != nil {
+			log.Warnf("Failed to remove new secret version %s after failed update: %v", createResponse.ID, err)
+		}
 		return fmt.Errorf("failed to update services to use new secret: %v", err)
 	}
-	
+
 	// Remove the old secret only after services are updated
 	if err := d.dockerClient.SecretRemove(ctx, existingSecret.ID); err != nil {
 		log.Warnf("Failed to remove old secret version %s: %v", existingSecret.ID, err)
 		// Don't return error as the new secret was created and services updated successfully
 	}
-	
+
 	return nil
 }
 
@@ -457,26 +461,26 @@ func (d *VaultDriver) updateDockerSecret(secretName string, newValue []byte) err
 func (d *VaultDriver) updateServicesSecretReference(oldSecretName, newSecretName, newSecretID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	
+
 	// List all services
-	services, err := d.dockerClient.ServiceList(ctx, types.ServiceListOptions{})
+	services, err := d.dockerClient.ServiceList(ctx, swarm.ServiceListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list services: %v", err)
 	}
-	
+
 	var updatedServices []string
-	
+
 	for _, service := range services {
 		// Check if service uses this secret and update the reference
 		needsUpdate := false
 		updatedSecrets := make([]*swarm.SecretReference, len(service.Spec.TaskTemplate.ContainerSpec.Secrets))
-		
+
 		for i, secretRef := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
 			if secretRef.SecretName == oldSecretName {
 				// Update to use the new secret name and ID
 				updatedSecrets[i] = &swarm.SecretReference{
 					File:       secretRef.File,
-					SecretID:   newSecretID,   // Use actual Docker secret ID
+					SecretID:   newSecretID, // Use actual Docker secret ID
 					SecretName: newSecretName,
 				}
 				needsUpdate = true
@@ -484,92 +488,91 @@ func (d *VaultDriver) updateServicesSecretReference(oldSecretName, newSecretName
 				updatedSecrets[i] = secretRef
 			}
 		}
-		
+
 		if needsUpdate {
 			// Update service with new secret references
 			serviceSpec := service.Spec
 			serviceSpec.TaskTemplate.ContainerSpec.Secrets = updatedSecrets
-			
+
 			// Add/update a label to force the update
 			if serviceSpec.Labels == nil {
 				serviceSpec.Labels = make(map[string]string)
 			}
 			serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
-			
-			updateOptions := types.ServiceUpdateOptions{}
+
+			updateOptions := swarm.ServiceUpdateOptions{}
 			updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
 			if err != nil {
 				return fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
 			}
-			
+
 			if len(updateResponse.Warnings) > 0 {
 				log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
 			}
-			
+
 			updatedServices = append(updatedServices, service.Spec.Name)
 		}
 	}
-	
+
 	if len(updatedServices) > 0 {
 		log.Printf("Updated services to use new secret %s: %v", newSecretName, updatedServices)
 	}
-	
+
 	return nil
 }
-
-
 
 // forceServiceUpdate forces a service to update (recreate tasks)
-func (d *VaultDriver) forceServiceUpdate(service swarm.Service) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	// Get current service spec
-	serviceSpec := service.Spec
-	
-	// Add/update a label to force the update
-	if serviceSpec.Labels == nil {
-		serviceSpec.Labels = make(map[string]string)
-	}
-	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
-	
-	// Update the service
-	updateOptions := types.ServiceUpdateOptions{}
-	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
-	if err != nil {
-		return fmt.Errorf("failed to update service: %v", err)
-	}
-	
-	if len(updateResponse.Warnings) > 0 {
-		log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
-	}
-	
-	log.Printf("Forced update for service: %s", service.Spec.Name)
-	return nil
-}
+// TODO - This method is currently not used, check later if needed
+// func (d *VaultDriver) forceServiceUpdate(service swarm.Service) error {
+// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+// 	defer cancel()
+
+// 	// Get current service spec
+// 	serviceSpec := service.Spec
+
+// 	// Add/update a label to force the update
+// 	if serviceSpec.Labels == nil {
+// 		serviceSpec.Labels = make(map[string]string)
+// 	}
+// 	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
+
+// 	// Update the service
+// 	updateOptions := types.ServiceUpdateOptions{}
+// 	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to update service: %v", err)
+// 	}
+
+// 	if len(updateResponse.Warnings) > 0 {
+// 		log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
+// 	}
+
+// 	log.Printf("Forced update for service: %s", service.Spec.Name)
+// 	return nil
+// }
 
 // Stop gracefully stops the monitoring and cleans up resources
 func (d *VaultDriver) Stop() error {
 	if d.monitorCancel != nil {
 		d.monitorCancel()
 	}
-	
+
 	if d.monitor != nil {
 		d.monitor.Stop()
 	}
-	
+
 	if d.webInterface != nil {
 		if err := d.webInterface.Stop(); err != nil {
 			log.Warnf("Error stopping web interface: %v", err)
 		}
 	}
-	
+
 	if d.provider != nil {
 		if err := d.provider.Close(); err != nil {
 			log.Warnf("Error closing provider: %v", err)
 		}
 	}
-	
+
 	if d.dockerClient != nil {
 		return d.dockerClient.Close()
 	}
@@ -583,7 +586,7 @@ func (d *VaultDriver) buildVaultSecretPath(req secrets.Request) string {
 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
 		return fmt.Sprintf("secret/data/%s", customPath)
 	}
-	
+
 	// Default path structure for KV v2
 	if req.ServiceName != "" {
 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
@@ -595,7 +598,7 @@ func (d *VaultDriver) buildAWSSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["aws_secret_name"]; exists {
 		return customName
 	}
-	
+
 	if req.ServiceName != "" {
 		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
 	}
@@ -606,13 +609,20 @@ func (d *VaultDriver) buildGCPSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["gcp_secret_name"]; exists {
 		return customName
 	}
-	
+
 	secretName := req.SecretName
 	if req.ServiceName != "" {
 		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
 	}
-	
-	// GCP secret names must match regex: [a-zA-Z][a-zA-Z0-9_-]*
+
+	return normalizeGCPSecretName(secretName)
+}
+
+// normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
+func normalizeGCPSecretName(secretName string) string {
+	if len(secretName) == 0 {
+		return "s"
+	}
 	result := ""
 	for i, char := range secretName {
 		if i == 0 {
@@ -622,8 +632,8 @@ func (d *VaultDriver) buildGCPSecretName(req secrets.Request) string {
 				result += "s"
 			}
 		} else {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-			   (char >= '0' && char <= '9') || char == '_' || char == '-' {
+			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+				(char >= '0' && char <= '9') || char == '_' || char == '-' {
 				result += string(char)
 			} else {
 				result += "_"
@@ -637,29 +647,29 @@ func (d *VaultDriver) buildAzureSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
 		return customName
 	}
-	
+
 	secretName := req.SecretName
 	if req.ServiceName != "" {
 		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
 	}
-	
+
 	// Azure Key Vault secret names must match regex: ^[0-9a-zA-Z-]+$
 	result := ""
 	for _, char := range secretName {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-		   (char >= '0' && char <= '9') || char == '-' {
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '-' {
 			result += string(char)
 		} else {
 			result += "-"
 		}
 	}
-	
+
 	// Remove consecutive hyphens and leading/trailing hyphens
 	for strings.Contains(result, "--") {
 		result = strings.ReplaceAll(result, "--", "-")
 	}
 	result = strings.Trim(result, "-")
-	
+
 	if result == "" || (result[0] >= '0' && result[0] <= '9') {
 		result = "secret-" + result
 	}
@@ -671,7 +681,7 @@ func (d *VaultDriver) buildOpenBaoSecretPath(req secrets.Request) string {
 	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
 		return fmt.Sprintf("secret/data/%s", customPath)
 	}
-	
+
 	// Default path structure for KV v2
 	if req.ServiceName != "" {
 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
@@ -683,8 +693,13 @@ func (d *VaultDriver) buildOpenBaoSecretPath(req secrets.Request) string {
 func parseIntOrDefault(intStr string) int {
 	if val, err := fmt.Sscanf(intStr, "%d", new(int)); err == nil && val == 1 {
 		var result int
-		fmt.Sscanf(intStr, "%d", &result)
-		return result
+		_, err := fmt.Sscanf(intStr, "%d", &result)
+		if err == nil {
+			// Successfully parsed integer
+			if result > 0 && result <= 65535 {
+				return result
+			}
+		}
 	}
 	return 8080 // Default port
 }
