@@ -108,6 +108,46 @@
       "settable": ["value"]
     },
     {
+      "name": "AWS_REGION",
+      "description": "AWS region",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_ACCESS_KEY_ID",
+      "description": "AWS access key ID",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_SECRET_ACCESS_KEY",
+      "description": "AWS secret access key",
+      "settable": ["value"]
+    },
+    {
+      "name": "AZURE_VAULT_URL",
+      "description": "Azure Key Vault URL",
+      "settable": ["value"]
+    },
+    {
+      "name": "AZURE_CLIENT_ID",
+      "description": "Azure client ID",
+      "settable": ["value"]
+    },
+    {
+      "name": "AZURE_CLIENT_SECRET",
+      "description": "Azure client secret",
+      "settable": ["value"]
+    },
+    {
+      "name": "AZURE_TENANT_ID",
+      "description": "Azure tenant ID",
+      "settable": ["value"]
+    },
+    {
+      "name" : "AZURE_ACCESS_TOKEN",
+      "description": "Azure access token for Key Vault",
+      "settable": ["value"]
+    },
+    {
       "name": "uid",
       "description": "User ID to run the plugin as",
       "settable": ["value"]

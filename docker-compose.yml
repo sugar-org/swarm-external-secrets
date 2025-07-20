@@ -75,31 +75,37 @@ secrets:
     # external: true
     # name: mysql_root_password
 
-    # driver: vault-secrets-plugin:latest
-    # labels:
+    driver: vault-secrets-plugin:latest
+    labels:
     #   vault_path: "database/mysql"
     #   vault_field: "root_password"
 
-    # name: mysql_root_password
-    driver: vault-secrets-plugin:latest
-    labels:
-      openbao_path: "database/mysql"
-      openbao_field: "root_password"
+      # openbao_path: "database/mysql"
+      # openbao_field: "root_password"
+
+      # aws_secret_name: "secret/database/mysql"
+      # aws_field: "root_password"
+
+      azure_secret_name: "https://sanjaykv2.vault.azure.net/"
+      azure_field: "rootpassword"
 
   mysql_password:
     # external: true
     # name: mysql_password
 
-    # driver: vault-secrets-plugin:latest
-    # labels:
+    driver: vault-secrets-plugin:latest
+    labels:
     #   vault_path: "database/mysql"
     #   vault_field: "user_password"
 
-    # name: mysql_password
-    driver: vault-secrets-plugin:latest
-    labels:
-      openbao_path: "database/mysql"
-      openbao_field: "user_password"
+      # openbao_path: "database/mysql"
+      # openbao_field: "user_password"
+
+      # aws_secret_name: "secret/database/mysql"
+      # aws_field: "user_password"
+
+      azure_secret_name: "https://sanjaykv2.vault.azure.net/"
+      azure_field: "userpassword"
 
   # api_key:
   #   external: true

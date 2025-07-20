@@ -211,7 +211,12 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 		if value, ok := data[field]; ok {
 			return []byte(fmt.Sprintf("%v", value)), nil
 		}
-		return nil, fmt.Errorf("field %s not found in secret", field)
+		// Improved error message: show available keys
+		keys := make([]string, 0, len(data))
+		for k := range data {
+			keys = append(keys, k)
+		}
+		return nil, fmt.Errorf("field %s not found in secret; available fields: %v", field, keys)
 	}
 
 	// If not JSON and field is requested, return error
