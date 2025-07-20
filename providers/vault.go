@@ -14,25 +14,25 @@ import (
 // VaultProvider implements the SecretsProvider interface for HashiCorp Vault
 type VaultProvider struct {
 	client *api.Client
-	config *VaultConfig
+	config *SecretsConfig
 }
 
-// VaultConfig holds the configuration for the Vault client
-type VaultConfig struct {
-	Address      string
-	Token        string
-	MountPath    string
-	RoleID       string
-	SecretID     string
-	AuthMethod   string
-	CACert       string
-	ClientCert   string
-	ClientKey    string
+// SecretsConfig holds the configuration for the Vault client
+type SecretsConfig struct {
+	Address    string
+	Token      string
+	MountPath  string
+	RoleID     string
+	SecretID   string
+	AuthMethod string
+	CACert     string
+	ClientCert string
+	ClientKey  string
 }
 
 // Initialize sets up the Vault provider with the given configuration
 func (v *VaultProvider) Initialize(config map[string]string) error {
-	v.config = &VaultConfig{
+	v.config = &SecretsConfig{
 		Address:    getConfigOrDefault(config, "VAULT_ADDR", "http://152.53.244.80:8200"),
 		Token:      getConfigOrDefault(config, "VAULT_TOKEN", "hvs.tD053xbJ1C5lo2EbtZnn2JU8"),
 		MountPath:  getConfigOrDefault(config, "VAULT_MOUNT_PATH", "secret"),
@@ -45,8 +45,8 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 	}
 
 	// Configure Vault client
-	vaultConfig := api.DefaultConfig()
-	vaultConfig.Address = v.config.Address
+	SecretsConfig := api.DefaultConfig()
+	SecretsConfig.Address = v.config.Address
 
 	// Configure TLS if certificates are provided
 	if v.config.CACert != "" || v.config.ClientCert != "" {
@@ -55,12 +55,12 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 			ClientCert: v.config.ClientCert,
 			ClientKey:  v.config.ClientKey,
 		}
-		if err := vaultConfig.ConfigureTLS(tlsConfig); err != nil {
+		if err := SecretsConfig.ConfigureTLS(tlsConfig); err != nil {
 			return fmt.Errorf("failed to configure TLS: %v", err)
 		}
 	}
 
-	client, err := api.NewClient(vaultConfig)
+	client, err := api.NewClient(SecretsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create vault client: %v", err)
 	}
@@ -79,7 +79,7 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 // GetSecret retrieves a secret value from Vault
 func (v *VaultProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
 	secretPath := v.buildSecretPath(req)
-	log.Printf("Reading secret from Vault path: %s", secretPath)
+	log.Printf("Reading secret from Vault/OpenBao path: %s", secretPath)
 
 	// Read secret from Vault
 	secret, err := v.client.Logical().ReadWithContext(ctx, secretPath)

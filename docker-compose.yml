@@ -74,18 +74,32 @@ secrets:
   mysql_root_password:
     # external: true
     # name: mysql_root_password
+
+    # driver: vault-secrets-plugin:latest
+    # labels:
+    #   vault_path: "database/mysql"
+    #   vault_field: "root_password"
+
+    # name: mysql_root_password
     driver: vault-secrets-plugin:latest
     labels:
-      vault_path: "database/mysql"
-      vault_field: "root_password"
+      openbao_path: "database/mysql"
+      openbao_field: "root_password"
 
   mysql_password:
     # external: true
     # name: mysql_password
+
+    # driver: vault-secrets-plugin:latest
+    # labels:
+    #   vault_path: "database/mysql"
+    #   vault_field: "user_password"
+
+    # name: mysql_password
     driver: vault-secrets-plugin:latest
     labels:
-      vault_path: "database/mysql"
-      vault_field: "user_password"
+      openbao_path: "database/mysql"
+      openbao_field: "user_password"
 
   # api_key:
   #   external: true

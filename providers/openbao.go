@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/docker/go-plugins-helpers/secrets"
-	"github.com/hashicorp/vault/api"
+	"github.com/openbao/openbao/api/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,15 +19,15 @@ type OpenBaoProvider struct {
 
 // OpenBaoConfig holds the configuration for the OpenBao client
 type OpenBaoConfig struct {
-	Address      string
-	Token        string
-	MountPath    string
-	RoleID       string
-	SecretID     string
-	AuthMethod   string
-	CACert       string
-	ClientCert   string
-	ClientKey    string
+	Address    string
+	Token      string
+	MountPath  string
+	RoleID     string
+	SecretID   string
+	AuthMethod string
+	CACert     string
+	ClientCert string
+	ClientKey  string
 }
 
 // Initialize sets up the OpenBao provider with the given configuration
@@ -44,7 +44,7 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 		ClientKey:  config["OPENBAO_CLIENT_KEY"],
 	}
 
-	// Configure OpenBao client (using Vault API client since OpenBao is compatible)
+	// Configure OpenBao client (using OpenBao API client since OpenBao is compatible)
 	openBaoConfig := api.DefaultConfig()
 	openBaoConfig.Address = o.config.Address
 

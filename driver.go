@@ -12,16 +12,17 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"swarm-vault/monitoring"
 	"swarm-vault/providers"
 )
 
-// VaultDriver implements the secrets.Driver interface with multi-provider support
-type VaultDriver struct {
+// SecretsDriver implements the secrets.Driver interface with multi-provider support
+type SecretsDriver struct {
 	provider      providers.SecretsProvider
-	config        *VaultConfig
+	config        *SecretsConfig
 	dockerClient  *dockerclient.Client
 	secretTracker map[string]*providers.SecretInfo // key: docker secret name
 	trackerMutex  sync.RWMutex
@@ -31,8 +32,8 @@ type VaultDriver struct {
 	webInterface  *monitoring.WebInterface
 }
 
-// VaultConfig holds the configuration for the multi-provider driver
-type VaultConfig struct {
+// SecretsConfig holds the configuration for the multi-provider driver
+type SecretsConfig struct {
 	ProviderType     string
 	EnableRotation   bool
 	RotationInterval time.Duration
@@ -41,8 +42,8 @@ type VaultConfig struct {
 	Settings         map[string]string
 }
 
-// NewVaultDriver creates a new VaultDriver instance with multi-provider support
-func NewVaultDriver() (*VaultDriver, error) {
+// NewDriver creates a new Driver instance with multi-provider support
+func NewDriver() (*SecretsDriver, error) {
 	// Collect all configuration from environment variables
 	settings := make(map[string]string)
 
@@ -57,10 +58,10 @@ func NewVaultDriver() (*VaultDriver, error) {
 		}
 	}
 
-	config := &VaultConfig{
+	config := &SecretsConfig{
 		ProviderType:     providerType,
-		EnableRotation:   getEnvOrDefault("VAULT_ENABLE_ROTATION", "true") == "true",
-		RotationInterval: parseDurationOrDefault(getEnvOrDefault("VAULT_ROTATION_INTERVAL", "10s")),
+		EnableRotation:   getEnvOrDefault("ENABLE_ROTATION", "true") == "true",
+		RotationInterval: parseDurationOrDefault(getEnvOrDefault("ROTATION_INTERVAL", "10s")),
 		EnableMonitoring: getEnvOrDefault("ENABLE_MONITORING", "true") == "true",
 		MonitoringPort:   parseIntOrDefault(getEnvOrDefault("MONITORING_PORT", "8080")),
 		Settings:         settings,
@@ -86,7 +87,7 @@ func NewVaultDriver() (*VaultDriver, error) {
 	// Create context for monitoring
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 
-	driver := &VaultDriver{
+	driver := &SecretsDriver{
 		provider:      provider,
 		config:        config,
 		dockerClient:  dockerClient,
@@ -123,7 +124,7 @@ func NewVaultDriver() (*VaultDriver, error) {
 }
 
 // Get method implements the secrets.Driver interface
-func (d *VaultDriver) Get(req secrets.Request) secrets.Response {
+func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
 
 	if req.SecretName == "" {
@@ -163,7 +164,7 @@ func (d *VaultDriver) Get(req secrets.Request) secrets.Response {
 }
 
 // shouldNotReuse determines if the secret should not be reused
-func (d *VaultDriver) shouldNotReuse(req secrets.Request) bool {
+func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
 		return strings.ToLower(reuse) == "false"
@@ -179,24 +180,8 @@ func (d *VaultDriver) shouldNotReuse(req secrets.Request) bool {
 	return false
 }
 
-// getEnvOrDefault returns environment variable value or default
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// parseDurationOrDefault parses duration string or returns default
-func parseDurationOrDefault(durationStr string) time.Duration {
-	if duration, err := time.ParseDuration(durationStr); err == nil {
-		return duration
-	}
-	return 5 * time.Minute // Default to 5 minutes
-}
-
 // trackSecret adds or updates a secret in the tracking system
-func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
+func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 	d.trackerMutex.Lock()
 	defer d.trackerMutex.Unlock()
 
@@ -239,6 +224,9 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 		secretPath = req.SecretName
 	}
 
+	logrus.Printf("Current provider %s tracking secret: %s at path: %s with field: %s",
+		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
+
 	secretInfo := &providers.SecretInfo{
 		DockerSecretName: req.SecretName,
 		SecretPath:       secretPath,
@@ -273,7 +261,7 @@ func (d *VaultDriver) trackSecret(req secrets.Request, value []byte) {
 }
 
 // startMonitoring starts the background monitoring goroutine
-func (d *VaultDriver) startMonitoring() {
+func (d *SecretsDriver) startMonitoring() {
 	ticker := time.NewTicker(d.config.RotationInterval)
 	defer ticker.Stop()
 
@@ -295,7 +283,7 @@ func (d *VaultDriver) startMonitoring() {
 }
 
 // checkForSecretChanges monitors tracked secrets for changes
-func (d *VaultDriver) checkForSecretChanges() {
+func (d *SecretsDriver) checkForSecretChanges() {
 	d.trackerMutex.RLock()
 	secrets := make(map[string]*providers.SecretInfo)
 	for k, v := range d.secretTracker {
@@ -328,7 +316,7 @@ func (d *VaultDriver) checkForSecretChanges() {
 }
 
 // hasSecretChanged checks if a secret has changed using the provider
-func (d *VaultDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool {
+func (d *SecretsDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -342,7 +330,7 @@ func (d *VaultDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool {
 }
 
 // rotateSecret handles the secret rotation process
-func (d *VaultDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
+func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	log.Printf("Starting rotation for secret: %s", secretInfo.DockerSecretName)
 
 	// Create a dummy request to get the new secret value
@@ -396,7 +384,7 @@ func (d *VaultDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 }
 
 // updateDockerSecret creates a new version of the Docker secret
-func (d *VaultDriver) updateDockerSecret(secretName string, newValue []byte) error {
+func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -458,7 +446,7 @@ func (d *VaultDriver) updateDockerSecret(secretName string, newValue []byte) err
 }
 
 // updateServicesSecretReference updates all services to use the new secret version
-func (d *VaultDriver) updateServicesSecretReference(oldSecretName, newSecretName, newSecretID string) error {
+func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretName, newSecretID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -523,7 +511,7 @@ func (d *VaultDriver) updateServicesSecretReference(oldSecretName, newSecretName
 
 // forceServiceUpdate forces a service to update (recreate tasks)
 // TODO - This method is currently not used, check later if needed
-// func (d *VaultDriver) forceServiceUpdate(service swarm.Service) error {
+// func (d *SecretsDriver) forceServiceUpdate(service swarm.Service) error {
 // 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 // 	defer cancel()
 
@@ -552,7 +540,7 @@ func (d *VaultDriver) updateServicesSecretReference(oldSecretName, newSecretName
 // }
 
 // Stop gracefully stops the monitoring and cleans up resources
-func (d *VaultDriver) Stop() error {
+func (d *SecretsDriver) Stop() error {
 	if d.monitorCancel != nil {
 		d.monitorCancel()
 	}
@@ -581,7 +569,7 @@ func (d *VaultDriver) Stop() error {
 
 // Helper methods for building provider-specific secret paths/names
 
-func (d *VaultDriver) buildVaultSecretPath(req secrets.Request) string {
+func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
 	// Use custom path from labels if provided
 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
 		return fmt.Sprintf("secret/data/%s", customPath)
@@ -594,7 +582,20 @@ func (d *VaultDriver) buildVaultSecretPath(req secrets.Request) string {
 	return fmt.Sprintf("secret/data/%s", req.SecretName)
 }
 
-func (d *VaultDriver) buildAWSSecretName(req secrets.Request) string {
+func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
+		return fmt.Sprintf("secret/data/%s", customPath)
+	}
+
+	// Default path structure for KV v2
+	if req.ServiceName != "" {
+		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+	}
+	return fmt.Sprintf("secret/data/%s", req.SecretName)
+}
+
+func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["aws_secret_name"]; exists {
 		return customName
 	}
@@ -605,7 +606,7 @@ func (d *VaultDriver) buildAWSSecretName(req secrets.Request) string {
 	return req.SecretName
 }
 
-func (d *VaultDriver) buildGCPSecretName(req secrets.Request) string {
+func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["gcp_secret_name"]; exists {
 		return customName
 	}
@@ -643,7 +644,7 @@ func normalizeGCPSecretName(secretName string) string {
 	return result
 }
 
-func (d *VaultDriver) buildAzureSecretName(req secrets.Request) string {
+func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
 		return customName
 	}
@@ -676,30 +677,15 @@ func (d *VaultDriver) buildAzureSecretName(req secrets.Request) string {
 	return result
 }
 
-func (d *VaultDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
-	}
+// func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
+// 	// Use custom path from labels if provided
+// 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
+// 		return fmt.Sprintf("secret/data/%s", customPath)
+// 	}
 
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
-}
-
-// parseIntOrDefault parses integer string or returns default
-func parseIntOrDefault(intStr string) int {
-	if val, err := fmt.Sscanf(intStr, "%d", new(int)); err == nil && val == 1 {
-		var result int
-		_, err := fmt.Sscanf(intStr, "%d", &result)
-		if err == nil {
-			// Successfully parsed integer
-			if result > 0 && result <= 65535 {
-				return result
-			}
-		}
-	}
-	return 8080 // Default port
-}
+// 	// Default path structure for KV v2
+// 	if req.ServiceName != "" {
+// 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+// 	}
+// 	return fmt.Sprintf("secret/data/%s", req.SecretName)
+// }

@@ -58,6 +58,56 @@
       "settable": ["value"]
     },
     {
+      "name": "SECRETS_PROVIDER",
+      "description": "Secrets provider type (e.g., vault, openbao)",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_ADDR",
+      "description": "OpenBao server address",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_AUTH_METHOD",
+      "description": "OpenBao authentication method",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_ROLE_ID",
+      "description": "OpenBao AppRole role ID",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_SECRET_ID",
+      "description": "OpenBao AppRole secret ID",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_AUTH_METHOD",
+      "description": "OpenBao authentication method",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_TOKEN",
+      "description": "OpenBao authentication token",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_MOUNT_PATH",
+      "description": "OpenBao mount path",
+      "settable": ["value"]
+    },
+    {
+      "name": "ENABLE_ROTATION",
+      "description": "Enable OpenBao secret rotation (true/false)",
+      "settable": ["value"]
+    },
+    {
+      "name": "ROTATION_INTERVAL",
+      "description": "OpenBao secret rotation check interval (e.g., 5m, 1h)",
+      "settable": ["value"]
+    },
+    {
       "name": "uid",
       "description": "User ID to run the plugin as",
       "settable": ["value"]

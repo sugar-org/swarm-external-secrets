@@ -30,27 +30,38 @@ docker plugin create vault-secrets-plugin:latest ./plugin
 echo -e ${DEF}Clean up plugin directory
 rm -rf ./plugin
 
-echo -e ${DEF}Enable the plugin
-docker plugin enable vault-secrets-plugin:latest
 
 
 # echo -e ${DEF}Set plugin configuration
 # docker plugin set vault-secrets-plugin:latest \
 #     VAULT_ADDR="https://152.53.244.80:8200" \
 #     VAULT_AUTH_METHOD="approle" \
-#     VAULT_ROLE_ID="8ff294a6-9d5c-c5bb-b494-bc0bfe02a97e" \
-#     VAULT_SECRET_ID="aedde801-0616-18a5-a62d-c6d7eb483cff" \
+#     VAULT_ROLE_ID="" \
+#     VAULT_SECRET_ID="" \
 #     VAULT_MOUNT_PATH="secret"
 
+# docker plugin set vault-secrets-plugin:latest \
+#     SECRETS_PROVIDER="vault" \
+#     VAULT_ADDR="https://152.53.244.80:8200" \
+#     VAULT_AUTH_METHOD="token" \
+#     VAULT_TOKEN="" \
+#     VAULT_MOUNT_PATH="secret" \
+#     VAULT_ENABLE_ROTATION="true" \
+#     VAULT_ROTATION_INTERVAL="5s" \
+#     ENABLE_MONITORING="true" \
+#     MONITORING_PORT="8080"
+
 docker plugin set vault-secrets-plugin:latest \
-    VAULT_ADDR="https://152.53.244.80:8200" \
-    VAULT_AUTH_METHOD="token" \
-    VAULT_TOKEN="hvs.tD053xbJ1C5lo2EbtZnn2JU8" \
-    VAULT_MOUNT_PATH="secret" \
-    VAULT_ENABLE_ROTATION="true" \
-    VAULT_ROTATION_INTERVAL="5s" \
-    ENABLE_MONITORING="true" \
-    MONITORING_PORT="8080"
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_AUTH_METHOD="token" \
+    OPENBAO_ADDR="http://34.9.194.245:8300" \
+    OPENBAO_TOKEN="" \
+    OPENBAO_MOUNT_PATH="secret" \
+    VAULT_ENABLE_ROTATION="true"
+
+echo -e ${DEF}Enable the plugin
+docker plugin enable vault-secrets-plugin:latest
+
 
 # export VAULT_ROLE_ID="8ff294a6-9d5c-c5bb-b494-bc0bfe02a97e"
 # export VAULT_SECRET_ID="aedde801-0616-18a5-a62d-c6d7eb483cff"
