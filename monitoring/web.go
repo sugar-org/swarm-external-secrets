@@ -106,27 +106,27 @@ func (wi *WebInterface) handleAPIMetrics(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "text/plain")
 
 	// Basic Prometheus-style metrics
-	fmt.Fprintf(w, "# HELP vault_swarm_plugin_goroutines Current number of goroutines\n")
-	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_goroutines gauge\n")
-	fmt.Fprintf(w, "vault_swarm_plugin_goroutines %d\n", metrics.NumGoroutines)
+	_, _ = fmt.Fprintf(w, "# HELP vault_swarm_plugin_goroutines Current number of goroutines\n")
+	_, _ = fmt.Fprintf(w, "# TYPE vault_swarm_plugin_goroutines gauge\n")
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_goroutines %d\n", metrics.NumGoroutines)
 
-	fmt.Fprintf(w, "# HELP vault_swarm_plugin_memory_bytes Memory usage in bytes\n")
-	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_memory_bytes gauge\n")
-	fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"alloc\"} %d\n", metrics.MemAllocBytes)
-	fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"sys\"} %d\n", metrics.MemSysBytes)
-	fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"heap\"} %d\n", metrics.MemHeapBytes)
+	_, _ = fmt.Fprintf(w, "# HELP vault_swarm_plugin_memory_bytes Memory usage in bytes\n")
+	_, _ = fmt.Fprintf(w, "# TYPE vault_swarm_plugin_memory_bytes gauge\n")
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"alloc\"} %d\n", metrics.MemAllocBytes)
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"sys\"} %d\n", metrics.MemSysBytes)
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_memory_bytes{type=\"heap\"} %d\n", metrics.MemHeapBytes)
 
-	fmt.Fprintf(w, "# HELP vault_swarm_plugin_secret_rotations_total Total number of secret rotations\n")
-	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_secret_rotations_total counter\n")
-	fmt.Fprintf(w, "vault_swarm_plugin_secret_rotations_total %d\n", metrics.SecretRotations)
+	_, _ = fmt.Fprintf(w, "# HELP vault_swarm_plugin_secret_rotations_total Total number of secret rotations\n")
+	_, _ = fmt.Fprintf(w, "# TYPE vault_swarm_plugin_secret_rotations_total counter\n")
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_secret_rotations_total %d\n", metrics.SecretRotations)
 
-	fmt.Fprintf(w, "# HELP vault_swarm_plugin_rotation_errors_total Total number of rotation errors\n")
-	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_rotation_errors_total counter\n")
-	fmt.Fprintf(w, "vault_swarm_plugin_rotation_errors_total %d\n", metrics.SecretRotationErrors)
+	_, _ = fmt.Fprintf(w, "# HELP vault_swarm_plugin_rotation_errors_total Total number of rotation errors\n")
+	_, _ = fmt.Fprintf(w, "# TYPE vault_swarm_plugin_rotation_errors_total counter\n")
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_rotation_errors_total %d\n", metrics.SecretRotationErrors)
 
-	fmt.Fprintf(w, "# HELP vault_swarm_plugin_gc_total Total number of garbage collections\n")
-	fmt.Fprintf(w, "# TYPE vault_swarm_plugin_gc_total counter\n")
-	fmt.Fprintf(w, "vault_swarm_plugin_gc_total %d\n", metrics.NumGC)
+	_, _ = fmt.Fprintf(w, "# HELP vault_swarm_plugin_gc_total Total number of garbage collections\n")
+	_, _ = fmt.Fprintf(w, "# TYPE vault_swarm_plugin_gc_total counter\n")
+	_, _ = fmt.Fprintf(w, "vault_swarm_plugin_gc_total %d\n", metrics.NumGC)
 }
 
 const dashboardTemplate = `

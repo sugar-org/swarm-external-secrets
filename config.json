@@ -148,6 +148,21 @@
       "settable": ["value"]
     },
     {
+      "name" : "GCP_PROJECT_ID",
+      "description": "GCP project ID",
+      "settable": ["value"]
+    },
+    {
+      "name" : "GOOGLE_APPLICATION_CREDENTIALS",
+      "description": "Google application credentials required for GCP Secrets manager",
+      "settable": ["value"]
+    },
+    {
+      "name" : "GCP_CREDENTIALS_JSON",
+      "description": "Google credentials json required for GCP Secrets manager",
+      "settable": ["value"]
+    },
+    {
       "name": "uid",
       "description": "User ID to run the plugin as",
       "settable": ["value"]

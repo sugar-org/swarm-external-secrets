@@ -86,8 +86,12 @@ secrets:
       # aws_secret_name: "secret/database/mysql"
       # aws_field: "root_password"
 
-      azure_secret_name: "https://sanjaykv2.vault.azure.net/"
-      azure_field: "rootpassword"
+      # azure_secret_name: "https://sanjaykv2.vault.azure.net/"
+      # azure_field: "rootpassword"
+
+      gcp_secret_name: "projects/752493912910/secrets"
+      gcp_field: "root_password"
+
 
   mysql_password:
     # external: true
@@ -104,8 +108,12 @@ secrets:
       # aws_secret_name: "secret/database/mysql"
       # aws_field: "user_password"
 
-      azure_secret_name: "https://sanjaykv2.vault.azure.net/"
-      azure_field: "userpassword"
+      # azure_secret_name: "https://sanjaykv2.vault.azure.net/"
+      # azure_field: "userpassword"
+
+      gcp_secret_name: "projects/752493912910/secrets"
+      gcp_field: "user_password"
+
 
   # api_key:
   #   external: true

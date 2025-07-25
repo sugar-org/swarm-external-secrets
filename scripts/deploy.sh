@@ -51,13 +51,20 @@ rm -rf ./plugin
 #     ENABLE_MONITORING="true" \
 #     MONITORING_PORT="8080"
 
+# docker plugin set vault-secrets-plugin:latest \
+#     SECRETS_PROVIDER="openbao" \
+#     OPENBAO_AUTH_METHOD="token" \
+#     OPENBAO_ADDR="http://34.9.194.245:8300" \
+#     OPENBAO_TOKEN="" \
+#     OPENBAO_MOUNT_PATH="secret" \
+#     VAULT_ENABLE_ROTATION="true"
+
+JSON_CONTENT=$(cat ./graphic-transit-458312-f7-44c20b0e486c.json | jq -c .)
 docker plugin set vault-secrets-plugin:latest \
-    SECRETS_PROVIDER="openbao" \
-    OPENBAO_AUTH_METHOD="token" \
-    OPENBAO_ADDR="http://34.9.194.245:8300" \
-    OPENBAO_TOKEN="" \
-    OPENBAO_MOUNT_PATH="secret" \
-    VAULT_ENABLE_ROTATION="true"
+    SECRETS_PROVIDER="gcp" \
+    GCP_PROJECT_ID="" \
+    GOOGLE_APPLICATION_CREDENTIALS="" \
+    GCP_CREDENTIALS_JSON="$JSON_CONTENT" 
 
 echo -e ${DEF}Enable the plugin
 docker plugin enable vault-secrets-plugin:latest

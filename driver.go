@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"swarm-vault/monitoring"
@@ -224,7 +223,7 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		secretPath = req.SecretName
 	}
 
-	logrus.Printf("Current provider %s tracking secret: %s at path: %s with field: %s",
+	log.Printf("Current provider %s tracking secret: %s at path: %s with field: %s",
 		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
 
 	secretInfo := &providers.SecretInfo{

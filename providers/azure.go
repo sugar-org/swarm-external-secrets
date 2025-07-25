@@ -75,7 +75,7 @@ func (az *AzureProvider) GetSecret(ctx context.Context, req secrets.Request) ([]
 
 	// Build API URL
 	apiURL := fmt.Sprintf("%ssecrets/%s?api-version=7.3", az.config.VaultURL, url.QueryEscape(secretName))
-	
+
 	// Create HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
@@ -94,10 +94,14 @@ func (az *AzureProvider) GetSecret(ctx context.Context, req secrets.Request) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret from Azure Key Vault: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Errorf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Azure Key Vault returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("azure Key Vault returned status %d", resp.StatusCode)
 	}
 
 	// Parse response
@@ -127,7 +131,7 @@ func (az *AzureProvider) SupportsRotation() bool {
 func (az *AzureProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
 	// Build API URL
 	apiURL := fmt.Sprintf("%ssecrets/%s?api-version=7.3", az.config.VaultURL, url.QueryEscape(secretInfo.SecretPath))
-	
+
 	// Create HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
@@ -146,10 +150,14 @@ func (az *AzureProvider) CheckSecretChanged(ctx context.Context, secretInfo *Sec
 	if err != nil {
 		return false, fmt.Errorf("error reading secret from Azure Key Vault: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Errorf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != 200 {
-		return false, fmt.Errorf("Azure Key Vault returned status %d", resp.StatusCode)
+		return false, fmt.Errorf("azure Key Vault returned status %d", resp.StatusCode)
 	}
 
 	// Parse response
@@ -187,7 +195,7 @@ func (az *AzureProvider) Close() error {
 func (az *AzureProvider) authenticate() error {
 	// OAuth2 endpoint for Azure
 	tokenURL := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", az.config.TenantID)
-	
+
 	// Prepare form data
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
@@ -207,10 +215,14 @@ func (az *AzureProvider) authenticate() error {
 	if err != nil {
 		return fmt.Errorf("failed to authenticate with Azure: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Errorf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Azure authentication failed with status %d", resp.StatusCode)
+		return fmt.Errorf("azure authentication failed with status %d", resp.StatusCode)
 	}
 
 	// Parse response
@@ -244,8 +256,8 @@ func (az *AzureProvider) buildSecretName(req secrets.Request) string {
 	// Replace invalid characters with hyphens
 	result := ""
 	for _, char := range secretName {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-		   (char >= '0' && char <= '9') || char == '-' {
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '-' {
 			result += string(char)
 		} else {
 			result += "-"
