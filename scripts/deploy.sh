@@ -54,27 +54,10 @@ rm -rf ./plugin
 # docker plugin set vault-secrets-plugin:latest \
 #     SECRETS_PROVIDER="openbao" \
 #     OPENBAO_AUTH_METHOD="token" \
-#     OPENBAO_ADDR="http://34.9.194.245:8300" \
+#     OPENBAO_ADDR="" \
 #     OPENBAO_TOKEN="" \
 #     OPENBAO_MOUNT_PATH="secret" \
 #     VAULT_ENABLE_ROTATION="true"
-
-docker plugin set vault-secrets-plugin:latest \
-    SECRETS_PROVIDER="azure" \
-    AZURE_VAULT_URL="https://sanjaykv2.vault.azure.net/" \
-    AZURE_TENANT_ID="f97edb08-f525-4e2a-83b0-eef9abf8ea63" \
-    AZURE_CLIENT_ID="6d568ca0-891c-4272-9b92-725cd67c3d3a" \
-    AZURE_CLIENT_SECRET="db048074-0492-4910-9c71-37ee4c1c1008" \
-    AZURE_ACCESS_TOKEN="" \
-    ENABLE_ROTATION="true" \
-    ROTATION_INTERVAL="20s" \
-
-# JSON_CONTENT=$(cat ./graphic-transit-458312-f7-44c20b0e486c.json | jq -c .)
-# docker plugin set vault-secrets-plugin:latest \
-#     SECRETS_PROVIDER="gcp" \
-#     GCP_PROJECT_ID="" \
-#     GOOGLE_APPLICATION_CREDENTIALS="" \
-#     GCP_CREDENTIALS_JSON="$JSON_CONTENT" 
 
 echo -e ${DEF}Enable the plugin
 docker plugin enable vault-secrets-plugin:latest
