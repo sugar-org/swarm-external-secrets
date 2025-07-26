@@ -13,6 +13,7 @@
 *.test
 
 ./test/* 
+test
 
 # Code coverage profiles and other test artifacts
 *.out
