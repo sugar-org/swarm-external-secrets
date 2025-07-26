@@ -2,8 +2,6 @@ name: Build and Release Plugin
 
 on:
   push:
-    branches:
-      - main
   pull_request:
     branches:
       - main

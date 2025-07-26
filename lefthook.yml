@@ -10,20 +10,15 @@ pre-commit:
 
     go-fmt:
       glob: "*.go"
-      run: |
-        for file in {staged_files}; do
-          go fmt "$file"
-          git add "$file"
-        done
+      run: go fmt {files} && git add {files}
 
     go-vet:
       glob: "*.go"
       run: go vet ./...
-
     # Ensure imports are correctly formatted.
     go-imports:
       glob: "*.go"
-      run: goimports -w {staged_files} && git add {staged_files}
+      run: goimports -w {files} && git add {files}
 
     # go-test:
     #   glob: "*.go"
