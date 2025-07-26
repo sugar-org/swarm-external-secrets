@@ -10,14 +10,18 @@ pre-commit:
 
     go-fmt:
       glob: "*.go"
-      run: go fmt {files} && git add {files}
+      run: |
+        for file in {staged_files}; do
+          go fmt "$file"
+          git add "$file"
+        done
 
     go-vet:
-      glob: "*.go"
+      glob: "**/*.go"
       run: go vet ./...
     # Ensure imports are correctly formatted.
     go-imports:
-      glob: "*.go"
+      glob: "**/*.go"
       run: goimports -w {files} && git add {files}
 
     # go-test:
@@ -25,15 +29,15 @@ pre-commit:
     #   run: go test -race ./...
 
     golangci-lint:
-      glob: "*.go"
+      glob: "**/*.go"
       run: golangci-lint run ./...
 
     gosec:
-      glob: "*.go"
+      glob: "**/*.go"
       run: gosec ./...
 
     # Check for cyclomatic complexity. You'll need to install it:
     # `go install github.com/fzipp/gocyclo/cmd/gocyclo@latest`
     gocyclo:
-      glob: "*.go"
+      glob: "**/*.go"
       run: gocyclo -over 17 .

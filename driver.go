@@ -14,8 +14,8 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
 
-	"swarm-vault/monitoring"
-	"swarm-vault/providers"
+	"github.com/sugar-org/vault-swarm-plugin/monitoring"
+	"github.com/sugar-org/vault-swarm-plugin/providers"
 )
 
 // SecretsDriver implements the secrets.Driver interface with multi-provider support
