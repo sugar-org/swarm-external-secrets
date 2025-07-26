@@ -1,4 +1,4 @@
-module swarm-vault
+module github.com/sugar-org/vault-swarm-plugin
 
 go 1.24.2
 
