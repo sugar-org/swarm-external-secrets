@@ -1,25 +1,6 @@
 version: '3.8'
 
 services:
-  # vault-secrets-plugin:
-  #   image: vault-secrets-plugin:latest
-  #   volumes:
-  #     - /run/docker/plugins:/run/docker/plugins
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   environment:
-  #     VAULT_ADDR: "https://152.53.244.80:8200"
-  #     VAULT_AUTH_METHOD: "approle"
-  #     VAULT_ROLE_ID: "${VAULT_ROLE_ID}"
-  #     VAULT_SECRET_ID: "${VAULT_SECRET_ID}"
-  #     VAULT_MOUNT_PATH: "secret"
-  #   # privileged: true
-  #   deploy:
-  #     mode: global
-  #     placement:
-  #       constraints:
-  #         - node.role == manager
-  #   networks:
-  #     - vault-network
 
   busybox:
     image: busybox:latest
@@ -37,65 +18,61 @@ services:
       done
       "
     secrets:
-      # - source: mysql_root_password
-      #   target: /run/secrets/mysql_root_password
-      # - source: mysql_password
-      #   target: /run/secrets/mysql_password
       - mysql_root_password
       - mysql_password
     networks:
       - app-network
     deploy:
-      replicas: 1
+      replicas: 3
       placement:
         constraints:
           - "node.role == ${snitch_role?}"
-
-
-  # app:
-  #   image: myapp:latest
-  #   environment:
-  #     DATABASE_HOST: mysql
-  #     DATABASE_NAME: myapp
-  #     DATABASE_USER: appuser
-  #   secrets:
-  #     - source: mysql_password
-  #       target: /run/secrets/db_password
-  #     - source: api_key
-  #       target: /run/secrets/api_key
-  #   networks:
-  #     - app-network
-  #   depends_on:
-  #     - mysql
-  #   deploy:
-  #     replicas: 3
 
 secrets:
   mysql_root_password:
     # external: true
     # name: mysql_root_password
+
     driver: vault-secrets-plugin:latest
     labels:
-      vault_path: "database/mysql"
-      vault_field: "root_password"
+    #   vault_path: "database/mysql"
+    #   vault_field: "root_password"
+
+      # openbao_path: "database/mysql"
+      # openbao_field: "root_password"
+
+      # aws_secret_name: "secret/database/mysql"
+      # aws_field: "root_password"
+
+      # azure_secret_name: "https://sanjaykv2.vault.azure.net/"
+      # azure_field: "rootpassword"
+      azure_secret_name: "rootpassword"
+
+      # gcp_secret_name: "projects/752493912910/secrets"
+      # gcp_field: "root_password"
+
 
   mysql_password:
     # external: true
     # name: mysql_password
+
     driver: vault-secrets-plugin:latest
     labels:
-      vault_path: "database/mysql"
-      vault_field: "user_password"
+    #   vault_path: "database/mysql"
+    #   vault_field: "user_password"
 
-  # api_key:
-  #   external: true
-  #   name: api_key
-  #   driver: vault-secrets-plugin:latest
-  #   labels:
-  #     vault_path: "application/api"
-  #     vault_field: "key"
-  #     vault_reuse: "false"
+      # openbao_path: "database/mysql"
+      # openbao_field: "user_password"
 
+      # aws_secret_name: "secret/database/mysql"
+      # aws_field: "user_password"
+
+      # azure_secret_name: "https://sanjaykv2.vault.azure.net/"
+      azure_secret_name: "userpassword"
+      # azure_field: "userpassword"
+
+      # gcp_secret_name: "projects/752493912910/secrets"
+      # gcp_field: "user_password"
 volumes:
   mysql-data:
     driver: local

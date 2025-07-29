@@ -1,29 +1,52 @@
 ---
 name: Getting Started
 ---
-
 ### Vault Swarm Plugin
 
-A Docker Swarm secrets plugin that integrates with HashiCorp Vault for secure secret management.
+A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, and OpenBao.
 
 ## Features
 
-- **Vault Integration**: Retrieve secrets from HashiCorp Vault
-- **Multiple Auth Methods**: Support for token and AppRole authentication
-- **Automatic Secret Rotation**: Monitor Vault for changes and automatically update Docker secrets and services
-- **Flexible Path Mapping**: Customize Vault paths and field extraction
-- **Production Ready**: Includes proper error handling, logging, and cleanup
+- **Multi-Provider Support**: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao
+- **Multiple Auth Methods**: Support for various authentication methods per provider
+- **Automatic Secret Rotation**: Monitor providers for changes and automatically update Docker secrets and services
+- **Real-time Monitoring**: Web dashboard with system metrics, health status, and performance tracking
+- **Flexible Path Mapping**: Customize secret paths and field extraction per provider
+- **Production Ready**: Includes proper error handling, logging, cleanup, and monitoring
+- **Backward Compatible**: Existing Vault configurations continue to work unchanged
 
-## New: Automatic Secret Rotation
+## New: Multi-Provider Support
 
-The plugin now automatically monitors secrets in Vault and updates Docker Swarm secrets and services when changes are detected. See [ROTATION.md](ROTATION.md) for detailed documentation.
+The plugin now supports multiple secret providers. Configure with `SECRETS_PROVIDER` environment variable:
 
-### Quick Example
 ```bash
-# Enable rotation with 2-minute check interval
+# HashiCorp Vault (default)
+docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="vault"
+
+# AWS Secrets Manager  
+docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="aws"
+
+# Azure Key Vault
+docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="azure"
+
+# OpenBao
+docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="openbao"
+```
+
+## New: Real-time Monitoring
+
+Access the monitoring dashboard at `http://localhost:8080` (configurable port):
+
+- **System Metrics**: Memory usage, goroutine count, GC statistics
+- **Secret Rotation**: Success/failure rates, error tracking
+- **Health Status**: Overall system health and provider connectivity
+- **Performance Tracking**: Response times, ticker health, uptime
+
+### Monitor Configuration
+```bash
 docker plugin set vault-secrets-plugin:latest \
-    VAULT_ENABLE_ROTATION="true" \
-    VAULT_ROTATION_INTERVAL="2m"
+    ENABLE_MONITORING="true" \
+    MONITORING_PORT="8080"
 ```
 
 ## Installation
@@ -43,6 +66,8 @@ docker plugin set vault-secrets-plugin:latest \
    ```
 
 3. Use in docker-compose.yml:
+
+   **HashiCorp Vault:**
    ```yaml
    secrets:
      mysql_password:
@@ -50,6 +75,35 @@ docker plugin set vault-secrets-plugin:latest \
        labels:
          vault_path: "database/mysql"
          vault_field: "password"
+   ```
+
+   **AWS Secrets Manager:**
+   ```yaml
+   secrets:
+     api_key:
+       driver: vault-secrets-plugin:latest
+       labels:
+         aws_secret_name: "prod/api/key"
+         aws_field: "api_key"
+   ```
+
+   **Azure Key Vault:**
+   ```yaml
+   secrets:
+     database_connection:
+       driver: vault-secrets-plugin:latest
+       labels:
+         azure_secret_name: "database-connection-string"
+   ```
+
+   **OpenBao:**
+   ```yaml
+   secrets:
+     app_secret:
+       driver: vault-secrets-plugin:latest
+       labels:
+         openbao_path: "app/config"
+         openbao_field: "secret_key"
    ```
 start the server
 ```bash
@@ -118,4 +172,46 @@ debug the plugin
 ```bash
 sudo journalctl -u docker.service -f \
   | grep plugin_id
+```
+
+## Documentation
+
+- **[Multi-Provider Guide](docs/MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers
+- **[Monitoring Guide](docs/MONITORING.md)**: System monitoring, metrics, and performance tracking
+- **[Original Vault Guide](docs/)**: HashiCorp Vault specific documentation
+
+## Supported Providers
+
+| Provider | Status | Authentication | Rotation |
+|----------|--------|---------------|----------|
+| HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
+| AWS Secrets Manager | ✅ Stable | IAM, Access Keys | ✅ |
+| Azure Key Vault | ✅ Stable | Service Principal, Access Token | ✅ |
+| OpenBao | ✅ Stable | Token, AppRole | ✅ |
+| GCP Secret Manager | 🚧 Placeholder | - | - |
+
+## Quick Start Examples
+
+### HashiCorp Vault
+```bash
+docker plugin set vault-secrets-plugin:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="https://vault.example.com:8200" \
+    VAULT_TOKEN="hvs.example-token"
+```
+
+### AWS Secrets Manager
+```bash
+docker plugin set vault-secrets-plugin:latest \
+    SECRETS_PROVIDER="aws" \
+    AWS_REGION="us-west-2" \
+    AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
+```
+
+### Azure Key Vault
+```bash
+docker plugin set vault-secrets-plugin:latest \
+    SECRETS_PROVIDER="azure" \
+    AZURE_VAULT_URL="https://myvault.vault.azure.net/" \
+    AZURE_TENANT_ID="12345678-1234-1234-1234-123456789012"
 ```

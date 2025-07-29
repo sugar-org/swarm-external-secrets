@@ -1,6 +1,7 @@
 ---
 name : Vault Secret Rotation Feature
 ---
+
 ## Vault Secret Rotation Feature
 
 This document describes the automatic secret rotation feature added to the vault-swarm-plugin.

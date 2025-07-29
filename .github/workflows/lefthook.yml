@@ -1,0 +1,31 @@
+name: lefthook pre validate
+
+on: [push, pull_request]
+
+jobs:
+  lefthook:
+    name: lefthook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.2'
+          cache: true
+
+      - name: Install lefthook and linters
+        run: |
+          go install github.com/evilmartians/lefthook@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Run lefthook pre-commit hooks
+        run: lefthook run pre-commit --all-files
+
+      - name: Check for uncommitted changes
+        run: git diff --exit-code
