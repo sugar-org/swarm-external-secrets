@@ -1,5 +1,5 @@
 {
-  "name": "Vault Swarm Plugin",
+  "name": "Swarm External Secrets",
   "version": "0.0.0",
   "description": "A Docker Swarm secrets plugin that integrates with HashiCorp Vault for secure secret management.",
   "license": "cc0",
