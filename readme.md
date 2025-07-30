@@ -1,4 +1,4 @@
-### Vault Swarm Plugin
+### Swarm External Secrets
 
 A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, and OpenBao.
 
