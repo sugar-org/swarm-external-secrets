@@ -1,0 +1,52 @@
+# .makim.yaml
+# ----------------------------------------------------------------------
+# Tasks for the shell scripts in the ./scripts directory
+# ----------------------------------------------------------------------
+backend: bash
+
+groups:
+  scripts:
+    tasks:
+      build:
+        help: Build project artifacts
+        run: ./scripts/build.sh
+
+      test:
+        help: Run unit/integration tests
+        run: ./scripts/test.sh
+
+      run:
+        help: Launch the application locally
+        run: ./scripts/run.sh
+
+      deploy:
+        help: Deploy the application to the target environment
+        run: ./scripts/deploy.sh
+
+      cleanup:
+        help: Remove temporary files, containers, and other build artifacts
+        run: ./scripts/cleanup.sh
+
+      check_plugin_service:
+        help: Health-check the plugin service
+        run: ./scripts/check_plugin_service.sh
+
+      demo_rotation:
+        help: Run demo rotation scenario
+        run: ./scripts/demo-rotation.sh
+
+      linter:
+        help: Run linting tools
+        run: ./scripts/linter.sh
+
+  ci:
+    # Aggregate tasks useful for CI pipelines
+    tasks:
+      all:
+        help: Run the same steps that CI executes
+        hooks:
+          pre-run:
+            - task: scripts.build
+            - task: scripts.test
+            - task: scripts.check_plugin_service
+            - task: scripts.cleanup

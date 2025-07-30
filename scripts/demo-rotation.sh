@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -ex  # Exit on any error
+cd -- "$(dirname -- "$0")" || exit 1
 
 # Vault Secret Rotation Demo Script
 # This script demonstrates the automatic secret rotation feature

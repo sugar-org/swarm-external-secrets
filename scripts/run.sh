@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -ex  # Exit on any error
+cd -- "$(dirname -- "$0")" || exit 1
 
 ./plugin_installer/plugin_installer
 until [[ "$(docker plugin inspect sanjay7178/vault-secrets-plugin:latest --format '{{.Enabled}}' 2>/dev/null)" == "true" ]]

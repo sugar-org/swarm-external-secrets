@@ -41,3 +41,23 @@ pre-commit:
     gocyclo:
       glob: "**/*.go"
       run: gocyclo -over 17 .
+      
+    eof-newline:
+      help: Fail when a staged file does not end with a POSIX newline
+      # pick the extensions you care about; here are the most common text types
+      glob: "**/*.{go,sh,md,yml,yaml,json,txt}"
+      stage_fixed: true          # lefthook will git-add any file we modify
+      run: |
+        fixed=0
+        for file in {staged_files}; do
+          [ -s "$file" ] || continue       # skip empty files
+          # last byte → decimal code   (10 == '\n')
+          last_byte=$(tail -c1 "$file" | od -An -t u1 | tr -d ' ')
+          if [ "$last_byte" != "10" ]; then
+            printf '\n' >> "$file"         # append missing newline
+            echo "↪  added newline at EOF → $file"
+            fixed=$((fixed + 1))
+          fi
+        done
+        echo "✔  fixed $fixed file(s)"
+        [ "$fixed" -eq 0 ]
