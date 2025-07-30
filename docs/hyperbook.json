@@ -8,5 +8,5 @@
     "url": "https://sugar-org.github.io/sugar"
   },
   "language": "en",
-    "basePath": "/vault-swarm-plugin"
+    "basePath": "/swarm-external-secrets"
 }
