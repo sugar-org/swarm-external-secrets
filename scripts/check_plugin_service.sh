@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -ex  # Exit on any error
+cd -- "$(dirname -- "$0")" || exit 1
 
 # Check if service ID is provided
 if [ $# -eq 0 ]; then

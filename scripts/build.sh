@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -e  # Exit on any error
+set -ex  # Exit on any error
+cd -- "$(dirname -- "$0")" || exit 1
 
 RED='\033[0;31m'
 BLU='\e[34m'

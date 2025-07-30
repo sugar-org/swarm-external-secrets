@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -ex  # Exit on any error
+cd -- "$(dirname -- "$0")" || exit 1
+
 # filepath: /home/sanjay7178/vault-swarm-plugin/test-plugin.sh
 
 RED='\033[0;31m'
