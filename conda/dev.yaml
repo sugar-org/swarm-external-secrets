@@ -1,0 +1,11 @@
+name: vault-swarm-plugin
+channels:
+  - nodefaults
+  - conda-forge
+dependencies:
+  - pip
+  - go
+  - pip:
+    - makim
+    - compose-go
+    - bash

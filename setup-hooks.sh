@@ -40,6 +40,19 @@ success "All required Go tools are installed."
 
 # --- 3. Activate Lefthook hooks ---
 info "Activating Lefthook Git hooks..."
+
+BIN_DIR=$(go env GOBIN)
+if [ -z "$BIN_DIR" ]; then
+  BIN_DIR="$(go env GOPATH)/bin"   # falls back to $HOME/go/bin when GOPATH is unset
+fi
+
+# Add it to PATH if it isn't there already
+case ":$PATH:" in
+  *":$BIN_DIR:"*) ;;                     # already present → do nothing
+  *) export PATH="$BIN_DIR:$PATH" ;;     # prepend so your own tools win
+esac
+# -----
+
 lefthook install
 
 success "Lefthook pre-commit hooks are now installed and active!"
