@@ -5,8 +5,7 @@ services:
   busybox:
     image: busybox:latest
     command: >
-      sh -c "
-      while true; do
+      sh -c " while true; do
         echo 'Waiting for secrets to be available...'
         if [ -f /run/secrets/mysql_root_password ] && [ -f /run/secrets/mysql_password ]; then
         echo 'Secrets are available!'
@@ -15,8 +14,7 @@ services:
         cat /run/secrets/mysql_password
         fi
         sleep 5
-      done
-      "
+      done "
     secrets:
       - mysql_root_password
       - mysql_password
@@ -35,8 +33,8 @@ secrets:
 
     driver: vault-secrets-plugin:latest
     labels:
-    #   vault_path: "database/mysql"
-    #   vault_field: "root_password"
+      #   vault_path: "database/mysql"
+      #   vault_field: "root_password"
 
       # openbao_path: "database/mysql"
       # openbao_field: "root_password"
@@ -46,11 +44,10 @@ secrets:
 
       # azure_secret_name: "https://sanjaykv2.vault.azure.net/"
       # azure_field: "rootpassword"
-      azure_secret_name: "rootpassword"
+      # azure_secret_name: "rootpassword"
 
-      # gcp_secret_name: "projects/752493912910/secrets"
-      # gcp_field: "root_password"
-
+      gcp_secret_name: "projects/752493912910/secrets"
+      gcp_field: "root_password"
 
   mysql_password:
     # external: true
@@ -58,8 +55,8 @@ secrets:
 
     driver: vault-secrets-plugin:latest
     labels:
-    #   vault_path: "database/mysql"
-    #   vault_field: "user_password"
+      #   vault_path: "database/mysql"
+      #   vault_field: "user_password"
 
       # openbao_path: "database/mysql"
       # openbao_field: "user_password"
@@ -68,11 +65,11 @@ secrets:
       # aws_field: "user_password"
 
       # azure_secret_name: "https://sanjaykv2.vault.azure.net/"
-      azure_secret_name: "userpassword"
+      # azure_secret_name: "userpassword"
       # azure_field: "userpassword"
 
-      # gcp_secret_name: "projects/752493912910/secrets"
-      # gcp_field: "user_password"
+      gcp_secret_name: "projects/752493912910/secrets"
+      gcp_field: "user_password"
 volumes:
   mysql-data:
     driver: local

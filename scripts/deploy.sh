@@ -59,6 +59,13 @@ rm -rf ./plugin
 #     OPENBAO_MOUNT_PATH="secret" \
 #     VAULT_ENABLE_ROTATION="true"
 
+export GOOGLE_CREDENTIALS=$(jq -c . /media/sanjay7178/3c23be67-cbc5-4076-b52e-66ce0b263631/home/sanjay7178/vault-swarm-plugin/graphic-transit-458312-f7-44c20b0e486c.json)
+docker plugin set vault-secrets-plugin:latest \
+    SECRETS_PROVIDER="gcp" \
+    GCP_PROJECT_ID="graphic-transit-458312-f7" \
+    GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_CREDENTIALS"
+
+
 echo -e ${DEF}Enable the plugin
 docker plugin enable vault-secrets-plugin:latest
 
