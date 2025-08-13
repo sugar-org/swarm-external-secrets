@@ -2,6 +2,8 @@ package providers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -13,9 +15,8 @@ import (
 )
 
 // GCPProvider implements the SecretsProvider interface for GCP Secret Manager
-// Note: This is a placeholder implementation
 type GCPProvider struct {
-	client secretmanager.Client
+	client *secretmanager.Client
 	config *GCPConfig
 	ctx    context.Context
 }
@@ -29,15 +30,12 @@ type GCPConfig struct {
 
 // Initialize sets up the GCP provider with the given configuration
 func (g *GCPProvider) Initialize(config map[string]string) error {
+	g.ctx = context.Background()
 	g.config = &GCPConfig{
 		ProjectID:       getConfigOrDefault(config, "GCP_PROJECT_ID", ""),
 		CredentialsPath: getConfigOrDefault(config, "GOOGLE_APPLICATION_CREDENTIALS", ""),
 		CredentialsJSON: config["GCP_CREDENTIALS_JSON"],
 	}
-
-	// if g.config.ProjectID == "" {
-	// 	return fmt.Errorf("GCP_PROJECT_ID is required")
-	// }
 
 	var client *secretmanager.Client
 	var err error
@@ -47,42 +45,49 @@ func (g *GCPProvider) Initialize(config map[string]string) error {
 	} else if g.config.CredentialsPath != "" {
 		client, err = secretmanager.NewClient(g.ctx, option.WithCredentialsFile(g.config.CredentialsPath))
 	} else {
-		return fmt.Errorf("either GCP_CREDENTIALS_JSON or GOOGLE_APPLICATION_CREDENTIALS must be provided, or rely on Application Default Credentials")
+		// Try using Application Default Credentials
+		client, err = secretmanager.NewClient(g.ctx)
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to create secretmanager client: %w", err)
 	}
-	g.client = *client
+	g.client = client
 
-	log.Printf("Successfully initialized GCP Secret Manager provider for project: %s (placeholder)", g.config.ProjectID)
+	log.Printf("Successfully initialized GCP Secret Manager provider for project: %s", g.config.ProjectID)
 	return nil
 }
 
 // GetSecret retrieves a secret value from GCP Secret Manager
 func (g *GCPProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
-
-	// Extract secert field and name
+	// Build the full secret name for GCP Secret Manager
 	secretName := g.buildSecretName(req)
 	log.Printf("Reading secret from GCP Secret Manager: %s", secretName)
 
-	secertField, err := g.extractSecretValue(secretName, req)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract secret value: %v", err)
+	// Create the request to access the latest version of the secret
+	secretRequest := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: secretName + "/versions/latest",
 	}
 
-	secertrequest := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: secretName + "/" + string(secertField),
-	}
-
-	// Call the API.
-	result, err := g.client.AccessSecretVersion(ctx, secertrequest)
+	// Call the API to get the secret
+	result, err := g.client.AccessSecretVersion(ctx, secretRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to access secret version: %w", err)
 	}
 
-	return result.Payload.Data, nil
+	// Store version information for rotation tracking
+	if g.SupportsRotation() {
+		log.Printf("Secret version for rotation tracking: %s", result.Name)
+	}
+
+	// Extract the specific field from the secret data
+	secretData := result.Payload.Data
+	extractedValue, err := g.extractSecretValue(string(secretData), req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract secret value: %v", err)
+	}
+
+	return extractedValue, nil
 }
 
 // buildSecretName constructs the GCP secret name based on request labels and service information
@@ -92,11 +97,18 @@ func (g *GCPProvider) buildSecretName(req secrets.Request) string {
 		return customPath
 	}
 
-	// Default naming convention
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
+	// Default naming convention: projects/{project}/secrets/{secret-name}
+	projectID := g.config.ProjectID
+	if projectID == "" {
+		log.Fatal("GCP_PROJECT_ID is required but not configured. Please set the GCP_PROJECT_ID environment variable.")
 	}
-	return req.SecretName
+
+	secretName := req.SecretName
+	if req.ServiceName != "" {
+		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
+	}
+
+	return fmt.Sprintf("projects/%s/secrets/%s", projectID, secretName)
 }
 
 // extractSecretValue extracts the appropriate value from the GCP secret string
@@ -106,7 +118,6 @@ func (g *GCPProvider) extractSecretValue(secretString string, req secrets.Reques
 		return g.extractSecretValueByField(secretString, field)
 	}
 
-	// Try to parse as JSON first
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
 		// Default field names to try
@@ -160,12 +171,52 @@ func (g *GCPProvider) extractSecretValueByField(secretString, field string) ([]b
 
 // SupportsRotation indicates that GCP Secret Manager supports secret rotation monitoring
 func (g *GCPProvider) SupportsRotation() bool {
-	return false // Disabled for now
+	return true
 }
 
 // CheckSecretChanged checks if a secret has changed in GCP Secret Manager
 func (g *GCPProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
-	return false, fmt.Errorf("GCP provider is not yet implemented")
+	secretName := secretInfo.SecretPath
+
+	// Get the current secret value and compute its hash
+	secretRequest := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: secretName + "/versions/latest",
+	}
+
+	result, err := g.client.AccessSecretVersion(ctx, secretRequest)
+	if err != nil {
+		return false, fmt.Errorf("failed to access secret version: %w", err)
+	}
+
+	// Extract the secret value using the same logic as GetSecret
+	secretData := result.Payload.Data
+	var extractedValue []byte
+
+	if secretInfo.SecretField != "" {
+		extractedValue, err = g.extractSecretValueByField(string(secretData), secretInfo.SecretField)
+	} else {
+		// Create a dummy request to use existing extraction logic
+		dummyReq := secrets.Request{
+			SecretName:   secretInfo.DockerSecretName,
+			SecretLabels: make(map[string]string),
+		}
+		extractedValue, err = g.extractSecretValue(string(secretData), dummyReq)
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("failed to extract secret value: %w", err)
+	}
+
+	// Compute hash of current value
+	currentHash := computeHash(extractedValue)
+
+	// Compare with stored hash
+	if secretInfo.LastHash != currentHash {
+		log.Printf("Secret %s has changed: hash mismatch", secretName)
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // GetProviderName returns the name of this provider
@@ -175,5 +226,14 @@ func (g *GCPProvider) GetProviderName() string {
 
 // Close performs cleanup for the GCP provider
 func (g *GCPProvider) Close() error {
+	if g.client != nil {
+		return g.client.Close()
+	}
 	return nil
+}
+
+// computeHash computes SHA256 hash of the given data
+func computeHash(data []byte) string {
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
 }

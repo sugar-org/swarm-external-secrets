@@ -47,7 +47,7 @@ secrets:
       # azure_field: "rootpassword"
       # azure_secret_name: "rootpassword"
 
-      gcp_secret_name: "projects/752493912910/secrets"
+      gcp_secret_name: "projects/graphic-transit-458312-f7/secrets/mysql-root-password"
       gcp_field: "root_password"
 
   mysql_password:
@@ -72,7 +72,7 @@ secrets:
       # azure_secret_name: "userpassword"
       # azure_field: "userpassword"
 
-      gcp_secret_name: "projects/752493912910/secrets"
+      gcp_secret_name: "projects/graphic-transit-458312-f7/secrets/mysql-user-password"
       gcp_field: "user_password"
 volumes:
   mysql-data:
