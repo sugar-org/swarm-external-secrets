@@ -13,7 +13,7 @@ docker plugin disable vault-secrets-plugin:latest --force 2>/dev/null || true
 docker plugin rm vault-secrets-plugin:latest --force 2>/dev/null || true
 
 echo -e ${DEF}Build the plugin
-docker build  -f Dockerfile -t vault-secrets-plugin:temp .
+docker build  -f ../Dockerfile -t vault-secrets-plugin:temp ..
 
 echo -e ${DEF}Create plugin rootfs
 mkdir -p ./plugin/rootfs
@@ -23,7 +23,7 @@ docker rm temp-container
 docker rmi vault-secrets-plugin:temp
 
 echo -e ${DEF}Copy config to plugin directory
-cp config.json ./plugin/
+cp ../config.json ./plugin/
 
 # go run plugin_installer/installer.go
 
@@ -62,6 +62,15 @@ rm -rf ./plugin
 #     OPENBAO_MOUNT_PATH="secret" \
 #     VAULT_ENABLE_ROTATION="true"
 
+export GOOGLE_CREDENTIALS=$(jq -c . ../graphic-transit-458312-f7-44c20b0e486c.json)
+docker plugin set vault-secrets-plugin:latest \
+    SECRETS_PROVIDER="gcp" \
+    GCP_PROJECT_ID="graphic-transit-458312-f7" \
+    GCP_CREDENTIALS_JSON="$GOOGLE_CREDENTIALS" \
+    ENABLE_ROTATION="true" \
+    ROTATION_INTERVAL="5s" \
+
+
 echo -e ${DEF}Enable the plugin
 docker plugin enable vault-secrets-plugin:latest
 
@@ -83,7 +92,7 @@ echo "- secret/database/mysql (with root_password and user_password fields)"
 docker node ls --filter role=worker -q | wc -l | grep -q 0 && snitch_role=manager || snitch_role=worker
 export snitch_role
 echo -e ${DEF}Deploy the stack
-docker stack deploy -c docker-compose.yml myapp
+docker stack deploy -c ../docker-compose.yml myapp
 
 echo -e ${DEF}Verify the deployment
 docker stack services myapp
