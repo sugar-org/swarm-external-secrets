@@ -30,6 +30,7 @@ pre-commit:
 
     golangci-lint:
       glob: "**/*.go"
+      timeout: 10m
       run: golangci-lint run ./...
 
     gosec:
