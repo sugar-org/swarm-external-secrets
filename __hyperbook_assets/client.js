@@ -4,34 +4,39 @@ var hyperbook = (function () {
    * @param {HTMLElement} root - The root element to initialize.
    */
   const initCollapsibles = (root) => {
-    const collapsibleEls = root.getElementsByClassName("collapsible");
-    for (let collapsible of collapsibleEls) {
-      const id = collapsible.parentElement.getAttribute("data-id");
+    // Handle both navigation sections and directive-collapsible elements
+    const detailsEls = root.querySelectorAll("details.section, details.directive-collapsible");
+    for (let details of detailsEls) {
+      const id = details.getAttribute("data-id");
 
-      if (id.startsWith("_nav:") && !collapsible.classList.contains("empty")) {
-        const link = collapsible.querySelector("a");
+      // Prevent link clicks from toggling the details element in navigation
+      if (id && id.startsWith("_nav:") && !details.classList.contains("empty")) {
+        const link = details.querySelector("summary a");
         link?.addEventListener("click", (event) => {
           event.stopPropagation();
         });
       }
-      collapsible.addEventListener("click", () => {
-        collapsible.classList.toggle("expanded");
+
+      // Listen for toggle events to persist state and sync with other elements
+      details.addEventListener("toggle", () => {
         if (id) {
-          store.collapsibles.get(id).then((result) => {
-            if (!result) {
-              store.collapsibles.put({ id }).then(() => {
-                updateCollapsibles(root);
-              });
-            } else {
-              store.collapsibles.delete(id).then(() => {
-                updateCollapsibles(root);
-              });
+          if (details.open) {
+            store.collapsibles.put({ id });
+          } else {
+            store.collapsibles.delete(id);
+          }
+
+          // Sync all elements with the same ID
+          const allWithSameId = document.querySelectorAll(`[data-id="${id}"]`);
+          for (let el of allWithSameId) {
+            if (el !== details && el.tagName === "DETAILS") {
+              el.open = details.open;
             }
-          });
+          }
         }
 
         setTimeout(() => {
-          window.dispatchEvent(new Event("resize")); // geogebra new this in order resize the applet
+          window.dispatchEvent(new Event("resize")); // geogebra needs this to resize the applet
         }, 100);
       });
     }
@@ -43,15 +48,15 @@ var hyperbook = (function () {
    */
   const updateCollapsibles = (root) => {
     store.collapsibles.toArray().then((collapsibles) => {
-      const collapsibleEls = root.getElementsByClassName("collapsible");
-      for (let collapsibleEl of collapsibleEls) {
-        const id = collapsibleEl.parentElement.getAttribute("data-id");
+      const detailsEls = root.querySelectorAll("details.section, details.directive-collapsible");
+      for (let details of detailsEls) {
+        const id = details.getAttribute("data-id");
         if (id) {
-          const expanded = collapsibles.some((c) => c.id === id);
-          if (expanded) {
-            collapsibleEl.classList.add("expanded");
-          } else if (!id.startsWith("_nav:")) {
-            collapsibleEl.classList.remove("expanded");
+          const shouldBeOpen = collapsibles.some((c) => c.id === id);
+          // Only update if state differs and it's not a navigation section
+          // (navigation sections are auto-expanded based on current page)
+          if (!id.startsWith("_nav:") && details.open !== shouldBeOpen) {
+            details.open = shouldBeOpen;
           }
         }
       }
@@ -180,6 +185,68 @@ var hyperbook = (function () {
   }
 
   /**
+   * Open the share dialog.
+   */
+  function shareOpen() {
+    const shareDialog = document.getElementById("share-dialog");
+    shareUpdatePreview();
+    shareDialog.showModal();
+  }
+
+  /**
+   * Close the share dialog.
+   */
+  function shareClose() {
+    const shareDialog = document.getElementById("share-dialog");
+    shareDialog.close();
+  }
+
+  /**
+   * Update the URL preview in the share dialog.
+   */
+  function shareUpdatePreview() {
+    const standaloneCheckbox = document.getElementById("share-standalone-checkbox");
+    const sectionCheckboxes = document.querySelectorAll("#share-dialog input[data-anchor]");
+    const previewEl = document.getElementById("share-url-preview");
+    
+    const baseUrl = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams();
+    
+    if (standaloneCheckbox && standaloneCheckbox.checked) {
+      params.append("standalone", "true");
+    }
+    
+    const selectedSections = Array.from(sectionCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.getAttribute("data-anchor"));
+    
+    if (selectedSections.length > 0) {
+      params.append("sections", selectedSections.join(","));
+    }
+    
+    const finalUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+    previewEl.textContent = finalUrl;
+  }
+
+  /**
+   * Copy the shareable URL to clipboard.
+   */
+  function shareCopyUrl() {
+    const previewEl = document.getElementById("share-url-preview");
+    const url = previewEl.textContent;
+    
+    navigator.clipboard.writeText(url).then(() => {
+      const button = document.querySelector("#share-dialog .copy-button");
+      const originalText = button.textContent;
+      button.textContent = window.i18n.get("share-dialog-url-copied");
+      
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 2000);
+    });
+  }
+
+  /**
    * Toggle the navigation drawer.
    */
   function navToggle() {
@@ -230,8 +297,42 @@ var hyperbook = (function () {
    * @param {HTMLElement} el - The element to toggle.
    */
   function toggleLightbox(el) {
-    el.parentElement.classList.toggle("lightbox");
-    el.parentElement.classList.toggle("normal");
+    const overlay = document.createElement("div");
+    overlay.classList.add("lightbox-overlay");
+
+    const captionText =
+      el.parentElement.querySelector("figcaption")?.textContent || "";
+
+    // container for image + caption
+    const content = document.createElement("div");
+    content.classList.add("lightbox-content");
+
+    // image container fills remaining space
+    const imgContainer = document.createElement("div");
+    imgContainer.classList.add("lightbox-image-container");
+
+    const lightboxImg = document.createElement("img");
+    lightboxImg.src = el.src;
+    imgContainer.appendChild(lightboxImg);
+
+    content.appendChild(imgContainer);
+
+    // add caption if exists
+    if (captionText) {
+      const caption = document.createElement("div");
+      caption.classList.add("caption");
+      caption.textContent = captionText;
+      content.appendChild(caption);
+    }
+
+    overlay.appendChild(content);
+
+    overlay.addEventListener("click", () => {
+      document.body.removeChild(overlay);
+    });
+
+    document.body.appendChild(overlay);
+    overlay.style.display = "flex";
   }
 
   function init(root) {
@@ -240,9 +341,137 @@ var hyperbook = (function () {
     initBookmarks(root);
   }
 
+  /**
+   * Hide TOC toggle button when sections are filtered
+   */
+  function hideTocWhenFiltered() {
+    const tocToggle = document.getElementById('toc-toggle');
+    
+    if (tocToggle) {
+      tocToggle.style.display = 'none';
+    }
+  }
+
+  // Filter sections based on query parameter
+  function filterSections() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sectionsParam = urlParams.get('sections');
+    
+    if (!sectionsParam) {
+      return; // No filtering needed
+    }
+    
+    // Parse sections parameter (comma-separated list of IDs)
+    const sectionIds = sectionsParam.split(',').map(id => id.trim()).filter(id => id);
+    
+    if (sectionIds.length === 0) {
+      return; // No valid IDs provided
+    }
+    
+    // Get all headings in the document
+    const allHeadings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    const headingsArray = Array.from(allHeadings);
+    
+    // Build a map of which elements should be visible
+    const visibleElements = new Set();
+    
+    sectionIds.forEach(sectionId => {
+      // Find the heading with this ID
+      const heading = document.getElementById(sectionId);
+      if (!heading) {
+        return; // ID not found
+      }
+      
+      // Get the heading level (h1 = 1, h2 = 2, etc.)
+      const headingLevel = parseInt(heading.tagName.substring(1));
+      
+      // Mark this heading as visible
+      visibleElements.add(heading);
+      
+      // Find the index of this heading
+      const headingIndex = headingsArray.indexOf(heading);
+      if (headingIndex === -1) {
+        return;
+      }
+      
+      // Collect all elements until the next heading of the same or higher level
+      let currentElement = heading.nextElementSibling;
+      
+      while (currentElement) {
+        // Check if this is a heading
+        const isHeading = /^H[1-6]$/.test(currentElement.tagName);
+        
+        if (isHeading) {
+          const currentLevel = parseInt(currentElement.tagName.substring(1));
+          
+          // Stop if we hit a heading of the same or higher level (lower number)
+          if (currentLevel <= headingLevel) {
+            break;
+          }
+          
+          // Include lower-level headings (subsections)
+          visibleElements.add(currentElement);
+        } else {
+          // Include non-heading elements
+          visibleElements.add(currentElement);
+        }
+        
+        currentElement = currentElement.nextElementSibling;
+      }
+    });
+    
+    // Hide all elements that are not in visibleElements
+    const markdownDiv = document.querySelector('main article .hyperbook-markdown');
+    if (markdownDiv) {
+      Array.from(markdownDiv.children).forEach(element => {
+        // Don't hide UI elements (floating buttons container, side drawers)
+        const isUIElement = element.id === 'floating-buttons-container' || 
+                           element.tagName === 'SIDE-DRAWER';
+        
+        if (!visibleElements.has(element) && !isUIElement) {
+          element.style.display = 'none';
+        }
+      });
+      
+      // Hide TOC toggle when sections are filtered
+      hideTocWhenFiltered();
+    }
+  }
+
+  // Check for standalone layout URL parameter or iframe context
+  function checkStandaloneMode() {
+    // Check if explicitly requested via URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const standaloneParam = urlParams.get('standalone') === 'true';
+    
+    // Check if page is inside an iframe (but not VSCode webview)
+    const isVSCodeWebview = typeof acquireVsCodeApi !== 'undefined';
+    const isInIframe = window.self !== window.top && !isVSCodeWebview;
+    
+    if (standaloneParam || isInIframe) {
+      const mainGrid = document.querySelector('.main-grid');
+      if (mainGrid && !mainGrid.classList.contains('layout-standalone')) {
+        mainGrid.classList.add('layout-standalone');
+      }
+      
+      // Hide TOC and QR code buttons when in standalone mode
+      const tocToggle = document.getElementById('toc-toggle');
+      if (tocToggle) {
+        tocToggle.style.display = 'none';
+      }
+      
+      const qrcodeOpen = document.getElementById('qrcode-open');
+      if (qrcodeOpen) {
+        qrcodeOpen.style.display = 'none';
+      }
+    }
+  }
+
   // Initialize existing elements on document load
   document.addEventListener("DOMContentLoaded", () => {
     init(document);
+    checkStandaloneMode();
+    filterSections();
   });
 
   // Observe for new elements added to the DOM
@@ -268,6 +497,10 @@ var hyperbook = (function () {
     search,
     qrcodeOpen,
     qrcodeClose,
+    shareOpen,
+    shareClose,
+    shareUpdatePreview,
+    shareCopyUrl,
     init,
   };
 })();
