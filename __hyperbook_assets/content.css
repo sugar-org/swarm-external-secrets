@@ -100,8 +100,8 @@ figure {
   clear: both;
   justify-items: center;
   align-content: center;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: var(--element-gap);
 }
 
 .hyperbook-markdown figure.normal img {
@@ -111,7 +111,7 @@ figure {
 
 .hyperbook-markdown figure.normal figcaption {
   font-style: italic;
-  font-size: 14px;
+  font-size: 0.875rem;
   max-width: 400px;
   margin: 0 auto;
 }
@@ -126,7 +126,7 @@ figure {
 .hyperbook-markdown a.heading:hover::before {
   position: absolute;
   content: "📎";
-  font-size: 12px;
+  font-size: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   left: 0px;
@@ -177,7 +177,7 @@ figure {
 }
 
 .hyperbook-markdown li>p {
-  margin-top: 16px;
+  margin: 0;
 }
 
 .hyperbook-markdown p,
@@ -188,12 +188,23 @@ figure {
 .hyperbook-markdown pre,
 .hyperbook-markdown details {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: var(--element-gap);
+}
+
+.hyperbook-markdown figure[data-rehype-pretty-code-figure] {
+  margin-top: 0;
+  margin-bottom: var(--element-gap);
+}
+
+.hyperbook-markdown [class^="directive-"],
+.hyperbook-markdown [class*=" directive-"] {
+  margin-top: 0;
+  margin-bottom: var(--element-gap);
 }
 
 .hyperbook-markdown blockquote {
   width: 90%;
-  margin: 20px auto;
+  margin: 0 auto var(--element-gap) auto;
   font-style: italic;
   padding: 1.2em 30px 1.2em 75px;
   border-left: 8px solid var(--color-brand);
@@ -213,6 +224,10 @@ figure {
 
 .hyperbook-markdown blockquote::after {
   content: "";
+}
+
+.hyperbook-markdown blockquote p:last-child {
+  margin-bottom: 0;
 }
 
 .hyperbook-markdown table {
@@ -252,8 +267,8 @@ figure {
 .hyperbook-markdown h6 {
   clear: both;
   font-family: hyperbook-heading, sans-serif;
-  margin-top: 24px;
-  margin-bottom: 16px;
+  margin-top: 0;
+  margin-bottom: var(--element-gap);
   font-weight: 600;
   line-height: 1.25;
 }
@@ -293,7 +308,7 @@ figure {
 
 .hyperbook-markdown p {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: var(--element-gap);
 }
 
 .hyperbook-markdown h1,
@@ -311,7 +326,7 @@ figure {
   background: none;
   border: none;
   opacity: 0.5;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .hyperbook-markdown .bookmark:hover {
