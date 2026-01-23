@@ -1,0 +1,30 @@
+# Labels for labeling issues and pull requests using GitHub prow action.
+
+area:
+  - 'performance'
+  - 'scalability'
+  - 'observability'
+  - 'deployment'
+  - 'operator'
+  - 'networking'
+  - 'storage'
+  - 'cleanup'
+  - 'docs'
+  - 'security'
+  - 'k8s'
+
+kind:
+  - 'github_actions'
+  - 'good first issue'
+  - 'breaking-change'
+  - 'bug'
+  - 'dependencies'
+  - 'documentation'
+  - 'testing'
+  - 'stale'
+  - 'wontfix'
+
+priority:
+  - 'P0'
+  - 'P1'
+  - 'P2'
