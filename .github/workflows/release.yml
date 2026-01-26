@@ -2,6 +2,8 @@ name: Build and Release Plugin
 
 on:
   push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -70,9 +72,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and Push Plugin
         env:
           PLUGIN_NAME: ghcr.io/${{ github.repository_owner }}/vault-secrets-plugin
+          DOCKERHUB_PLUGIN_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/vault-secrets-plugin
           PLUGIN_VERSION: ${{ github.event.inputs.version }}
         run: |
           # The build logic is based on your deploy.sh and build.sh scripts
@@ -84,13 +93,19 @@ jobs:
           docker rmi vault-secrets-plugin:temp
           cp config.json ./plugin/
 
-          # Create and push the version-specific tag
+          # Create and push to GitHub Container Registry
           docker plugin create ${{ env.PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }} ./plugin
           docker plugin push ${{ env.PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }}
 
-          # Create and push the 'latest' tag
           docker plugin create ${{ env.PLUGIN_NAME }}:latest ./plugin
           docker plugin push ${{ env.PLUGIN_NAME }}:latest
+
+          # Create and push to Docker Hub
+          docker plugin create ${{ env.DOCKERHUB_PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }} ./plugin
+          docker plugin push ${{ env.DOCKERHUB_PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }}
+
+          docker plugin create ${{ env.DOCKERHUB_PLUGIN_NAME }}:latest ./plugin
+          docker plugin push ${{ env.DOCKERHUB_PLUGIN_NAME }}:latest
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
