@@ -1,0 +1,82 @@
+version: 2
+
+project_name: swarm-external-secrets
+
+# GoReleaser is triggered by git tags created by semantic-release
+release:
+  prerelease: auto
+
+
+builds:
+  - id: swarm-external-secrets
+    main: ./cmd/swarm-external-secrets
+    binary: swarm-external-secrets
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+
+#Archive artifacts (GitHub Releases)
+
+archives:
+  - id: default
+    builds:
+      - swarm-external-secrets
+    format: tar.gz
+    name_template: >
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+
+#Checksums (MANDATORY)
+
+checksum:
+  name_template: checksums.txt
+
+
+#SBOMs for binaries (MANDATORY)
+
+sboms:
+  - id: spdx
+    artifacts: archive
+    format: spdx-json
+
+  - id: cyclonedx
+    artifacts: archive
+    format: cyclonedx-json
+
+
+#Docker image (used to build plugin rootfs)
+
+dockers:
+  - image_templates:
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/swarm-external-secrets:{{ .Version }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/swarm-external-secrets:latest"
+      - "{{ .Env.DOCKERHUB_USERNAME }}/swarm-external-secrets:{{ .Version }}"
+      - "{{ .Env.DOCKERHUB_USERNAME }}/swarm-external-secrets:latest"
+
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64,linux/arm64"
+
+
+#SBOMs for Docker images
+
+docker_sboms:
+  - image_templates:
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/swarm-external-secrets:{{ .Version }}"
+      - "{{ .Env.DOCKERHUB_USERNAME }}/swarm-external-secrets:{{ .Version }}"
+
+
+#Changelog (Semantic Release compatible)
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
