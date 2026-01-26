@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p ./plugin/rootfs
           docker create --name temp-container swarm-external-secrets:temp
-          docker export swarm-external-secrets -x -C ./plugin/rootfs
+          docker export temp-container | tar -x -C ./plugin/rootfs
           docker rm temp-container
           docker rmi swarm-external-secrets:temp
 
@@ -72,13 +72,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hubswarm-external-secrets
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Pluginswarm-external-secrets
+      - name: Build and Push Plugin
         env:
           PLUGIN_NAME: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
           DOCKERHUB_PLUGIN_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/swarm-external-secrets
