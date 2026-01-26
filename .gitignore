@@ -42,3 +42,5 @@ go.work.sum
 # remove the plugin binary
 ./plugin_installer/plugin_installer
 approle.token
+
+scripts/plugin/rootfs/*
