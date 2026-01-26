@@ -15,8 +15,8 @@ if [ -n "$DOCKER_USERNAME" ]; then
 fi
 
 echo -e "${DEF}Remove existing plugin if it exists${DEF}"
-docker plugin disable ${DOCKER_USERNAME}vault-secrets-plugin:latest --force 2>/dev/null || true
-docker plugin rm ${DOCKER_USERNAME}vault-secrets-plugin:latest --force 2>/dev/null || true
+docker plugin disable ${DOCKER_USERNAME}swarm-external-secrets:latest --force 2>/dev/null || true
+docker plugin rm ${DOCKER_USERNAME}swarm-external-secrets:latest --force 2>/dev/null || true
 echo -e "${DEF}Build the plugin${DEF}"
 docker build -t swarm-external-secrets:temp ../
 
@@ -34,9 +34,13 @@ mkdir -p ./plugin/rootfs
 docker create --name temp-container swarm-external-secrets:temp
 docker export temp-container | tar -x -C ./plugin/rootfs
 docker rm temp-container
-docker rmi vault-secrets-plugin:temp
+docker rmi swarm-external-secrets:temp
+
+echo -e "${DEF}Copy config to plugin directory${DEF}"
+cp ../config.json ./plugin/
+
 echo -e "${DEF}Create the plugin${DEF}"
-docker plugin create ${DOCKER_USERNAME}vault-secrets-plugin:latest ./plugin
+docker plugin create ${DOCKER_USERNAME}swarm-external-secrets:latest ./plugin
 
 echo -e "${DEF}Clean up plugin directory${DEF}"
 rm -rf ./plugin
@@ -45,15 +49,15 @@ rm -rf ./plugin
 if [ -z "$DOCKER_USERNAME" ]; then
     echo -e "${RED}Docker username not provided. Skipping push to registry.${DEF}"
     echo -e "${GRN}Plugin build and enable completed successfully${DEF}"
-    echo -e "You can now use this plugin with: docker plugin install ${DOCKER_USERNAME}vault-secrets-plugin:latest"
+    echo -e "You can now use this plugin with: docker plugin install ${DOCKER_USERNAME}swarm-external-secrets:latest"
     exit 0
 else
     # Use docker plugin push, not docker push
     echo -e "${DEF}Pushing plugin to registry${DEF}"
-    if docker plugin push ${DOCKER_USERNAME}vault-secrets-plugin:latest; then
+    if docker plugin push ${DOCKER_USERNAME}swarm-external-secrets:latest; then
         echo -e "${GRN}Successfully pushed plugin to Docker Hub${DEF}"
         echo -e "${GRN}Plugin build, enable, and push completed successfully${DEF}"
-        echo -e "You can now use this plugin with: docker plugin install ${DOCKER_USERNAME}vault-secrets-plugin:latest"
+        echo -e "You can now use this plugin with: docker plugin install ${DOCKER_USERNAME}swarm-external-secrets:latest"
     else
         echo -e "${DEF}Failed to push plugin. Make sure you're logged in with 'docker login'${DEF}"
         echo "Run: docker login -u ${DOCKER_USERNAME}"
