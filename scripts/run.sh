@@ -4,7 +4,7 @@ set -ex  # Exit on any error
 cd -- "$(dirname -- "$0")" || exit 1
 
 ./plugin_installer/plugin_installer
-until [[ "$(docker plugin inspect sanjay7178/vault-secrets-plugin:latest --format '{{.Enabled}}' 2>/dev/null)" == "true" ]]
+until [[ "$(docker plugin inspect sanjay7178/swarm-external-secrets:latest --format '{{.Enabled}}' 2>/dev/null)" == "true" ]]
 do
     echo "waiting for plugin to be installed"
     sleep 1

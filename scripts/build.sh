@@ -8,7 +8,6 @@ BLU='\e[34m'
 GRN='\e[32m'
 DEF='\e[0m'
 
-
 # Get Docker username from argument or environment (optional; if omitted, pushing will be skipped)
 DOCKER_USERNAME="${1:-${DOCKER_USERNAME:-}}"
 if [ -n "$DOCKER_USERNAME" ]; then
@@ -19,7 +18,7 @@ echo -e "${DEF}Remove existing plugin if it exists${DEF}"
 docker plugin disable ${DOCKER_USERNAME}vault-secrets-plugin:latest --force 2>/dev/null || true
 docker plugin rm ${DOCKER_USERNAME}vault-secrets-plugin:latest --force 2>/dev/null || true
 echo -e "${DEF}Build the plugin${DEF}"
-docker build -t vault-secrets-plugin:temp ../
+docker build -t swarm-external-secrets:temp ../
 
 echo -e "${DEF}Create plugin rootfs${DEF}"
 # Check if any previous plugin image exists and remove it
@@ -32,7 +31,7 @@ if docker ps -a --format '{{.Names}}' | grep -q '^temp-container$'; then
 fi
 
 mkdir -p ./plugin/rootfs
-docker create --name temp-container vault-secrets-plugin:temp
+docker create --name temp-container swarm-external-secrets:temp
 docker export temp-container | tar -x -C ./plugin/rootfs
 docker rm temp-container
 docker rmi vault-secrets-plugin:temp
@@ -64,8 +63,8 @@ fi
 
 # Important: Enable the plugin before pushing
 # echo -e "${DEF}Enable the plugin${DEF}"
-# docker plugin enable sanjay7178/vault-secrets-plugin:latest
+# docker plugin enable sanjay7178/swarm-external-secrets:latest
 
 # # Set privileges if needed
 # echo -e "${DEF}Setting plugin permissions${DEF}"
-# docker plugin set sanjay7178/vault-secrets-plugin:latest gid=0 uid=0 || echo "Skipping permission setting (plugin may already be enabled)"
+# docker plugin set sanjay7178/swarm-external-secrets:latest gid=0 uid=0 || echo "Skipping permission setting (plugin may already be enabled)"

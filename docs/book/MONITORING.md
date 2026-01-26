@@ -136,7 +136,7 @@ VAULT_ROTATION_INTERVAL=30s
 ### Docker Plugin Configuration
 
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     ENABLE_MONITORING=true \
     MONITORING_PORT=9090 \
     VAULT_ROTATION_INTERVAL=1m
