@@ -40,7 +40,7 @@ echo -e "${BLU}Building the plugin with rotation feature...${DEF}"
 ./build.sh
 
 echo -e "${BLU}Setting up plugin configuration with rotation enabled...${DEF}"
-docker plugin set sanjay7178/vault-secrets-plugin:latest \
+docker plugin set sanjay7178/swarm-external-secrets:latest \
     VAULT_ADDR="https://152.53.244.80:8200" \
     VAULT_AUTH_METHOD="token" \
     VAULT_TOKEN="hvs.tD053xbJ1C5lo2EbtZnn2JU8" \
@@ -78,7 +78,7 @@ services:
 
 secrets:
   demo_secret:
-    driver: sanjay7178/vault-secrets-plugin:latest
+    driver: sanjay7178/swarm-external-secrets:latest
     labels:
       vault_path: "demo/app"
       vault_field: "password"

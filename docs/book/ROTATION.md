@@ -31,18 +31,18 @@ The following environment variables control the rotation behavior:
 ### Example Configuration
 
 ```bash
-docker plugin install vault-secrets-plugin:latest
+docker plugin install swarm-external-secrets:latest
 
 ```
 
 ```bash
 # Enable rotation with 2-minute check interval
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     VAULT_ENABLE_ROTATION="true" \
     VAULT_ROTATION_INTERVAL="2m"
 
 # Disable rotation
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     VAULT_ENABLE_ROTATION="false"
 ```
 
@@ -52,7 +52,7 @@ docker plugin set vault-secrets-plugin:latest \
    ```yaml
    secrets:
      mysql_password:
-       driver: vault-secrets-plugin:latest
+       driver: swarm-external-secrets:latest
        labels:
          vault_path: "database/mysql"
          vault_field: "password"
