@@ -21,7 +21,7 @@ The Vault Swarm Plugin now supports multiple secrets providers, allowing you to 
 
 **Example:**
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="vault" \
     VAULT_ADDR="https://vault.example.com:8200" \
     VAULT_TOKEN="hvs.example-token"
@@ -38,7 +38,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 **Example:**
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="aws" \
     AWS_REGION="us-west-2" \
     AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
@@ -61,7 +61,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 **Example:**
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="azure" \
     AZURE_VAULT_URL="https://myvault.vault.azure.net/" \
     AZURE_TENANT_ID="12345678-1234-1234-1234-123456789012" \
@@ -86,7 +86,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 **Example:**
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="openbao" \
     OPENBAO_ADDR="https://openbao.example.com:8200" \
     OPENBAO_TOKEN="ob_example-token"
@@ -134,7 +134,7 @@ services:
 
 secrets:
   mysql_password:
-    driver: vault-secrets-plugin:latest
+    driver: swarm-external-secrets:latest
     labels:
       vault_path: "database/mysql"
       vault_field: "password"
@@ -144,7 +144,7 @@ secrets:
 ```yaml
 secrets:
   api_key:
-    driver: vault-secrets-plugin:latest
+    driver: swarm-external-secrets:latest
     labels:
       aws_secret_name: "prod/api/key"
       aws_field: "api_key"
@@ -154,7 +154,7 @@ secrets:
 ```yaml
 secrets:
   database_connection:
-    driver: vault-secrets-plugin:latest
+    driver: swarm-external-secrets:latest
     labels:
       azure_secret_name: "database-connection-string"
       azure_field: "connection_string"

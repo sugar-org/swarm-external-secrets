@@ -29,24 +29,24 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build the plugin image
-        run: docker build -t vault-secrets-plugin:temp .
+        run: docker build -t swarm-external-secrets:temp .
 
       - name: Create plugin rootfs
         run: |
           mkdir -p ./plugin/rootfs
-          docker create --name temp-container vault-secrets-plugin:temp
+          docker create --name temp-container swarm-external-secrets:temp
           docker export temp-container | tar -x -C ./plugin/rootfs
           docker rm temp-container
-          docker rmi vault-secrets-plugin:temp
+          docker rmi swarm-external-secrets:temp
 
       - name: Copy config.json
         run: cp config.json ./plugin/
 
       - name: Create the plugin for verification
-        run: docker plugin create my-test-org/vault-secrets-plugin:test ./plugin
+        run: docker plugin create my-test-org/swarm-external-secrets:test ./plugin
 
       - name: Inspect the plugin to confirm it was created
-        run: docker plugin inspect my-test-org/vault-secrets-plugin:test
+        run: docker plugin inspect my-test-org/swarm-external-secrets:test
 
   # This job builds, pushes the plugin to Docker Hub, and creates a GitHub Release.
   # It only runs when manually triggered via the "Run workflow" button.
@@ -80,17 +80,17 @@ jobs:
 
       - name: Build and Push Plugin
         env:
-          PLUGIN_NAME: ghcr.io/${{ github.repository_owner }}/vault-secrets-plugin
-          DOCKERHUB_PLUGIN_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/vault-secrets-plugin
+          PLUGIN_NAME: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
+          DOCKERHUB_PLUGIN_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/swarm-external-secrets
           PLUGIN_VERSION: ${{ github.event.inputs.version }}
         run: |
           # The build logic is based on your deploy.sh and build.sh scripts
-          docker build -t vault-secrets-plugin:temp .
+          docker build -t swarm-external-secrets:temp .
           mkdir -p ./plugin/rootfs
-          docker create --name temp-container vault-secrets-plugin:temp
+          docker create --name temp-container swarm-external-secrets:temp
           docker export temp-container | tar -x -C ./plugin/rootfs
           docker rm temp-container
-          docker rmi vault-secrets-plugin:temp
+          docker rmi swarm-external-secrets:temp
           cp config.json ./plugin/
 
           # Create and push to GitHub Container Registry

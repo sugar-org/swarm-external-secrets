@@ -32,7 +32,7 @@ secrets:
     # name: mysql_root_password
 
 
-    driver: vault-secrets-plugin:latest
+    driver: swarm-external-secrets:latest
     labels:
       #   vault_path: "database/mysql"
       #   vault_field: "root_password"
@@ -55,7 +55,7 @@ secrets:
     # name: mysql_password
 
 
-    driver: vault-secrets-plugin:latest
+    driver: swarm-external-secrets:latest
     labels:
     #   vault_path: "database/mysql"
     #   vault_field: "user_password"

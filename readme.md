@@ -21,16 +21,16 @@ The plugin now supports multiple secret providers. Configure with `SECRETS_PROVI
 
 ```bash
 # HashiCorp Vault (default)
-docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="vault"
+docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="vault"
 
 # AWS Secrets Manager  
-docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="aws"
+docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="aws"
 
 # Azure Key Vault
-docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="azure"
+docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="azure"
 
 # OpenBao
-docker plugin set vault-secrets-plugin:latest SECRETS_PROVIDER="openbao"
+docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="openbao"
 ```
 
 ## New: Real-time Monitoring
@@ -44,7 +44,7 @@ Access the monitoring dashboard at `http://localhost:8080` (configurable port):
 
 ### Monitor Configuration
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     ENABLE_MONITORING="true" \
     MONITORING_PORT="8080"
 ```
@@ -58,7 +58,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 2. Configure the plugin:
    ```bash
-   docker plugin set vault-secrets-plugin:latest \
+   docker plugin set swarm-external-secrets:latest \
        VAULT_ADDR="https://your-vault-server:8200" \
        VAULT_AUTH_METHOD="token" \
        VAULT_TOKEN="your-vault-token" \
@@ -71,7 +71,7 @@ docker plugin set vault-secrets-plugin:latest \
    ```yaml
    secrets:
      mysql_password:
-       driver: vault-secrets-plugin:latest
+       driver: swarm-external-secrets:latest
        labels:
          vault_path: "database/mysql"
          vault_field: "password"
@@ -81,7 +81,7 @@ docker plugin set vault-secrets-plugin:latest \
    ```yaml
    secrets:
      api_key:
-       driver: vault-secrets-plugin:latest
+       driver: swarm-external-secrets:latest
        labels:
          aws_secret_name: "prod/api/key"
          aws_field: "api_key"
@@ -91,7 +91,7 @@ docker plugin set vault-secrets-plugin:latest \
    ```yaml
    secrets:
      database_connection:
-       driver: vault-secrets-plugin:latest
+       driver: swarm-external-secrets:latest
        labels:
          azure_secret_name: "database-connection-string"
    ```
@@ -100,7 +100,7 @@ docker plugin set vault-secrets-plugin:latest \
    ```yaml
    secrets:
      app_secret:
-       driver: vault-secrets-plugin:latest
+       driver: swarm-external-secrets:latest
        labels:
          openbao_path: "app/config"
          openbao_field: "secret_key"
@@ -127,7 +127,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 ### HashiCorp Vault
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="vault" \
     VAULT_ADDR="https://vault.example.com:8200" \
     VAULT_TOKEN="hvs.example-token"
@@ -135,7 +135,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 ### AWS Secrets Manager
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="aws" \
     AWS_REGION="us-west-2" \
     AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
@@ -143,7 +143,7 @@ docker plugin set vault-secrets-plugin:latest \
 
 ### Azure Key Vault
 ```bash
-docker plugin set vault-secrets-plugin:latest \
+docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="azure" \
     AZURE_VAULT_URL="https://myvault.vault.azure.net/" \
     AZURE_TENANT_ID="12345678-1234-1234-1234-123456789012"
