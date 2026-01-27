@@ -1,0 +1,19 @@
+name: 'Dependency Review'
+on: [pull_request]
+
+permissions: read-all
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Harden Runner'
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@v4
