@@ -113,7 +113,7 @@ jobs:
 
     # Run only if semantic-release actually created a release
     needs: semantic-release
-    if: needs.semantic-release.outputs.released == 'true'
+    if: fromJSON(needs.semantic-release.outputs.released || 'false')
 
     steps:
       # Checkout code at the release tag
