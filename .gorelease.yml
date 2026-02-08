@@ -72,11 +72,7 @@ docker_sboms:
       - "{{ .Env.DOCKERHUB_USERNAME }}/swarm-external-secrets:{{ .Version }}"
 
 
-#Changelog (Semantic Release compatible)
+#Changelog (handled by semantic-release; disable in GoReleaser to avoid duplication)
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  disable: true
