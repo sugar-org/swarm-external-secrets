@@ -164,3 +164,52 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Build Docker image and extract rootfs for Docker plugin
+      # This restores the manual plugin rootfs build that GoReleaser does not handle.
+      - name: Build Docker plugin rootfs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Build a temporary image that will serve as the plugin root filesystem
+          PLUGIN_BUILD_IMAGE="plugin-build-image:latest"
+          docker build -t "${PLUGIN_BUILD_IMAGE}" .
+
+          # Create a container from the image and export its filesystem to ./rootfs
+          CONTAINER_ID="$(docker create "${PLUGIN_BUILD_IMAGE}")"
+          mkdir -p rootfs
+          docker export "${CONTAINER_ID}" | tar -x -C rootfs
+          docker rm "${CONTAINER_ID}"
+
+      # Create and push the Docker plugin to Docker Hub
+      # Docker Hub login is already performed earlier in this job.
+      - name: Create and push Docker plugin
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DOCKERHUB_USERNAME:-}" ]; then
+            echo "DOCKERHUB_USERNAME is not set; cannot publish Docker plugin."
+            exit 1
+          fi
+
+          # Ensure the rootfs directory exists from the previous step
+          if [ ! -d "./rootfs" ]; then
+            echo "rootfs directory not found; expected 'Build Docker plugin rootfs' to create it."
+            exit 1
+          fi
+
+          # Derive plugin name from the repository, e.g. username/reponame:latest
+          REPO_NAME="$(basename "${GITHUB_REPOSITORY}")"
+          PLUGIN_NAME="${DOCKERHUB_USERNAME}/${REPO_NAME}"
+          PLUGIN_TAG="latest"
+          PLUGIN_REF="${PLUGIN_NAME}:${PLUGIN_TAG}"
+
+          echo "Creating Docker plugin ${PLUGIN_REF}"
+          docker plugin create "${PLUGIN_REF}" .
+
+          echo "Pushing Docker plugin ${PLUGIN_REF}"
+          docker plugin push "${PLUGIN_REF}"
