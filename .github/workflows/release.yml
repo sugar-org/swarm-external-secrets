@@ -9,8 +9,9 @@ on:
     branches:
       - main
   workflow_dispatch:
-
-
+    # NOTE/Migration: manual runs of this workflow no longer accept a `version` input.
+    # Previous versions of this workflow required a manually specified version for releases.
+    # Now, even when triggered manually, the release version is determined entirely by semantic-release.
 # Permissions required for releases and containers
 
 permissions:
