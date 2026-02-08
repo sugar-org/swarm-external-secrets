@@ -9,7 +9,7 @@ release:
 
 builds:
   - id: swarm-external-secrets
-    main: ./cmd/swarm-external-secrets
+    main: .
     binary: swarm-external-secrets
     env:
       - CGO_ENABLED=0
