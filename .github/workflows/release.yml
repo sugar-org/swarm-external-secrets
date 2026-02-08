@@ -101,9 +101,9 @@ jobs:
       # If no version bump is needed, no release will be created
       - name: Run semantic-release
         id: semantic
+        uses: cycjimmy/semantic-release-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
 
   
   # JOB 3: GoReleaser (build & publish)
