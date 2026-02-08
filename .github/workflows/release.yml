@@ -149,11 +149,11 @@ jobs:
 
       # Run GoReleaser
       # GoReleaser handles:
-      # 1 binaries
-      # 2 SBOMs
-      # 3 checksums
-      # 4 GitHub release
-      # 5 Docker image publishing
+      # 1. binaries
+      # 2. SBOMs
+      # 3. checksums
+      # 4. GitHub release
+      # 5. Docker image publishing
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
