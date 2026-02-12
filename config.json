@@ -33,6 +33,11 @@
       "settable": ["value"]
     },
     {
+      "name": "VAULT_TOKEN",
+      "description": "Vault authentication token",
+      "settable": ["value"]
+    },
+    {
       "name": "VAULT_ROLE_ID",
       "description": "Vault AppRole role ID", 
       "settable": ["value"]
@@ -80,11 +85,6 @@
     {
       "name": "OPENBAO_SECRET_ID",
       "description": "OpenBao AppRole secret ID",
-      "settable": ["value"]
-    },
-    {
-      "name": "OPENBAO_AUTH_METHOD",
-      "description": "OpenBao authentication method",
       "settable": ["value"]
     },
     {

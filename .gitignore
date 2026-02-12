@@ -43,4 +43,5 @@ go.work.sum
 ./plugin_installer/plugin_installer
 approle.token
 
-scripts/plugin/rootfs/*
+scripts/plugin/rootfs/*.DS_Store
+.DS_Store
