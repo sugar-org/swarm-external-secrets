@@ -1,4 +1,12 @@
-var i18n = (function () {
+/// <reference path="./hyperbook.types.js" />
+window.hyperbook = window.hyperbook || {};
+
+/**
+ * Internationalization module providing translation lookups.
+ * @type {HyperbookI18n}
+ * @memberof hyperbook
+ */
+hyperbook.i18n = (function () {
   
   // GENERATED
   const locales = {
@@ -78,11 +86,45 @@ var i18n = (function () {
     "typst-filename-exists": "File already exists",
     "typst-file-replace": "Replace existing file?",
     "typst-binary-files": "Binary Files",
-    "typst-no-binary-files": "No binary files"
+    "typst-no-binary-files": "No binary files",
+    "user-login-title": "Login",
+    "user-username": "Username",
+    "user-password": "Password",
+    "user-login": "Login",
+    "user-info-title": "User Info",
+    "user-status": "Status",
+    "user-saved": "Saved",
+    "user-saving": "Saving...",
+    "user-save-error": "Save Error",
+    "user-unsaved": "Unsaved changes",
+    "user-offline": "Offline",
+    "user-offline-queued": "Saved locally",
+    "user-save": "Save Now",
+    "user-logout": "Logout",
+    "user-login-required": "Username and password required",
+    "user-login-failed": "Login failed",
+    "user-logout-confirm": "Are you sure you want to logout?",
+    "user-readonly": "Read-Only Mode",
+    "user-impersonating": "Impersonating",
+    "user-exit-impersonation": "Exit Impersonation",
+    "consent-youtube-text": "Clicking the play button will load a YouTube video via YouTube-NoCookie. However, a connection will still be established and the necessary data will be transmitted.",
+    "consent-youtube-nocookie": "We use YouTube-NoCookie to protect your privacy.",
+    "consent-youtube-always": "Always allow YouTube videos",
+    "consent-youtube-accept": "Accept and play",
+    "consent-embed-text": "Content from an external website is to be loaded here.",
+    "consent-embed-personal-data": "The external website may collect personal data.",
+    "consent-embed-always": "Always allow content from {{domain}}",
+    "consent-embed-accept": "Load content"
 }
 ;
 
 
+  /**
+   * Get a translated string by key, with optional placeholder substitution.
+   * @param {string} key - The translation key.
+   * @param {Record<string, string>} [values] - Placeholder values to substitute.
+   * @returns {string} The translated string, or the key itself if not found.
+   */
   const get = (key, values) => {
     if (!locales[key]) {
       console.warn(
