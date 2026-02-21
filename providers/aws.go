@@ -22,8 +22,8 @@ type AWSProvider struct {
 // AWSConfig holds the configuration for the AWS Secrets Manager client
 type AWSConfig struct {
 	Region    string
-	AccessKey string
-	SecretKey string
+        accessKey string
+        secretKey string
 	Profile   string
 }
 
@@ -31,8 +31,8 @@ type AWSConfig struct {
 func (a *AWSProvider) Initialize(config map[string]string) error {
 	a.config = &AWSConfig{
 		Region:    getConfigOrDefault(config, "AWS_REGION", "us-east-1"),
-		AccessKey: config["AWS_ACCESS_KEY_ID"],
-		SecretKey: config["AWS_SECRET_ACCESS_KEY"],
+		accessKey: config["AWS_ACCESS_KEY_ID"],
+		secretKey: config["AWS_SECRET_ACCESS_KEY"],
 		Profile:   config["AWS_PROFILE"],
 	}
 
@@ -143,11 +143,11 @@ func (a *AWSProvider) loadAWSConfig() (aws.Config, error) {
 	}
 
 	// Override with explicit credentials if provided
-	if a.config.AccessKey != "" && a.config.SecretKey != "" {
+	if a.config.accessKey != "" && a.config.secretKey != "" {
 		cfg.Credentials = aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 			return aws.Credentials{
-				AccessKeyID:     a.config.AccessKey,
-				SecretAccessKey: a.config.SecretKey,
+				AccessKeyID:     a.config.accessKey,
+				SecretAccessKey: a.config.secretKey,
 			}, nil
 		})
 	}
