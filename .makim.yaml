@@ -34,6 +34,10 @@ groups:
       demo_rotation:
         help: Run demo rotation scenario
         run: ./scripts/demo-rotation.sh
+      
+      docs:
+        help: Build documentation
+        run:  python3 -m mkdocs build
 
       linter:
         help: Run linting tools
@@ -50,3 +54,4 @@ groups:
             - task: scripts.test
             - task: scripts.check_plugin_service
             - task: scripts.cleanup
+            - task: scripts.docs

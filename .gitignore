@@ -44,3 +44,6 @@ go.work.sum
 approle.token
 
 scripts/plugin/rootfs/*
+
+# MkDocs build output
+site/

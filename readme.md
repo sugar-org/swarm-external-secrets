@@ -17,7 +17,15 @@ We welcome students and contributors who are passionate about open-source, cloud
 
 ### Architecture 
 
-![Architecture](./docs/architecture.png)
+![Architecture](https://raw.githubusercontent.com/sugar-org/swarm-external-secrets/refs/heads/main/docs/architecture.png)
+
+
+## Documentation
+
+Please refer to the [docs](https://sugar-org.github.io/swarm-external-secrets/) for more information.
+
+## Supported Providers
+
 ## Features
 
 - **Multi-Provider Support**: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao
@@ -119,15 +127,6 @@ docker plugin set swarm-external-secrets:latest \
          openbao_field: "secret_key"
    ```
 
-## Documentation
-
-- **[Multi-Provider Guide](docs/MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers
-- **[Monitoring Guide](docs/MONITORING.md)**: System monitoring, metrics, and performance tracking
-- **[Original Vault Guide](docs/)**: HashiCorp Vault specific documentation
-- **[Debugging Docker Plugin](docs/DEBUG_PLUGIN.md)** : Guide to Debug the docker plugin
-
-## Supported Providers
-
 | Provider | Status | Authentication | Rotation |
 |----------|--------|---------------|----------|
 | HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
@@ -163,3 +162,5 @@ docker plugin set swarm-external-secrets:latest \
 ```
 
 ### License
+
+[BSD-3-Clause license](https://github.com/sugar-org/swarm-external-secrets/blob/main/LICENSE)
