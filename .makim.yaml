@@ -15,6 +15,10 @@ groups:
         help: Run unit/integration tests
         run: ./scripts/test.sh
 
+      docs:
+        help: Build documentation with MkDocs (strict mode)
+        run: python3 -m mkdocs build --strict
+
       run:
         help: Launch the application locally
         run: ./scripts/run.sh
@@ -48,5 +52,6 @@ groups:
           pre-run:
             - task: scripts.build
             - task: scripts.test
+            - task: scripts.docs
             - task: scripts.check_plugin_service
             - task: scripts.cleanup

@@ -176,10 +176,9 @@ sudo journalctl -u docker.service -f \
 
 ## Documentation
 
-- **[Multi-Provider Guide](docs/MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers
-- **[Monitoring Guide](docs/MONITORING.md)**: System monitoring, metrics, and performance tracking
-- **[Original Vault Guide](docs/)**: HashiCorp Vault specific documentation
-
+- **[Multi-Provider Guide](../MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers
+- **[Monitoring Guide](../MONITORING.md)**: System monitoring, metrics, and performance tracking
+- **[Original Vault Guide](../index.md)**: HashiCorp Vault specific documentation
 ## Supported Providers
 
 | Provider | Status | Authentication | Rotation |

@@ -43,4 +43,4 @@ go.work.sum
 ./plugin_installer/plugin_installer
 approle.token
 
-scripts/plugin/rootfs/*
+scripts/plugin/rootfs/*site/

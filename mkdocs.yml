@@ -1,0 +1,18 @@
+site_name: Swarm External Secrets
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Debug Plugin: DEBUG_PLUGIN.md
+  - Monitoring: MONITORING.md
+  - Multi Provider: MULTI_PROVIDER.md
+  - Rotation: ROTATION.md
+  - Book:
+      - Overview: book/index.md
+      - Monitoring: book/MONITORING.md
+      - Multi Provider: book/MULTI_PROVIDER.md
+      - Rotation: book/ROTATION.md
+  - Glossary:
+      - Hyperbook: glossary/hyperbook.md
