@@ -8,29 +8,17 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g., v1.0.0)'
-        required: true
-        type: string
 
 jobs:
-  # This job runs on every push and pull request to the main branch to verify the build.
   verify-build:
     name: Verify Plugin Build
     runs-on: ubuntu-latest
-    # This job runs on push and PR, but not on manual dispatch.
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Build the plugin image
         run: docker build -t swarm-external-secrets:temp .
-
       - name: Create plugin rootfs
         run: |
           mkdir -p ./plugin/rootfs
@@ -38,53 +26,65 @@ jobs:
           docker export temp-container | tar -x -C ./plugin/rootfs
           docker rm temp-container
           docker rmi swarm-external-secrets:temp
+      - run: cp config.json ./plugin/
+      - run: docker plugin create my-test-org/swarm-external-secrets:test ./plugin
+      - run: docker plugin inspect my-test-org/swarm-external-secrets:test
 
-      - name: Copy config.json
-        run: cp config.json ./plugin/
-
-      - name: Create the plugin for verification
-        run: docker plugin create my-test-org/swarm-external-secrets:test ./plugin
-
-      - name: Inspect the plugin to confirm it was created
-        run: docker plugin inspect my-test-org/swarm-external-secrets:test
-
-  # This job builds, pushes the plugin to Docker Hub, and creates a GitHub Release.
-  # It only runs when manually triggered via the "Run workflow" button.
-  release:
-    name: Create and Publish Release
+  semantic-release:
     runs-on: ubuntu-latest
-    # This job only runs on a manual 'workflow_dispatch' trigger.
-    if: github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write # Required to create a GitHub release
-      packages: write # Required to push packages to a registry
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Calculate Version
+        id: set-version
+        run: |
+          # For simplicity, use latest tag + commit count
+          VERSION=$(git describe --tags --abbrev=0)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  goreleaser:
+    needs: semantic-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Install Syft (SBOM generator)
+      - uses: anchore/sbom-action/download-syft@v0
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.semantic-release.outputs.version }}
 
-      - name: Log in to GitHub Container Registry
+  docker-plugin:
+    needs: [goreleaser, semantic-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push Plugin
+      - name: Build & Push Plugin
         env:
           PLUGIN_NAME: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
           DOCKERHUB_PLUGIN_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/swarm-external-secrets
-          PLUGIN_VERSION: ${{ github.event.inputs.version }}
+          PLUGIN_VERSION: ${{ needs.semantic-release.outputs.version }}
         run: |
-          # The build logic is based on your deploy.sh and build.sh scripts
           docker build -t swarm-external-secrets:temp .
           mkdir -p ./plugin/rootfs
           docker create --name temp-container swarm-external-secrets:temp
@@ -93,25 +93,14 @@ jobs:
           docker rmi swarm-external-secrets:temp
           cp config.json ./plugin/
 
-          # Create and push to GitHub Container Registry
+          # GitHub Container Registry
           docker plugin create ${{ env.PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }} ./plugin
           docker plugin push ${{ env.PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }}
-
           docker plugin create ${{ env.PLUGIN_NAME }}:latest ./plugin
           docker plugin push ${{ env.PLUGIN_NAME }}:latest
 
-          # Create and push to Docker Hub
+          # Docker Hub
           docker plugin create ${{ env.DOCKERHUB_PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }} ./plugin
           docker plugin push ${{ env.DOCKERHUB_PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }}
-
           docker plugin create ${{ env.DOCKERHUB_PLUGIN_NAME }}:latest ./plugin
           docker plugin push ${{ env.DOCKERHUB_PLUGIN_NAME }}:latest
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: Release ${{ github.event.inputs.version }}
-          body: "Official release for version ${{ github.event.inputs.version }}."
-          draft: false
-          prerelease: false
