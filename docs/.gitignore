@@ -1,3 +1,4 @@
 .hyperbook
 out
 public/archives/
+dist/

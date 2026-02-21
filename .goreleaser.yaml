@@ -1,0 +1,41 @@
+project_name: swarm-external-secrets
+version: 2
+builds:
+  - main: .
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    env:
+      - CGO_ENABLED=0
+archives:
+  - format: tar.gz
+    files:
+      - LICENSE
+      - readme.md
+
+checksum:
+  name_template: "checksums.txt"
+
+sboms:
+  - id: spdx
+    artifacts: archive
+    documents:
+      - "${artifact}.spdx.json"
+    cmd: syft
+    args: ["$artifact", "--output", "spdx-json=$document"]
+  - id: cyclonedx
+    artifacts: archive
+    documents:
+      - "${artifact}.cyclonedx.json"
+    cmd: syft
+    args: ["$artifact", "--output", "cyclonedx-json=$document"]
+
+release:
+  github:
+    owner: sugar-org
+    name: swarm-external-secrets
