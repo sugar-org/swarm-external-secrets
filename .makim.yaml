@@ -44,7 +44,6 @@ groups:
         run: ./scripts/linter.sh
 
   ci:
-    # Aggregate tasks useful for CI pipelines
     tasks:
       all:
         help: Run the same steps that CI executes
@@ -55,3 +54,5 @@ groups:
             - task: scripts.docs
             - task: scripts.check_plugin_service
             - task: scripts.cleanup
+ 
+ 
