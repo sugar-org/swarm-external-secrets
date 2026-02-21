@@ -1,5 +1,6 @@
 name: Build and Release Plugin
 
+
 on:
   push:
     branches:
@@ -8,29 +9,39 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g., v1.0.0)'
-        required: true
-        type: string
+    # NOTE/Migration: manual runs of this workflow no longer accept a `version` input.
+    # Previous versions of this workflow required a manually specified version for releases.
+    # Now, even when triggered manually, the release version is determined entirely by semantic-release.
+# Permissions required for releases and containers
+
+permissions:
+  contents: write   # create GitHub releases & tags
+  packages: write   # push images to GHCR
 
 jobs:
-  # This job runs on every push and pull request to the main branch to verify the build.
+  # JOB 1: Verify build (CI)
+  
   verify-build:
     name: Verify Plugin Build
     runs-on: ubuntu-latest
-    # This job runs on push and PR, but not on manual dispatch.
+
+    # Run only for push and PR events
     if: github.event_name == 'push' || github.event_name == 'pull_request'
+
     steps:
+      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Enable multi-platform Docker builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Build the Docker image used by the plugin
       - name: Build the plugin image
         run: docker build -t swarm-external-secrets:temp .
 
+      # Extract container filesystem as plugin rootfs
       - name: Create plugin rootfs
         run: |
           mkdir -p ./plugin/rootfs
@@ -39,32 +50,90 @@ jobs:
           docker rm temp-container
           docker rmi swarm-external-secrets:temp
 
+      # Copy plugin configuration
       - name: Copy config.json
         run: cp config.json ./plugin/
 
-      - name: Create the plugin for verification
+      # Create a temporary plugin to verify correctness
+      - name: Create plugin for verification
         run: docker plugin create my-test-org/swarm-external-secrets:test ./plugin
 
-      - name: Inspect the plugin to confirm it was created
+      # Inspect plugin to ensure it was created successfully
+      - name: Inspect plugin
         run: docker plugin inspect my-test-org/swarm-external-secrets:test
 
-  # This job builds, pushes the plugin to Docker Hub, and creates a GitHub Release.
-  # It only runs when manually triggered via the "Run workflow" button.
-  release:
-    name: Create and Publish Release
+  
+  # JOB 2: Semantic Release (versioning)
+
+  semantic-release:
+    name: Semantic Release
     runs-on: ubuntu-latest
-    # This job only runs on a manual 'workflow_dispatch' trigger.
+
+    # Run only when manually triggered
     if: github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write # Required to create a GitHub release
-      packages: write # Required to push packages to a registry
+
+    # Expose whether a new release was created
+    outputs:
+      released: ${{ steps.semantic.outputs.new_release_published }}
+
     steps:
+      # Full git history is required for semantic-release
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # Setup Node.js for semantic-release
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Install semantic-release and required plugins
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release \
+            @semantic-release/git \
+            @semantic-release/github \
+            @semantic-release/commit-analyzer \
+            @semantic-release/release-notes-generator
+
+      # Run semantic-release
+      # If no version bump is needed, no release will be created
+      - name: Run semantic-release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  
+  # JOB 3: GoReleaser (build & publish)
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+
+    # Run only if semantic-release actually created a release
+    needs: semantic-release
+    if: fromJSON(needs.semantic-release.outputs.released || 'false')
+
+    steps:
+      # Checkout code at the release tag
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Setup Go for building binaries
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      # Enable multi-platform Docker builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Login to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -72,46 +141,75 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Login to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Plugin
-        env:
-          PLUGIN_NAME: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
-          DOCKERHUB_PLUGIN_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/swarm-external-secrets
-          PLUGIN_VERSION: ${{ github.event.inputs.version }}
-        run: |
-          # The build logic is based on your deploy.sh and build.sh scripts
-          docker build -t swarm-external-secrets:temp .
-          mkdir -p ./plugin/rootfs
-          docker create --name temp-container swarm-external-secrets:temp
-          docker export temp-container | tar -x -C ./plugin/rootfs
-          docker rm temp-container
-          docker rmi swarm-external-secrets:temp
-          cp config.json ./plugin/
-
-          # Create and push to GitHub Container Registry
-          docker plugin create ${{ env.PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }} ./plugin
-          docker plugin push ${{ env.PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }}
-
-          docker plugin create ${{ env.PLUGIN_NAME }}:latest ./plugin
-          docker plugin push ${{ env.PLUGIN_NAME }}:latest
-
-          # Create and push to Docker Hub
-          docker plugin create ${{ env.DOCKERHUB_PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }} ./plugin
-          docker plugin push ${{ env.DOCKERHUB_PLUGIN_NAME }}:${{ env.PLUGIN_VERSION }}
-
-          docker plugin create ${{ env.DOCKERHUB_PLUGIN_NAME }}:latest ./plugin
-          docker plugin push ${{ env.DOCKERHUB_PLUGIN_NAME }}:latest
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      # Run GoReleaser
+      # GoReleaser handles:
+      # 1. binaries
+      # 2. SBOMs
+      # 3. checksums
+      # 4. GitHub release
+      # 5. Docker image publishing
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: Release ${{ github.event.inputs.version }}
-          body: "Official release for version ${{ github.event.inputs.version }}."
-          draft: false
-          prerelease: false
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+      # Build Docker image and extract rootfs for Docker plugin
+      # This restores the manual plugin rootfs build that GoReleaser does not handle.
+      - name: Build Docker plugin rootfs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Build a temporary image that will serve as the plugin root filesystem
+          PLUGIN_BUILD_IMAGE="plugin-build-image:latest"
+          docker build -t "${PLUGIN_BUILD_IMAGE}" .
+
+          # Create a container from the image and export its filesystem to ./rootfs
+          CONTAINER_ID="$(docker create "${PLUGIN_BUILD_IMAGE}")"
+          mkdir -p rootfs
+          docker export "${CONTAINER_ID}" | tar -x -C rootfs
+          docker rm "${CONTAINER_ID}"
+
+      # Create and push the Docker plugin to Docker Hub
+      # Docker Hub login is already performed earlier in this job.
+      - name: Create and push Docker plugin
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DOCKERHUB_USERNAME:-}" ]; then
+            echo "DOCKERHUB_USERNAME is not set; cannot publish Docker plugin."
+            exit 1
+          fi
+
+          # Ensure the rootfs directory exists from the previous step
+          if [ ! -d "./rootfs" ]; then
+            echo "rootfs directory not found; expected 'Build Docker plugin rootfs' to create it."
+            exit 1
+          fi
+
+          # Derive plugin name from the repository, e.g. username/reponame:latest
+          REPO_NAME="$(basename "${GITHUB_REPOSITORY}")"
+          PLUGIN_NAME="${DOCKERHUB_USERNAME}/${REPO_NAME}"
+          PLUGIN_TAG="latest"
+          PLUGIN_REF="${PLUGIN_NAME}:${PLUGIN_TAG}"
+
+          echo "Creating Docker plugin ${PLUGIN_REF}"
+          docker plugin create "${PLUGIN_REF}" .
+
+          echo "Pushing Docker plugin ${PLUGIN_REF}"
+          docker plugin push "${PLUGIN_REF}"
