@@ -1,14 +1,10 @@
----
-name : Vault Secret Rotation Feature
----
+# Secret Rotation
 
-## Vault Secret Rotation Feature
-
-This document describes the automatic secret rotation feature added to the vault-swarm-plugin.
+This document describes the automatic secret rotation feature of the Swarm External Secrets plugin.
 
 ## Overview
 
-The plugin now automatically monitors secrets in Vault and updates the corresponding Docker Swarm secrets and services when changes are detected. This ensures that applications always use the latest secret values without manual intervention.
+The plugin automatically monitors secrets in Vault and updates the corresponding Docker Swarm secrets and services when changes are detected. This ensures that applications always use the latest secret values without manual intervention.
 
 ## How It Works
 
@@ -25,15 +21,12 @@ The plugin now automatically monitors secrets in Vault and updates the correspon
 
 The following environment variables control the rotation behavior:
 
-- `VAULT_ENABLE_ROTATION`: Enable/disable automatic rotation (default: `true`)
-- `VAULT_ROTATION_INTERVAL`: How often to check for changes (default: `5m`)
+| Variable | Description | Default |
+|---|---|---|
+| `VAULT_ENABLE_ROTATION` | Enable/disable automatic rotation | `true` |
+| `VAULT_ROTATION_INTERVAL` | How often to check for changes | `5m` |
 
 ### Example Configuration
-
-```bash
-docker plugin install swarm-external-secrets:latest
-
-```
 
 ```bash
 # Enable rotation with 2-minute check interval
