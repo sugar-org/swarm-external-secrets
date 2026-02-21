@@ -394,10 +394,12 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	}
 
 	var existingSecret *swarm.Secret
+
 	for _, secret := range secrets {
-		if secret.Spec.Name == secretName {
-			existingSecret = &secret
-			break
+		if secret.Spec.Name == secretName || strings.HasPrefix(secret.Spec.Name, secretName+"-") {
+			if existingSecret == nil || secret.CreatedAt.After(existingSecret.CreatedAt) {
+				existingSecret = &secret
+			}
 		}
 	}
 
