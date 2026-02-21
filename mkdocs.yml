@@ -1,0 +1,6 @@
+site_name: Vault Swarm Plugin
+theme:
+  name: material
+
+nav:
+  - Home: index.md
