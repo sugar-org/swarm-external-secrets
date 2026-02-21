@@ -1,11 +1,11 @@
 {
-  "description": "Vault secrets plugin for Docker Swarm",
+  "description": "External secrets plugin for Docker Swarm",
   "documentation": "https://docs.docker.com/engine/extend/",
   "interface": {
     "types": ["docker.secretdriver/1.0","docker.secretprovider/1.0"],
     "socket": "plugin.sock"
   },
-  "entrypoint": ["./vault-secrets-plugin"],
+  "entrypoint": ["./swarm-external-secrets"],
   "workdir": "/root",
   "linux": {
     "capabilities": ["CAP_SYS_ADMIN"]
@@ -28,19 +28,19 @@
       "settable": ["value"]
     },
     {
-      "name": "VAULT_AUTH_METHOD", 
+      "name": "VAULT_AUTH_METHOD",
       "description": "Vault authentication method",
       "settable": ["value"]
     },
     {
       "name": "VAULT_ROLE_ID",
-      "description": "Vault AppRole role ID", 
+      "description": "Vault AppRole role ID",
       "settable": ["value"]
     },
     {
       "name": "VAULT_SECRET_ID",
       "description": "Vault AppRole secret ID",
-      "settable": ["value"] 
+      "settable": ["value"]
     },
     {
       "name": "VAULT_MOUNT_PATH",
@@ -163,12 +163,22 @@
       "settable": ["value"]
     },
     {
+      "name": "ENABLE_MONITORING",
+      "description": "Enable Monitoring secret rotation (true/false) default true",
+      "settable": ["value"]
+    },
+    {
+      "name": "MONITORING_PORT",
+      "description": "default 8080",
+      "settable": ["value"]
+    },
+    {
       "name": "uid",
       "description": "User ID to run the plugin as",
       "settable": ["value"]
     },
     {
-      "name": "gid", 
+      "name": "gid",
       "description": "Group ID to run the plugin as",
       "settable": ["value"]
     }

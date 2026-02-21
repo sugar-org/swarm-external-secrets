@@ -1,38 +1,39 @@
-name: GitHub Pages
+name: Documentation
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main # Set a branch name to trigger deployment
+    branches: [main]
   pull_request:
+    branches: [main]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 permissions: read-all
 
 jobs:
-  deploy:
-    runs-on: ubuntu-24.04 
-    permissions:
-      contents: write
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
+  gen-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
+    steps:
       - uses: actions/checkout@v4
 
-      - name: Build
-        run: |
-          cd docs
-          npx hyperbook build
-          cp -r .hyperbook ../
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          github_token: ${{ secrets.ACTION_TOKEN }}
-          publish_dir: ./.hyperbook/out
+          python-version: "3.11"
 
+      - name: Install MkDocs dependencies
+        run: pip install mkdocs-material
+
+      - name: Build documentation
+        run: mkdocs build
+
+      - name: Deploy to GitHub Pages
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
