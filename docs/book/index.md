@@ -1,6 +1,7 @@
 ---
 name: Getting Started
 ---
+
 ### Vault Swarm Plugin
 
 A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, and OpenBao.
@@ -23,7 +24,7 @@ The plugin now supports multiple secret providers. Configure with `SECRETS_PROVI
 # HashiCorp Vault (default)
 docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="vault"
 
-# AWS Secrets Manager  
+# AWS Secrets Manager
 docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="aws"
 
 # Azure Key Vault
@@ -43,6 +44,7 @@ Access the monitoring dashboard at `http://localhost:8080` (configurable port):
 - **Performance Tracking**: Response times, ticker health, uptime
 
 ### Monitor Configuration
+
 ```bash
 docker plugin set swarm-external-secrets:latest \
     ENABLE_MONITORING="true" \
@@ -52,65 +54,76 @@ docker plugin set swarm-external-secrets:latest \
 ## Installation
 
 1. Build and enable the plugin:
-   ```bash
-   ./build.sh
-   ```
+
+```bash
+./build.sh
+```
 
 2. Configure the plugin:
-   ```bash
-   docker plugin set swarm-external-secrets:latest \
-       VAULT_ADDR="https://your-vault-server:8200" \
-       VAULT_AUTH_METHOD="token" \
-       VAULT_TOKEN="your-vault-token" \
-       VAULT_ENABLE_ROTATION="true"
-   ```
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    VAULT_ADDR="https://your-vault-server:8200" \
+    VAULT_AUTH_METHOD="token" \
+    VAULT_TOKEN="your-vault-token" \
+    VAULT_ENABLE_ROTATION="true"
+```
 
 3. Use in docker-compose.yml:
 
-   **HashiCorp Vault:**
-   ```yaml
-   secrets:
-     mysql_password:
-       driver: swarm-external-secrets:latest
-       labels:
-         vault_path: "database/mysql"
-         vault_field: "password"
-   ```
+**HashiCorp Vault:**
 
-   **AWS Secrets Manager:**
-   ```yaml
-   secrets:
-     api_key:
-       driver: swarm-external-secrets:latest
-       labels:
-         aws_secret_name: "prod/api/key"
-         aws_field: "api_key"
-   ```
+```yaml
+secrets:
+  mysql_password:
+    driver: swarm-external-secrets:latest
+    labels:
+      vault_path: "database/mysql"
+      vault_field: "password"
+```
 
-   **Azure Key Vault:**
-   ```yaml
-   secrets:
-     database_connection:
-       driver: swarm-external-secrets:latest
-       labels:
-         azure_secret_name: "database-connection-string"
-   ```
+**AWS Secrets Manager:**
 
-   **OpenBao:**
-   ```yaml
-   secrets:
-     app_secret:
-       driver: swarm-external-secrets:latest
-       labels:
-         openbao_path: "app/config"
-         openbao_field: "secret_key"
-   ```
+```yaml
+secrets:
+  api_key:
+    driver: swarm-external-secrets:latest
+    labels:
+      aws_secret_name: "prod/api/key"
+      aws_field: "api_key"
+```
+
+**Azure Key Vault:**
+
+```yaml
+secrets:
+  database_connection:
+    driver: swarm-external-secrets:latest
+    labels:
+      azure_secret_name: "database-connection-string"
+```
+
+**OpenBao:**
+
+```yaml
+secrets:
+  app_secret:
+    driver: swarm-external-secrets:latest
+    labels:
+      openbao_path: "app/config"
+      openbao_field: "secret_key"
+```
+
+---
+
 start the server
+
 ```bash
 vault server -dev
 ```
 
 create a vault role
+
 ```bash
 vault write auth/approle/role/my-role \
     token_policies="default,web-app" \
@@ -118,44 +131,50 @@ vault write auth/approle/role/my-role \
     token_max_ttl=4h \
     secret_id_ttl=24h \
     secret_id_num_uses=10
-
 ```
 
-retrieve the role id 
-```
+retrieve the role id
+
+```bash
 vault read auth/approle/role/my-role/role-id
 ```
-(or) 
+
+(or)
 
 for automation
+
 ```bash
 vault read -format=json auth/approle/role/my-role/role-id \
   | jq -r .data.role_id
-
 ```
+
 get the secret id
+
 ```bash
 vault write -f auth/approle/role/my-role/secret-id
-
 ```
-login with approle 
+
+login with approle
+
 ```bash
 vault write auth/approle/login \
-    role_id="192e9220-f35c-c2e9-2931-464696e0ff24" \
-    secret_id="4e46a226-fdd5-5ed1-f7bb-7b92a0013cad"
+    role_id="ROLE_ID_HERE" \
+    secret_id="SECRET_ID_HERE"
 ```
 
-write and attach policy for the approle 
+write and attach policy for the approle
 
 ```bash
 vault policy write db-policy ./db-policy.hcl
 ```
+
 ```bash
 vault write auth/approle/role/my-role \
-    token_policies="db-policy" 
+    token_policies="db-policy"
 ```
 
-set and get the kv secrets 
+set and get the kv secrets
+
 ```bash
 vault kv put secret/database/mysql \
     root_password=admin \
@@ -163,35 +182,37 @@ vault kv put secret/database/mysql \
 ```
 
 ```bash
-vault kv get secret/database/mysql 
+vault kv get secret/database/mysql
 ```
 
 ---
-debug the plugin 
+
+debug the plugin
 
 ```bash
-sudo journalctl -u docker.service -f \
-  | grep plugin_id
+sudo journalctl -u docker.service -f | grep plugin_id
 ```
 
 ## Documentation
 
-- **[Multi-Provider Guide](../MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers
-- **[Monitoring Guide](../MONITORING.md)**: System monitoring, metrics, and performance tracking
-- **[Original Vault Guide](../index.md)**: HashiCorp Vault specific documentation
+- **[Multi-Provider Guide](MULTI_PROVIDER.md)**: Complete configuration guide for all supported providers
+- **[Monitoring Guide](MONITORING.md)**: System monitoring, metrics, and performance tracking
+- **[Rotation Guide](ROTATION.md)**
+
 ## Supported Providers
 
 | Provider | Status | Authentication | Rotation |
 |----------|--------|---------------|----------|
 | HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
 | AWS Secrets Manager | ✅ Stable | IAM, Access Keys | ✅ |
-| Azure Key Vault | ✅ Stable | Service Principal, Access Token | ✅ |
+| Azure Key Vault | ✅ Stable | Service Principal | ✅ |
 | OpenBao | ✅ Stable | Token, AppRole | ✅ |
 | GCP Secret Manager | 🚧 Placeholder | - | - |
 
 ## Quick Start Examples
 
 ### HashiCorp Vault
+
 ```bash
 docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="vault" \
@@ -200,6 +221,7 @@ docker plugin set swarm-external-secrets:latest \
 ```
 
 ### AWS Secrets Manager
+
 ```bash
 docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="aws" \
