@@ -1,0 +1,7 @@
+site_name: Swarm External Secrets
+site_description: Docker Swarm external secrets plugin
+theme:
+  name: material
+
+nav:
+  - Home: index.md
