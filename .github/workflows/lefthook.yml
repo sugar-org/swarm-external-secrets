@@ -19,7 +19,7 @@ jobs:
       - name: Install lefthook and linters
         run: |
           go install github.com/evilmartians/lefthook@latest
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.10.1
           go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: Run lefthook pre-commit hooks
