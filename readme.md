@@ -9,9 +9,7 @@ A Docker Swarm secrets plugin that integrates with multiple secret management pr
 #### 🎓 Google Summer of Code 2026
 swarm-external-secrets is participating in Google Summer of Code 2026 incubated under the  organization [OpenScienceLabs](http://opensciencelabs.org/)!
 
-We welcome students and contributors who are passionate about open-source, cloud security, and Docker infrastructure to apply and work on exciting, high-impact projects with us.
-
-[Project Ideas Wiki](https://github.com/sugar-org/swarm-external-secrets/wiki/Project-Ideas)
+For more information, check out [GSoC Contribution Guidelines](./CONTRIBUTING.md#google-summer-of-code-2026)
 
 ---
 
