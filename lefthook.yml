@@ -42,6 +42,24 @@ pre-commit:
       glob: "**/*.go"
       run: gocyclo -over 17 .
       
+    no-binaries:
+      help: Fail if any binary files are staged for commit (excludes images/icons)
+      glob: "**/*"
+      exclude: "\\.(png|jpg|jpeg|gif|ico|svg|webp)$"
+      run: |
+        binaries=0
+        for file in {staged_files}; do
+          [ -f "$file" ] || continue
+          [ -s "$file" ] || continue
+          if grep -qI . "$file"; then
+             continue
+          else
+             echo "✖  binary file detected: $file"
+             binaries=$((binaries + 1))
+          fi
+        done
+        [ "$binaries" -eq 0 ]
+
     eof-newline:
       help: Fail when a staged file does not end with a POSIX newline
       # pick the extensions you care about; here are the most common text types

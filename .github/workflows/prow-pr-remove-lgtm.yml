@@ -1,11 +1,20 @@
 name: Run Jobs on PR
 on: pull_request
 
+permissions: read-all
+
 jobs:
   execute:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
-      - uses: jpmcb/prow-github-actions@v2.0.0
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: jpmcb/prow-github-actions@v2
         with:
           jobs: lgtm
           github-token: '${{ secrets.GITHUB_TOKEN }}'
