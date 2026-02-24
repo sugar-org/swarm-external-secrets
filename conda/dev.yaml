@@ -9,3 +9,5 @@ dependencies:
     - makim
     - compose-go
     - bash
+    - mkdocs
+    - mkdocs-material

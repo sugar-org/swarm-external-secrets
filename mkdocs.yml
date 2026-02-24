@@ -1,0 +1,65 @@
+site_name: Swarm External Secrets
+site_url: https://sugar-org.github.io/swarm-external-secrets
+repo_url: https://github.com/sugar-org/swarm-external-secrets
+docs_dir: ./docs
+site_dir: ./site
+
+theme:
+  name: material
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - header.autohide
+    - navigation.indexes
+    - navigation.instant
+    - search.highlight
+    - search.share
+    - search.suggest
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Swarm External Secrets: readme.md
+  - Multi-Provider: multi-provider.md
+  - Monitoring: monitoring.md
+  - Rotation: rotation.md
+  - Debugging: debugging.md
+
+copyright: "Copyright &copy; 2025, Swarm External Secrets contributors"
