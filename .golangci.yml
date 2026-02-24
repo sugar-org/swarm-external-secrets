@@ -1,0 +1,24 @@
+# golangci-lint configuration file
+# See https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+linters:
+  enable:
+    - errcheck      # ensure errors are not silently dropped
+    - staticcheck   # comprehensive static analysis (supersedes megacheck)
+    - ineffassign   # detect useless variable assignments
+    - misspell      # typos in comments and strings
+    - gocyclo       # detect functions with high cyclomatic complexity
+
+formatters:
+  enable:
+    - gci           # enforce import group ordering (std / ext / local)
+    - gofumpt       # stricter gofmt superset
+    - goimports     
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - localmodule

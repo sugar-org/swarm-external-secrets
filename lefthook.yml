@@ -19,10 +19,6 @@ pre-commit:
     go-vet:
       glob: "**/*.go"
       run: go vet ./...
-    # Ensure imports are correctly formatted.
-    go-imports:
-      glob: "**/*.go"
-      run: goimports -w {files} && git add {files}
 
     # go-test:
     #   glob: "*.go"
@@ -36,12 +32,6 @@ pre-commit:
       glob: "**/*.go"
       run: gosec ./...
 
-    # Check for cyclomatic complexity. You'll need to install it:
-    # `go install github.com/fzipp/gocyclo/cmd/gocyclo@latest`
-    gocyclo:
-      glob: "**/*.go"
-      run: gocyclo -over 17 .
-      
     eof-newline:
       help: Fail when a staged file does not end with a POSIX newline
       # pick the extensions you care about; here are the most common text types

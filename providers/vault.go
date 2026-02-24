@@ -27,7 +27,7 @@ type SecretsConfig struct {
 	AuthMethod string
 	CACert     string
 	ClientCert string
-        clientKey string 
+	clientKey  string
 }
 
 // Initialize sets up the Vault provider with the given configuration

@@ -22,8 +22,8 @@ type AWSProvider struct {
 // AWSConfig holds the configuration for the AWS Secrets Manager client
 type AWSConfig struct {
 	Region    string
-        accessKey string
-        secretKey string
+	accessKey string
+	secretKey string
 	Profile   string
 }
 
