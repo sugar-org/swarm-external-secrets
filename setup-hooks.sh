@@ -31,7 +31,7 @@ success "Go is installed."
 
 # --- 2. Install required Go tools ---
 info "Installing required Go development tools..."
-go install github.com/evilmartians/lefthook@latest
+go install github.com/evilmartians/lefthook/v2/cmd/lefthook@latest
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 go install github.com/securego/gosec/v2/cmd/gosec@latest
 go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
