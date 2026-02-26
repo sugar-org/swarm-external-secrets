@@ -457,12 +457,16 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	var updatedServices []string
 
 	for _, service := range services {
+		containerSpec := service.Spec.TaskTemplate.ContainerSpec
+		if containerSpec == nil || len(containerSpec.Secrets) == 0 {
+			continue
+		}
 		// Check if service uses this secret and update the reference
 		needsUpdate := false
-		updatedSecrets := make([]*swarm.SecretReference, len(service.Spec.TaskTemplate.ContainerSpec.Secrets))
+		updatedSecrets := make([]*swarm.SecretReference, len(containerSpec.Secrets))
 
-		for i, secretRef := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if secretRef.SecretName == oldSecretName {
+		for i, secretRef := range containerSpec.Secrets {
+			if strings.HasPrefix(secretRef.SecretName, oldSecretName) {
 				// Update to use the new secret name and ID
 				updatedSecrets[i] = &swarm.SecretReference{
 					File:       secretRef.File,
