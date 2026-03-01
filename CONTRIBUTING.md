@@ -250,7 +250,21 @@ If you are a student looking to apply, please review the [Project Ideas Wiki](ht
 
 Feel free to ping us if you need help or use the `#gsoc` channel on [discord](https://discord.gg/GaYjnbtqQ).
 
+### Restrictions on Generative AI Usage
 
+GSoC is a program centered on mentorship, learning, and authentic engagement with the open-source community. To maintain the integrity of the program and respect the time of our mentors, we have established the following guidelines regarding the use of Generative AI (LLMs like ChatGPT, Claude, GitHub Copilot, etc.):
+
+* **Authentic Contribution:** We expect all contributions , from proposal writing to final code to be the result of your own learning and critical thinking. While AI can be a supportive tool for debugging or boilerplate, it must not be the "author" of your work.
+* **Zero-Value Submissions:** Simply feeding a prompt to an AI and posting the output (whether as a code change, documentation update, or issue comment) is considered low-value and will be rejected. Contributions must include value added through your own technical competency and understanding of the project context.
+* **Human-in-the-Loop:** If you use generative AI as an aid, you must fully understand every change you submit. You are expected to explain the rationale behind your technical decisions during code reviews. If you cannot explain why a specific approach was taken, the contribution will not be accepted.
+* **Prohibition of Automated Agents:** The use of automated AI agents, bots, or scripts to submit issues or pull requests is strictly forbidden. Any account found using such tools to interact with the repository may be blocked and reported to the GSoC program administrators.
+* **Disclosure:** If AI was used significantly to assist in a contribution (e.g., to refactor a complex function), please disclose this in your pull request description. Transparency helps mentors provide better guidance.
+* **Reviewer Capacity:** Our mentors have limited bandwidth. To protect their capacity for human-to-human mentorship, we reserve the right to rigorously reject contributions that appear to be high-volume, AI-generated, or lack human verification.
+
+We also prefer new contributors to follow these 
+- [Matplotlib : Restrictions on Generative AI Usage](https://matplotlib.org/devdocs/devel/contribute.html#restrictions-on-generative-ai-usage)
+- [Scipy : A policy on generative AI assisted contributions](https://discuss.scientific-python.org/t/a-policy-on-generative-ai-assisted-contributions/1702)
+- [kubernetes/steering : Guidance on Generative AI usage in Kubernetes Github Orgs](https://github.com/kubernetes/steering/issues/291)
 ---
 
 ## Getting Help

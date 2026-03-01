@@ -33,8 +33,8 @@ type SecretsConfig struct {
 // Initialize sets up the Vault provider with the given configuration
 func (v *VaultProvider) Initialize(config map[string]string) error {
 	v.config = &SecretsConfig{
-		Address:    getConfigOrDefault(config, "VAULT_ADDR", "http://152.53.244.80:8200"),
-		Token:      getConfigOrDefault(config, "VAULT_TOKEN", "hvs.tD053xbJ1C5lo2EbtZnn2JU8"),
+		Address:    getConfigOrDefault(config, "VAULT_ADDR", ""),
+		Token:      getConfigOrDefault(config, "VAULT_TOKEN", ""),
 		MountPath:  getConfigOrDefault(config, "VAULT_MOUNT_PATH", "secret"),
 		RoleID:     config["VAULT_ROLE_ID"],
 		SecretID:   config["VAULT_SECRET_ID"],

@@ -45,10 +45,10 @@ groups:
         
       smoke-test-vault:
         help: Run Vault smoke test to validate plugin end-to-end
-        run: bash ./scripts/smoke-test.sh vault
+        run: bash ./scripts/tests/smoke-test-vault.sh
       smoke-test-openbao:
         help: Run OpenBao smoke test to validate plugin end-to-end
-        run: bash ./scripts/smoke-test.sh openbao
+        run: bash ./scripts/tests/smoke-test-openbao.sh
   ci:
     # Aggregate tasks useful for CI pipelines
     tasks:
