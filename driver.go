@@ -154,18 +154,21 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		d.trackSecret(req, value)
 	}
 
-	// Determine if secret should be reusable
-	doNotReuse := d.shouldNotReuse(req)
+	// Determine whether the caller should request a freshly issued secret.
+	createSecret := d.shouldCreateSecret(req)
 
 	log.Printf("Successfully returning secret value")
 	return secrets.Response{
-		Value:      value,
-		DoNotReuse: doNotReuse,
+		Value: value,
+		// Docker's plugin API uses DoNotReuse. We map from the clearer
+		// local "create secret" decision to preserve wire compatibility.
+		DoNotReuse: createSecret,
 	}
 }
 
-// shouldNotReuse determines if the secret should not be reused
-func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
+// shouldCreateSecret determines whether a new secret should be issued
+// for this request instead of reusing a previously returned value.
+func (d *SecretsDriver) shouldCreateSecret(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
 		return strings.ToLower(reuse) == "false"
