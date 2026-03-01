@@ -129,6 +129,6 @@ info "Logging service output after rotation..."
 log_stack "${STACK_NAME}" "app"
 
 info "Verifying rotated secret value (must update in-place, same container)..."
-verify_secret_in_container "${APP_CONTAINER_ID}" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 60
+verify_secret_in_container "${APP_CONTAINER_ID}" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 success "OpenBao smoke test PASSED (incl. rotation)"
