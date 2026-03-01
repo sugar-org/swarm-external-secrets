@@ -19,30 +19,48 @@ SECRET_VALUE="awssm-smoke-pass-v1"
 SECRET_VALUE_ROTATED="awssm-smoke-pass-v2"
 COMPOSE_FILE="$(dirname "$0")/smoke-awssm-compose.yml"
 
+# Helper to run awslocal either on host or inside container
+awslocal_cmd() {
+    if [ -n "${LOCALSTACK_CONTAINER}" ]; then
+        docker exec "${LOCALSTACK_CONTAINER}" awslocal "$@"
+    else
+        AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+        AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
+        AWS_DEFAULT_REGION="${AWS_REGION}" \
+        awslocal "$@"
+    fi
+}
+
 # Cleanup trap
 cleanup() {
     echo -e "${RED}Running AWS Secrets Manager smoke test cleanup...${DEF}"
     remove_stack "${STACK_NAME}"
     docker secret rm "${SECRET_NAME}" 2>/dev/null || true
-    docker stop "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
-    docker rm   "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
+    if [ -n "${LOCALSTACK_CONTAINER}" ]; then
+        docker stop "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
+        docker rm   "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
+    fi
     remove_plugin
 }
 trap cleanup EXIT
 
-# Start LocalStack container
-info "Starting LocalStack container..."
-docker run -d \
-    --name "${LOCALSTACK_CONTAINER}" \
-    -p 4566:4566 \
-    -e SERVICES=secretsmanager \
-    localstack/localstack:latest
+# Start LocalStack container (skip if already running, e.g. in CI)
+if curl -s "${LOCALSTACK_ENDPOINT}/_localstack/health" >/dev/null 2>&1; then
+    info "LocalStack already running, skipping container start."
+    LOCALSTACK_CONTAINER=""
+else
+    info "Starting LocalStack container..."
+    docker run -d \
+        --name "${LOCALSTACK_CONTAINER}" \
+        -p 4566:4566 \
+        -e SERVICES=secretsmanager \
+        localstack/localstack:latest
+fi
 
 # Wait for LocalStack to be ready
 info "Waiting for LocalStack to be ready..."
 elapsed=0
-until docker exec "${LOCALSTACK_CONTAINER}" \
-    awslocal secretsmanager list-secrets --region "${AWS_REGION}" >/dev/null 2>&1; do
+until curl -s "${LOCALSTACK_ENDPOINT}/_localstack/health" | grep -q "available" 2>/dev/null; do
     sleep 2
     elapsed=$((elapsed + 2))
     [ "${elapsed}" -lt 60 ] || die "LocalStack did not become ready within 60s."
@@ -51,8 +69,7 @@ success "LocalStack is ready."
 
 # Write test secret
 info "Writing test secret to AWS Secrets Manager..."
-docker exec "${LOCALSTACK_CONTAINER}" \
-    awslocal secretsmanager create-secret \
+awslocal_cmd secretsmanager create-secret \
     --region "${AWS_REGION}" \
     --name "${SECRET_PATH}" \
     --secret-string "{\"${SECRET_FIELD}\":\"${SECRET_VALUE}\"}"
@@ -92,8 +109,7 @@ verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
 # Rotate the password and verify
 info "Rotating secret in AWS Secrets Manager..."
-docker exec "${LOCALSTACK_CONTAINER}" \
-    awslocal secretsmanager put-secret-value \
+awslocal_cmd secretsmanager put-secret-value \
     --region "${AWS_REGION}" \
     --secret-id "${SECRET_PATH}" \
     --secret-string "{\"${SECRET_FIELD}\":\"${SECRET_VALUE_ROTATED}\"}"
