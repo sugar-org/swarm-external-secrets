@@ -86,6 +86,29 @@ docker plugin set swarm-external-secrets:latest \
        VAULT_ENABLE_ROTATION="true"
    ```
 
+2.1 Enable shared plugin logs (required once per host):
+   ```bash
+   sudo mkdir -p /run/swarm-external-secrets
+   sudo chmod 755 /run/swarm-external-secrets
+   ```
+
+   Optional plugin log settings:
+   ```bash
+   docker plugin set swarm-external-secrets:latest \
+       PLUGIN_LOG_PATH="/run/swarm-external-secrets/plugin.log" \
+       PLUGIN_LOG_MAX_SIZE_MB="10"
+   ```
+
+   Optional compose sidecar to expose plugin logs via `docker compose logs`:
+   ```yaml
+   services:
+     secrets-logger:
+       image: alpine:3.20
+       command: sh -c "touch /run/swarm-external-secrets/plugin.log && tail -F /run/swarm-external-secrets/plugin.log"
+       volumes:
+         - /run/swarm-external-secrets:/run/swarm-external-secrets:ro
+   ```
+
 3. Use in docker-compose.yml:
 
    **HashiCorp Vault:**

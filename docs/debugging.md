@@ -71,6 +71,15 @@ vault kv get secret/database/mysql
 
 ## Debug the Plugin
 
+Preferred method (works with docker compose sidecar logger):
+
+```bash
+sudo mkdir -p /run/swarm-external-secrets
+sudo tail -F /run/swarm-external-secrets/plugin.log
+```
+
+Fallback method (daemon logs):
+
 ```bash
 sudo journalctl -u docker.service -f \
   | grep plugin_id

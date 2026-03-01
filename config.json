@@ -19,6 +19,12 @@
       "destination": "/var/run/docker.sock",
       "type": "bind",
       "options": ["bind", "rbind"]
+    },
+    {
+      "source": "/run/swarm-external-secrets",
+      "destination": "/run/swarm-external-secrets",
+      "type": "bind",
+      "options": ["rbind", "rshared"]
     }
   ],
   "env": [
@@ -175,6 +181,16 @@
     {
       "name": "MONITORING_PORT",
       "description": "default 8080",
+      "settable": ["value"]
+    },
+    {
+      "name": "PLUGIN_LOG_PATH",
+      "description": "Host-mounted file path for plugin logs",
+      "settable": ["value"]
+    },
+    {
+      "name": "PLUGIN_LOG_MAX_SIZE_MB",
+      "description": "Max size for plugin.log before rotating to plugin.log.1 (default 10)",
       "settable": ["value"]
     },
     {
