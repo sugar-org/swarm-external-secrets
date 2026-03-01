@@ -153,6 +153,20 @@ verify_secret() {
     die "Secret '${secret_name}' did not match expected value within ${timeout}s."
 }
 
+# Get the currently running container ID for a swarm service
+get_running_container_id() {
+    local stack_name="$1"
+    local service_suffix="$2"
+    local task_id
+    task_id=$(docker service ps "${stack_name}_${service_suffix}" \
+        --filter "desired-state=running" \
+        --format '{{.ID}}' 2>/dev/null | head -1)
+    if [ -n "${task_id}" ]; then
+        docker inspect "${task_id}" \
+            --format '{{.Status.ContainerStatus.ContainerID}}' 2>/dev/null || true
+    fi
+}
+
 # Remove stack cleanly
 remove_stack() {
     local stack_name="$1"
