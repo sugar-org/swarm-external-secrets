@@ -105,6 +105,11 @@ log_stack "${STACK_NAME}" "app"
 info "Verifying secret value matches expected password..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
+# Capture container ID now, before rotation, to verify in-place update
+info "Capturing running container ID before rotation..."
+APP_CONTAINER_ID=$(get_running_container_id "${STACK_NAME}" "app")
+success "Container to watch: ${APP_CONTAINER_ID:0:12}"
+
 # Rotate the password and verify
 info "Rotating secret in OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
@@ -117,10 +122,13 @@ success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 info "Waiting for plugin rotation interval (15s)..."
 sleep 15
 
+info "Waiting for new container to start after rotation (10s)..."
+sleep 10
+
 info "Logging service output after rotation..."
 log_stack "${STACK_NAME}" "app"
 
-info "Verifying rotated secret value..."
-verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 60
+info "Verifying rotated secret value (must update in-place, same container)..."
+verify_secret_in_container "${APP_CONTAINER_ID}" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 60
 
 success "OpenBao smoke test PASSED (incl. rotation)"
