@@ -21,19 +21,21 @@ type AWSProvider struct {
 
 // AWSConfig holds the configuration for the AWS Secrets Manager client
 type AWSConfig struct {
-	Region    string
-	AccessKey string
-	SecretKey string
-	Profile   string
+	Region      string
+	AccessKey   string
+	SecretKey   string
+	Profile     string
+	EndpointURL string
 }
 
 // Initialize sets up the AWS provider with the given configuration
 func (a *AWSProvider) Initialize(config map[string]string) error {
 	a.config = &AWSConfig{
-		Region:    getConfigOrDefault(config, "AWS_REGION", "us-east-1"),
-		AccessKey: config["AWS_ACCESS_KEY_ID"],
-		SecretKey: config["AWS_SECRET_ACCESS_KEY"],
-		Profile:   config["AWS_PROFILE"],
+		Region:      getConfigOrDefault(config, "AWS_REGION", "us-east-1"),
+		AccessKey:   config["AWS_ACCESS_KEY_ID"],
+		SecretKey:   config["AWS_SECRET_ACCESS_KEY"],
+		Profile:     config["AWS_PROFILE"],
+		EndpointURL: config["AWS_ENDPOINT_URL"],
 	}
 
 	// Load AWS configuration
@@ -43,7 +45,13 @@ func (a *AWSProvider) Initialize(config map[string]string) error {
 	}
 
 	// Create Secrets Manager client
-	a.client = secretsmanager.NewFromConfig(cfg)
+	if a.config.EndpointURL != "" {
+		a.client = secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
+			o.BaseEndpoint = aws.String(a.config.EndpointURL)
+		})
+	} else {
+		a.client = secretsmanager.NewFromConfig(cfg)
+	}
 
 	log.Printf("Successfully initialized AWS Secrets Manager provider for region: %s", a.config.Region)
 	return nil

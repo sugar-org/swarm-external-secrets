@@ -128,6 +128,11 @@
       "settable": ["value"]
     },
     {
+      "name": "AWS_ENDPOINT_URL",
+      "description": "AWS endpoint URL (e.g. for LocalStack)",
+      "settable": ["value"]
+    },
+    {
       "name": "AZURE_VAULT_URL",
       "description": "Azure Key Vault URL",
       "settable": ["value"]
