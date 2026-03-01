@@ -23,4 +23,4 @@ jobs:
         run: docker swarm init
 
       - name: Run smoke test for ${{ matrix.provider }}
-        run: bash scripts/smoke-test-${{ matrix.provider }}.sh
+        run: bash scripts/tests/smoke-test-${{ matrix.provider }}.sh

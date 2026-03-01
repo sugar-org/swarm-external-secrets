@@ -1,61 +1,47 @@
 #!/usr/bin/env bash
-
 set -ex  # Exit on any error
 cd -- "$(dirname -- "$0")" || exit 1
-
 # Vault Secret Rotation Demo Script
 # This script demonstrates the automatic secret rotation feature
-
 set -e
-
 RED='\033[0;31m'
 GRN='\033[0;32m'
 BLU='\033[0;34m'
 DEF='\033[0m'
-
 echo -e "${BLU}=== Vault Secret Rotation Demo ===${DEF}"
 echo
-
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
-
 # Check prerequisites
 echo -e "${BLU}Checking prerequisites...${DEF}"
 if ! command_exists docker; then
     echo -e "${RED}Error: Docker is not installed${DEF}"
     exit 1
 fi
-
 if ! command_exists vault; then
     echo -e "${RED}Warning: Vault CLI is not installed. Some demo steps may be skipped.${DEF}"
 fi
-
 echo -e "${GRN}Prerequisites check passed${DEF}"
 echo
-
 # Build the plugin
 echo -e "${BLU}Building the plugin with rotation feature...${DEF}"
 ./build.sh
-
 echo -e "${BLU}Setting up plugin configuration with rotation enabled...${DEF}"
-docker plugin set sanjay7178/swarm-external-secrets:latest \
-    VAULT_ADDR="https://152.53.244.80:8200" \
+docker plugin set swarm-external-secrets:latest \
+    VAULT_ADDR="https://your-vault-address:8200" \
     VAULT_AUTH_METHOD="token" \
-    VAULT_TOKEN="hvs.tD053xbJ1C5lo2EbtZnn2JU8" \
+    VAULT_TOKEN="your-vault-token" \
     VAULT_MOUNT_PATH="secret" \
     VAULT_ENABLE_ROTATION="true" \
     VAULT_ROTATION_INTERVAL="30s" || echo "Plugin configuration may already be set"
-
 echo -e "${GRN}Plugin configured with 30-second rotation interval${DEF}"
 echo
-
 # Create a simple demo stack
 echo -e "${BLU}Creating demo docker-compose.yml with automatic rotation...${DEF}"
 cat > demo-compose.yml << 'EOF'
 version: '3.8'
-
 services:
   demo-app:
     image: busybox:latest
@@ -75,22 +61,18 @@ services:
         condition: any
     networks:
       - demo-network
-
 secrets:
   demo_secret:
-    driver: sanjay7178/swarm-external-secrets:latest
+    driver: swarm-external-secrets:latest
     labels:
       vault_path: "demo/app"
       vault_field: "password"
-
 networks:
   demo-network:
     driver: overlay
 EOF
-
 echo -e "${GRN}Demo compose file created${DEF}"
 echo
-
 # Display the rotation configuration
 echo -e "${BLU}Current rotation configuration:${DEF}"
 echo "- Rotation enabled: true"
@@ -98,7 +80,6 @@ echo "- Check interval: 30 seconds"
 echo "- Vault path: demo/app"
 echo "- Secret field: password"
 echo
-
 echo -e "${BLU}=== Demo Instructions ===${DEF}"
 echo
 echo "1. Deploy the demo stack:"
@@ -120,7 +101,6 @@ echo "5. Clean up when done:"
 echo "   docker stack rm demo"
 echo "   rm demo-compose.yml"
 echo
-
 echo -e "${BLU}=== Rotation Feature Summary ===${DEF}"
 echo
 echo "The implemented rotation feature provides:"
