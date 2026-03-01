@@ -121,16 +121,10 @@ docker exec "${VAULT_CONTAINER}" \
     "${SECRET_FIELD}=${SECRET_VALUE_ROTATED}"
 success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 
-info "Waiting for plugin rotation interval (15s)..."
-sleep 15
-
-info "Waiting for new container to start after rotation (10s)..."
-sleep 10
-
 info "Logging service output after rotation..."
 log_stack "${STACK_NAME}" "app"
 
-info "Verifying rotated secret value (must update in-place, same container)..."
+info "Verifying rotated secret value (waiting for in-place update, up to 180s)..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 success "Vault smoke test PASSED (incl. rotation)"
