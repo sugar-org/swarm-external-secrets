@@ -153,57 +153,6 @@ verify_secret() {
     die "Secret '${secret_name}' did not match expected value within ${timeout}s."
 }
 
-# Get the currently running container ID for a swarm service
-get_running_container_id() {
-    local stack_name="$1"
-    local service_suffix="$2"
-    local task_id
-    task_id=$(docker service ps "${stack_name}_${service_suffix}" \
-        --filter "desired-state=running" \
-        --format '{{.ID}}' 2>/dev/null | head -1)
-    if [ -n "${task_id}" ]; then
-        docker inspect "${task_id}" \
-            --format '{{.Status.ContainerStatus.ContainerID}}' 2>/dev/null || true
-    fi
-}
-
-# Verify secret in a *specific* container (for live-rotation checks).
-# Fails if the secret does not update in-place within timeout.
-verify_secret_in_container() {
-    local container_id="$1"
-    local secret_name="$2"
-    local expected_value="$3"
-    local timeout="${4:-60}"
-
-    info "Verifying live rotation of '${secret_name}' in container '${container_id:0:12}'..."
-
-    local elapsed=0
-    while [ "${elapsed}" -lt "${timeout}" ]; do
-        # Fail fast if the container is gone (restarted) — that is NOT live rotation
-        if ! docker inspect "${container_id}" &>/dev/null; then
-            die "Container '${container_id:0:12}' is no longer running. Secret was NOT rotated in-place (container restarted)."
-        fi
-
-        local actual
-        actual=$(docker exec "${container_id}" \
-            cat "/run/secrets/${secret_name}" 2>/dev/null | tr -d '[:space:]' || true)
-        local expected_trimmed
-        expected_trimmed=$(echo "${expected_value}" | tr -d '[:space:]')
-
-        info "Expected: '${expected_trimmed}' | Got: '${actual}'"
-
-        if [ "${actual}" = "${expected_trimmed}" ]; then
-            success "Live rotation verified: '${secret_name}' updated in existing container."
-            return 0
-        fi
-
-        sleep 5
-        elapsed=$((elapsed + 5))
-    done
-
-    die "Secret '${secret_name}' was NOT updated in-place within ${timeout}s (container '${container_id:0:12}')."
-}
-
 # Remove stack cleanly
 remove_stack() {
     local stack_name="$1"
