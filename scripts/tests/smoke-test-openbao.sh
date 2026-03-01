@@ -88,7 +88,7 @@ docker plugin set "${PLUGIN_NAME}" \
     ENABLE_MONITORING="false"
 success "Plugin configured with OpenBao token."
 
-# Run the plugin
+# Run (enable) the plugin
 info "Enabling plugin..."
 enable_plugin
 
