@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -ex
 cd -- "$(dirname -- "$0")" || exit 1
 source ./smoke-test-helper.sh
@@ -53,7 +54,7 @@ docker exec "${VAULT_CONTAINER}" \
     vault policy write smoke-policy /tmp/admin.hcl
 success "Policy applied."
 
-# Add passwords (write test secret)
+# Add passwords
 info "Writing test secret to Vault..."
 docker exec "${VAULT_CONTAINER}" \
     env VAULT_ADDR="http://127.0.0.1:8200" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
