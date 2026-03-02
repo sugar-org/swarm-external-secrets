@@ -1,6 +1,8 @@
 ### Swarm External Secrets
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sugar-org/swarm-external-secrets/badge)](https://scorecard.dev/viewer/?uri=github.com/sugar-org/swarm-external-secrets) ![Discord](https://img.shields.io/discord/1476983394977054740?logo=discord&color=blue) [![Join our Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/4NYdBu7bZy)
+
 ---
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sugar-org/swarm-external-secrets/badge)](https://scorecard.dev/viewer/?uri=github.com/sugar-org/swarm-external-secrets)
+
 
 A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, and OpenBao.
 
