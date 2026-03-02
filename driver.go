@@ -243,7 +243,11 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 	case "gcp":
 		secretPath = d.buildGCPSecretName(req)
 	case "azure":
-		secretPath = d.buildAzureSecretName(req)
+        var err error
+        secretPath, err = d.buildAzureSecretName(req)
+        if err != nil {
+            return nil, err
+        }
 	case "openbao":
 		secretPath = d.buildOpenBaoSecretPath(req)
 	default:
@@ -662,7 +666,12 @@ func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
 
 func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["gcp_secret_name"]; exists {
-		return normalizeGCPSecretName(customName)
+		name, err := normalizeGCPSecretName(customName)
+		if err != nil {
+			log.Warnf("invalid GCP secret name %q: %v", customName, err)
+			return customName
+		}
+		return name
 	}
 
 	secretName := req.SecretName
@@ -670,7 +679,13 @@ func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
 	}
 
-	return normalizeGCPSecretName(secretName)
+	name, err := normalizeGCPSecretName(secretName)
+	if err != nil {
+		log.Warnf("invalid GCP secret name %q: %v", secretName, err)
+		return secretName
+	}
+
+	return name
 }
 // normalizeGCPSecretName ensures the name matches GCP Secret Manager requirements.
 // Reference (GCP Secret Manager API):
