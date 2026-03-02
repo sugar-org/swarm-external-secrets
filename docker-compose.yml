@@ -2,6 +2,14 @@ version: '3.8'
 
 services:
 
+  secrets-logger:
+    image: alpine:3.20
+    command: sh -c "while [ ! -f /run/swarm-external-secrets/plugin.log ]; do sleep 1; done; tail -F /run/swarm-external-secrets/plugin.log"
+    volumes:
+      - /run/swarm-external-secrets:/run/swarm-external-secrets:ro
+    deploy:
+      mode: global
+
   busybox:
     image: busybox:latest
     command: >

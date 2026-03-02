@@ -71,6 +71,10 @@ docker plugin set swarm-external-secrets:latest \
     ROTATION_INTERVAL="5s" \
 
 
+echo -e ${DEF}Create plugin log directory on host
+sudo mkdir -p /run/swarm-external-secrets
+sudo chmod 755 /run/swarm-external-secrets
+
 echo -e ${DEF}Enable the plugin
 docker plugin enable swarm-external-secrets:latest
 

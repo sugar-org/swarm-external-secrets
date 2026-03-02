@@ -104,7 +104,7 @@ docker plugin set swarm-external-secrets:latest \
    services:
      secrets-logger:
        image: alpine:3.20
-       command: sh -c "touch /run/swarm-external-secrets/plugin.log && tail -F /run/swarm-external-secrets/plugin.log"
+       command: sh -c "while [ ! -f /run/swarm-external-secrets/plugin.log ]; do sleep 1; done; tail -F /run/swarm-external-secrets/plugin.log"
        volumes:
          - /run/swarm-external-secrets:/run/swarm-external-secrets:ro
    ```
