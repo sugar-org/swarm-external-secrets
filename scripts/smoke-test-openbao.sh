@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 set -ex
 cd -- "$(dirname -- "$0")" || exit 1
 source ./smoke-test-helper.sh
