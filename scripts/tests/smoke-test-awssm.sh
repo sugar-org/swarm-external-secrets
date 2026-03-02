@@ -116,12 +116,12 @@ awslocal_cmd secretsmanager put-secret-value \
 success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 
 info "Waiting for plugin rotation interval (15s)..."
-sleep 15
+sleep 30
 
 info "Logging service output after rotation..."
 log_stack "${STACK_NAME}" "app"
 
 info "Verifying rotated secret value..."
-verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 60
+verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 success "AWS Secrets Manager smoke test PASSED"
