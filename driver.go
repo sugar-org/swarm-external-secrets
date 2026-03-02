@@ -674,40 +674,50 @@ func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 
 	return normalizeGCPSecretName(secretName)
 }
-
+// normalizeGCPSecretName ensures the name matches GCP Secret Manager requirements.
+// Reference (GCP Secret Manager API):
+// https://cloud.google.com/secret-manager/docs/reference/rest/v1/projects.secrets/create
+// Secret ID must be <= 255 characters and match allowed pattern.
 // normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
-func normalizeGCPSecretName(secretName string) string {
-	if len(secretName) == 0 {
-		return "s"
-	}
-	result := ""
-	for i, char := range secretName {
-		if i == 0 {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
-				result += string(char)
-			} else {
-				result += "s"
-			}
-		} else {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-				(char >= '0' && char <= '9') || char == '_' || char == '-' {
-				result += string(char)
-			} else {
-				result += "_"
-			}
-		}
-	}
+func normalizeGCPSecretName(secretName string) (string, error) {
+    if len(secretName) == 0 {
+        return "s", nil
+    }
 
-	if len(result) > 255 {
-		result = result[:255]
-	}
+    result := ""
+    for i, char := range secretName {
+        if i == 0 {
+            if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
+                result += string(char)
+            } else {
+                result += "s"
+            }
+        } else {
+            if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+                (char >= '0' && char <= '9') || char == '_' || char == '-' {
+                result += string(char)
+            } else {
+                result += "_"
+            }
+        }
+    }
 
-	return result
+    if len(result) > 255 {
+        return "", fmt.Errorf("secret name exceeds 255 characters (GCP limit as per Secret Manager spec)")
+    }
+
+    return result, nil
 }
-
-func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
+// buildAzureSecretName ensures the name matches Azure Key Vault requirements.
+// Reference (Azure Key Vault naming rules):
+// https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-identifiers
+// Secret name must be <= 127 characters and match ^[0-9a-zA-Z-]+$
+func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) (string, error) {
 	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
-		return customName
+		if len(customName) > 127 {
+			return "", fmt.Errorf("secret name exceeds 127 characters (Azure Key Vault limit)")
+		}
+		return customName, nil
 	}
 
 	secretName := req.SecretName
@@ -717,30 +727,36 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 
 	// Azure Key Vault secret names must match regex: ^[0-9a-zA-Z-]+$
 	result := ""
+
 	for _, char := range secretName {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == '-' {
+		if (char >= 'a' && char <= 'z') ||
+			(char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') ||
+			char == '-' {
 			result += string(char)
 		} else {
 			result += "-"
 		}
 	}
 
-	// Remove consecutive hyphens and leading/trailing hyphens
+	// Remove consecutive hyphens
 	for strings.Contains(result, "--") {
 		result = strings.ReplaceAll(result, "--", "-")
 	}
+
+	// Trim leading/trailing hyphens
 	result = strings.Trim(result, "-")
 
 	if result == "" || (result[0] >= '0' && result[0] <= '9') {
 		result = "secret-" + result
 	}
 
+	// Explicit length validation (Azure limit: 127 chars)
 	if len(result) > 127 {
-		result = result[:127]
+		return "", fmt.Errorf("secret name exceeds 127 characters (Azure Key Vault limit)")
 	}
 
-	return result
+	return result, nil
 }
 
 // func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
