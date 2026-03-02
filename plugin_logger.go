@@ -34,11 +34,11 @@ func newRotatingFileWriter(path string, maxSizeMB int) (*rotatingFileWriter, err
 		maxSizeMB = defaultPluginLogSizeMB
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return nil, fmt.Errorf("create log directory: %w", err)
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600) // #nosec G304 -- path is admin-controlled via PLUGIN_LOG_PATH env
 	if err != nil {
 		return nil, fmt.Errorf("open log file: %w", err)
 	}
@@ -104,7 +104,7 @@ func (w *rotatingFileWriter) rotateLocked() error {
 		return fmt.Errorf("rotate log file: %w", err)
 	}
 
-	f, err := os.OpenFile(w.path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(w.path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("create new log file: %w", err)
 	}
