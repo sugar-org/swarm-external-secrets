@@ -2,7 +2,7 @@
   "description": "External secrets plugin for Docker Swarm",
   "documentation": "https://docs.docker.com/engine/extend/",
   "interface": {
-    "types": ["docker.secretdriver/1.0","docker.secretprovider/1.0"],
+    "types": ["docker.secretdriver/1.0", "docker.secretprovider/1.0"],
     "socket": "plugin.sock"
   },
   "entrypoint": ["./swarm-external-secrets"],
@@ -19,6 +19,12 @@
       "destination": "/var/run/docker.sock",
       "type": "bind",
       "options": ["bind", "rbind"]
+    },
+    {
+      "source": "/var/lib/docker/swarm-external-secrets",
+      "destination":"/var/lib/docker/swarm-external-secrets",
+      "type": "bind",
+      "options": ["rbind", "rshared"]
     }
   ],
   "env": [
@@ -30,6 +36,11 @@
     {
       "name": "VAULT_AUTH_METHOD",
       "description": "Vault authentication method",
+      "settable": ["value"]
+    },
+    {
+      "name": "VAULT_TOKEN",
+      "description": "Vault authentication token",
       "settable": ["value"]
     },
     {
@@ -80,11 +91,6 @@
     {
       "name": "OPENBAO_SECRET_ID",
       "description": "OpenBao AppRole secret ID",
-      "settable": ["value"]
-    },
-    {
-      "name": "OPENBAO_AUTH_METHOD",
-      "description": "OpenBao authentication method",
       "settable": ["value"]
     },
     {
@@ -143,22 +149,22 @@
       "settable": ["value"]
     },
     {
-      "name" : "AZURE_ACCESS_TOKEN",
+      "name": "AZURE_ACCESS_TOKEN",
       "description": "Azure access token for Key Vault",
       "settable": ["value"]
     },
     {
-      "name" : "GCP_PROJECT_ID",
+      "name": "GCP_PROJECT_ID",
       "description": "GCP project ID",
       "settable": ["value"]
     },
     {
-      "name" : "GOOGLE_APPLICATION_CREDENTIALS",
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
       "description": "Google application credentials required for GCP Secrets manager",
       "settable": ["value"]
     },
     {
-      "name" : "GCP_CREDENTIALS_JSON",
+      "name": "GCP_CREDENTIALS_JSON",
       "description": "Google credentials json required for GCP Secrets manager",
       "settable": ["value"]
     },
@@ -180,6 +186,21 @@
     {
       "name": "gid",
       "description": "Group ID to run the plugin as",
+      "settable": ["value"]
+    },
+    {
+      "name": "PLUGIN_FILE_LOG",
+      "description": "Enable file logging to host path (true/false)",
+      "settable": ["value"]
+    },
+    {
+      "name": "PLUGIN_LOG_PATH",
+      "description": "Log file path (default: /var/lib/docker/swarm-external-secrets/plugin.log)",
+      "settable": ["value"]
+    },
+    {
+      "name": "PLUGIN_LOG_LEVEL",
+      "description": "Log level (debug, info, warn, error)",
       "settable": ["value"]
     }
   ]

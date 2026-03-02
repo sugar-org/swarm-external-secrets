@@ -4,18 +4,20 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/sugar-org/vault-swarm-plugin/monitoring"
 	"github.com/sugar-org/vault-swarm-plugin/providers"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // SecretsDriver implements the secrets.Driver interface with multi-provider support
@@ -39,6 +41,50 @@ type SecretsConfig struct {
 	EnableMonitoring bool
 	MonitoringPort   int
 	Settings         map[string]string
+}
+
+func configureLogging() {
+	log.SetFormatter(&log.JSONFormatter{})
+
+	// Default level = INFO
+	level := log.InfoLevel
+	if lvl := os.Getenv("PLUGIN_LOG_LEVEL"); lvl != "" {
+		if parsed, err := log.ParseLevel(lvl); err == nil {
+			level = parsed
+		} else {
+			log.Warnf("Invalid PLUGIN_LOG_LEVEL '%s', defaulting to INFO", lvl)
+		}
+	}
+	log.SetLevel(level)
+
+	if os.Getenv("PLUGIN_FILE_LOG") == "true" {
+		logPath := os.Getenv("PLUGIN_LOG_PATH")
+		if logPath == "" {
+			logPath = "/var/lib/docker/swarm-external-secrets/plugin.log"
+		}
+
+		// Ensure log directory exists
+		dir := filepath.Dir(logPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Fatalf("failed to create log directory: %v", err)
+		}
+
+		fileWriter := &lumberjack.Logger{
+			Filename:   logPath,
+			MaxSize:    10, // MB
+			MaxBackups: 3,
+			MaxAge:     7, // days
+			Compress:   true,
+		}
+
+		// Write logs to both stdout and file
+		log.SetOutput(io.MultiWriter(os.Stdout, fileWriter))
+	}
+
+	log.WithFields(log.Fields{
+		"file_logging": os.Getenv("PLUGIN_FILE_LOG"),
+		"log_level":    log.GetLevel().String(),
+	}).Info("Plugin logging initialized")
 }
 
 // NewDriver creates a new Driver instance with multi-provider support
@@ -69,14 +115,23 @@ func NewDriver() (*SecretsDriver, error) {
 	// Create the appropriate provider
 	provider, err := providers.CreateProvider(config.ProviderType)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"provider_type": config.ProviderType,
+			"error":         err.Error(),
+		}).Error("Failed to create provider")
+
 		return nil, fmt.Errorf("failed to create provider: %v", err)
 	}
 
 	// Initialize the provider
 	if err := provider.Initialize(settings); err != nil {
+		log.WithFields(log.Fields{
+			"provider_type": config.ProviderType,
+			"error":         err.Error(),
+		}).Error("Failed to initialize provider")
+
 		return nil, fmt.Errorf("failed to initialize %s provider: %v", config.ProviderType, err)
 	}
-
 	// Create Docker client
 	dockerClient, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
@@ -139,9 +194,13 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	// Get secret from the provider
 	value, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
-		log.Printf("Error getting secret from provider: %v", err)
+		log.WithFields(log.Fields{
+			"secret_name": req.SecretName,
+			"provider":    d.provider.GetProviderName(),
+			"error":       err.Error(),
+		}).Error("Failed to fetch secret from provider")
 		return secrets.Response{
-			Err: fmt.Sprintf("failed to get secret: %v", err),
+			Err: "failed to fetch secret from provider",
 		}
 	}
 
@@ -299,9 +358,14 @@ func (d *SecretsDriver) checkForSecretChanges() {
 
 	for secretName, secretInfo := range secrets {
 		if d.hasSecretChanged(secretInfo) {
-			log.Printf("Detected change in secret: %s", secretName)
+			log.WithField("secret_name", secretName).
+				Info("Detected change in secret")
 			if err := d.rotateSecret(secretInfo); err != nil {
-				log.Errorf("Failed to rotate secret %s: %v", secretName, err)
+				log.WithFields(log.Fields{
+					"secret_name": secretName,
+					"operation":   "rotateSecret",
+					"error":       err.Error(),
+				}).Error("Failed to rotate secret")
 				if d.monitor != nil {
 					d.monitor.IncrementRotationErrors()
 				}
@@ -321,7 +385,12 @@ func (d *SecretsDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool 
 
 	changed, err := d.provider.CheckSecretChanged(ctx, secretInfo)
 	if err != nil {
-		log.Errorf("Error checking secret change for %s: %v", secretInfo.DockerSecretName, err)
+		log.WithFields(log.Fields{
+			"secret_name": secretInfo.DockerSecretName,
+			"operation":   "CheckSecretChanged",
+			"provider":    secretInfo.Provider,
+			"error":       err.Error(),
+		}).Error("Error checking secret change")
 		return false
 	}
 
@@ -364,11 +433,23 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 
 	newValue, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"secret_name": secretInfo.DockerSecretName,
+			"provider":    secretInfo.Provider,
+			"operation":   "GetSecretDuringRotation",
+			"error":       err.Error(),
+		}).Error("Failed to get updated secret from provider")
+
 		return fmt.Errorf("failed to get updated secret from provider: %v", err)
 	}
 
 	// Update Docker secret (this now handles service updates internally)
 	if err := d.updateDockerSecret(secretInfo.DockerSecretName, newValue); err != nil {
+		log.WithFields(log.Fields{
+			"secret_name": secretInfo.DockerSecretName,
+			"operation":   "updateDockerSecret",
+			"error":       err.Error(),
+		}).Error("Failed to update docker secret")
 		return fmt.Errorf("failed to update docker secret: %v", err)
 	}
 
@@ -387,9 +468,10 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// List existing secrets to find the one to update
 	secrets, err := d.dockerClient.SecretList(ctx, swarm.SecretListOptions{})
 	if err != nil {
+		log.WithField("error", err.Error()).
+			Error("Failed to list Docker secrets")
 		return fmt.Errorf("failed to list secrets: %v", err)
 	}
 
@@ -402,13 +484,13 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	}
 
 	if existingSecret == nil {
+		log.WithField("secret_name", secretName).
+			Error("Secret not found during rotation")
 		return fmt.Errorf("secret %s not found", secretName)
 	}
 
-	// Generate a unique name for the new secret version
 	newSecretName := fmt.Sprintf("%s-%d", secretName, time.Now().UnixNano())
 
-	// Create new secret with versioned name and same labels but updated value
 	newSecretSpec := swarm.SecretSpec{
 		Annotations: swarm.Annotations{
 			Name:   newSecretName,
@@ -417,27 +499,47 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 		Data: newValue,
 	}
 
-	// Create the new secret
 	createResponse, err := d.dockerClient.SecretCreate(ctx, newSecretSpec)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"secret_name": secretName,
+			"operation":   "SecretCreate",
+			"error":       err.Error(),
+		}).Error("Failed to create new Docker secret version")
+
 		return fmt.Errorf("failed to create new secret version: %v", err)
 	}
 
-	log.Printf("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
+	log.WithFields(log.Fields{
+		"secret_name": secretName,
+		"new_secret":  newSecretName,
+		"secret_id":   createResponse.ID,
+	}).Info("Created new version of Docker secret")
 
-	// Update all services that use this secret to point to the new version
 	if err := d.updateServicesSecretReference(secretName, newSecretName, createResponse.ID); err != nil {
-		// try to remove the new secret since service update failed
+
+		log.WithFields(log.Fields{
+			"secret_name": secretName,
+			"new_secret":  newSecretName,
+			"operation":   "updateServicesSecretReference",
+			"error":       err.Error(),
+		}).Error("Failed to update services with rotated secret")
+
 		if cleanupErr := d.dockerClient.SecretRemove(ctx, createResponse.ID); cleanupErr != nil {
-			log.Warnf("failed to remove new secret %s after service update error: %v", createResponse.ID, cleanupErr)
+			log.WithFields(log.Fields{
+				"secret_id": createResponse.ID,
+				"error":     cleanupErr.Error(),
+			}).Warn("Failed to cleanup newly created secret after service update failure")
 		}
+
 		return fmt.Errorf("failed to update services to use new secret: %v", err)
 	}
 
-	// Remove the old secret only after services are updated
 	if err := d.dockerClient.SecretRemove(ctx, existingSecret.ID); err != nil {
-		log.Warnf("Failed to remove old secret version %s: %v", existingSecret.ID, err)
-		// Don't return error as the new secret was created and services updated successfully
+		log.WithFields(log.Fields{
+			"secret_id": existingSecret.ID,
+			"error":     err.Error(),
+		}).Warn("Failed to remove old secret version after rotation")
 	}
 
 	return nil
@@ -451,6 +553,10 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	// List all services
 	services, err := d.dockerClient.ServiceList(ctx, swarm.ServiceListOptions{})
 	if err != nil {
+		log.WithFields(log.Fields{
+			"operation": "ServiceList",
+			"error":     err.Error(),
+		}).Error("Failed to list Docker services")
 		return fmt.Errorf("failed to list services: %v", err)
 	}
 
@@ -489,6 +595,11 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 			updateOptions := swarm.ServiceUpdateOptions{}
 			updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
 			if err != nil {
+				log.WithFields(log.Fields{
+					"service_name": service.Spec.Name,
+					"operation":    "ServiceUpdate",
+					"error":        err.Error(),
+				}).Error("Failed to update service during secret rotation")
 				return fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
 			}
 

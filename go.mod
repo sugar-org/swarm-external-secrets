@@ -16,6 +16,7 @@ require (
 	github.com/openbao/openbao/api/v2 v2.3.1
 	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/api v0.237.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
