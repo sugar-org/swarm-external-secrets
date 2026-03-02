@@ -2,8 +2,9 @@
 
 
 set -ex
-cd -- "$(dirname -- "$0")" || exit 1
-source ./smoke-test-helper.sh
+SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
+source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
 # Configuration
 LOCALSTACK_CONTAINER="smoke-localstack"
@@ -17,7 +18,7 @@ SECRET_PATH="database/mysql"
 SECRET_FIELD="password"
 SECRET_VALUE="awssm-smoke-pass-v1"
 SECRET_VALUE_ROTATED="awssm-smoke-pass-v2"
-COMPOSE_FILE="$(dirname "$0")/smoke-awssm-compose.yml"
+COMPOSE_FILE="${SCRIPT_DIR}/smoke-awssm-compose.yml"
 
 # Helper to run awslocal either on host or inside container
 awslocal_cmd() {
