@@ -9,17 +9,13 @@ DEF='\033[0m'
 
 PLUGIN_NAME="swarm-external-secrets:latest"
 
-# ---------------------------------------------------------------------------
 # Logging
-# ---------------------------------------------------------------------------
 info()    { echo -e "${BLU}[INFO]${DEF} $*"; }
 success() { echo -e "${GRN}[PASS]${DEF} $*"; }
 error()   { echo -e "${RED}[FAIL]${DEF} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
-# ---------------------------------------------------------------------------
-# Build plugin (mirrors build.sh / test.sh pattern exactly)
-# ---------------------------------------------------------------------------
+# Build plugin
 build_plugin() {
     echo -e "${RED}Remove existing plugin if it exists${DEF}"
     if docker plugin inspect "${PLUGIN_NAME}" &>/dev/null; then
@@ -58,9 +54,7 @@ build_plugin() {
     success "Plugin built: ${PLUGIN_NAME}"
 }
 
-# ---------------------------------------------------------------------------
-# Enable plugin (mirrors test.sh pattern)
-# ---------------------------------------------------------------------------
+# Enable plugin
 enable_plugin() {
     echo -e "${RED}Set plugin permissions${DEF}"
     docker plugin set "${PLUGIN_NAME}" gid=0 uid=0
@@ -73,18 +67,15 @@ enable_plugin() {
 
     success "Plugin enabled."
 }
-# ---------------------------------------------------------------------------
-# Remove plugin (mirrors cleanup.sh pattern)
-# ---------------------------------------------------------------------------
+
+# Remove plugin
 remove_plugin() {
     docker plugin disable "${PLUGIN_NAME}" --force 2>/dev/null || true
     docker plugin rm      "${PLUGIN_NAME}" --force 2>/dev/null || true
     docker image rm swarm-external-secrets:temp --force 2>/dev/null || true
 }
 
-# ---------------------------------------------------------------------------
-# Deploy swarm stack (mirrors deploy.sh pattern)
-# ---------------------------------------------------------------------------
+# Deploy swarm stack
 deploy_stack() {
     local compose_file="$1"
     local stack_name="$2"
@@ -111,9 +102,7 @@ deploy_stack() {
     die "Stack '${stack_name}' did not become ready within ${timeout}s."
 }
 
-# ---------------------------------------------------------------------------
-# Log stack service output (mirrors deploy.sh: docker service logs)
-# ---------------------------------------------------------------------------
+# Log stack service output
 log_stack() {
     local stack_name="$1"
     local service_suffix="$2"
@@ -121,9 +110,7 @@ log_stack() {
     docker service logs "${stack_name}_${service_suffix}" 2>&1 || true
 }
 
-# ---------------------------------------------------------------------------
-# Compare password == logged secret (from your notes)
-# ---------------------------------------------------------------------------
+# Compare password == logged secret
 verify_secret() {
     local stack_name="$1"
     local service_suffix="$2"
@@ -167,9 +154,7 @@ verify_secret() {
     die "Secret '${secret_name}' did not match expected value within ${timeout}s."
 }
 
-# ---------------------------------------------------------------------------
 # Remove stack cleanly
-# ---------------------------------------------------------------------------
 remove_stack() {
     local stack_name="$1"
     info "Removing stack '${stack_name}'..."
