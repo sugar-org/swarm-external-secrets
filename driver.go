@@ -70,16 +70,14 @@ func NewDriver() (*SecretsDriver, error) {
 	}
 
 	enableRotation := true
-	rotationEnv := getEnvOrDefault("ENABLE_ROTATION", "true")
-	if v, err := strconv.ParseBool(rotationEnv); err == nil {
-		enableRotation = v
-	} else {
-		log.Warnf("Invalid boolean value for ENABLE_ROTATION: %q, defaulting to true", rotationEnv)
-	}
+    rotationEnv := getEnvOrDefault("ENABLE_ROTATION", "true")
+    if v, err := strconv.ParseBool(rotationEnv); err == nil {
+	    enableRotation = v
+    } else {
+	    log.Warnf("Invalid boolean value for ENABLE_ROTATION: %q, defaulting to true", rotationEnv)
+    }
 
-	enableRotation := parseBoolEnv("ENABLE_ROTATION", true)
     enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
-
     config := &SecretsConfig{
         ProviderType:      providerType,
         EnableRotation:    enableRotation,
