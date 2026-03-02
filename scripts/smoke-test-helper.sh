@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# smoke-test-helper.sh
-# Shared helper functions sourced by smoke-test-vault.sh and smoke-test-openbao.sh
 
 RED='\033[0;31m'
 GRN='\033[0;32m'
@@ -15,7 +13,7 @@ success() { echo -e "${GRN}[PASS]${DEF} $*"; }
 error()   { echo -e "${RED}[FAIL]${DEF} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
-# Build plugin
+# Build plugin 
 build_plugin() {
     echo -e "${RED}Remove existing plugin if it exists${DEF}"
     if docker plugin inspect "${PLUGIN_NAME}" &>/dev/null; then
@@ -68,7 +66,7 @@ enable_plugin() {
     success "Plugin enabled."
 }
 
-# Remove plugin
+# Remove plugin 
 remove_plugin() {
     docker plugin disable "${PLUGIN_NAME}" --force 2>/dev/null || true
     docker plugin rm      "${PLUGIN_NAME}" --force 2>/dev/null || true
