@@ -246,7 +246,9 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
         var err error
         secretPath, err = d.buildAzureSecretName(req)
         if err != nil {
-            return nil, err
+            log.Errorf("failed to build azure secret name: %v", err)
+            return
+        
         }
 	case "openbao":
 		secretPath = d.buildOpenBaoSecretPath(req)
