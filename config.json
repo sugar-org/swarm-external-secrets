@@ -184,8 +184,13 @@
       "settable": ["value"]
     },
     {
+      "name": "LOG_LEVEL",
+      "description": "1=Trace 2=Debug 3=Info 4=Warn 5=Error; enables file logging when set",
+      "settable": ["value"]
+    },
+    {
       "name": "PLUGIN_LOG_PATH",
-      "description": "Host-mounted file path for plugin logs",
+      "description": "Optional override for plugin log path (default /run/swarm-external-secrets/plugin.log)",
       "settable": ["value"]
     },
     {

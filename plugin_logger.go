@@ -127,7 +127,40 @@ func parsePositiveIntOrDefault(value string, fallback int) int {
 	return parsed
 }
 
+// parseLogLevel maps LOG_LEVEL integer (1-5) to a logrus level.
+// 1=Trace, 2=Debug, 3=Info, 4=Warn, 5=Error
+func parseLogLevel(value string) (log.Level, bool) {
+	level, err := strconv.Atoi(value)
+	if err != nil || level < 1 || level > 5 {
+		return log.InfoLevel, false
+	}
+
+	levels := map[int]log.Level{
+		1: log.TraceLevel,
+		2: log.DebugLevel,
+		3: log.InfoLevel,
+		4: log.WarnLevel,
+		5: log.ErrorLevel,
+	}
+
+	return levels[level], true
+}
+
 func setupPluginFileLogging() io.Closer {
+	logLevelStr := os.Getenv("LOG_LEVEL")
+	if logLevelStr == "" {
+		log.Info("LOG_LEVEL not set; file logging disabled")
+		return nil
+	}
+
+	level, ok := parseLogLevel(logLevelStr)
+	if !ok {
+		log.Warnf("invalid LOG_LEVEL=%q (must be 1-5); file logging disabled", logLevelStr)
+		return nil
+	}
+
+	log.SetLevel(level)
+
 	logPath := getEnvOrDefault("PLUGIN_LOG_PATH", defaultPluginLogPath)
 	maxSizeMB := parsePositiveIntOrDefault(os.Getenv("PLUGIN_LOG_MAX_SIZE_MB"), defaultPluginLogSizeMB)
 
@@ -139,8 +172,8 @@ func setupPluginFileLogging() io.Closer {
 
 	log.SetOutput(io.MultiWriter(os.Stderr, writer))
 	log.WithFields(log.Fields{
-		"log_path":    logPath,
-		"log_size_mb": maxSizeMB,
+		"log_path":  logPath,
+		"log_level": level.String(),
 	}).Info("plugin file logging enabled")
 
 	return writer
