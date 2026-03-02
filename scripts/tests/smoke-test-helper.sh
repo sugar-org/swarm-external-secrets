@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# smoke-test-helper.sh
+# Shared helper functions sourced by smoke-test-vault.sh and smoke-test-openbao.sh
 
 RED='\033[0;31m'
 GRN='\033[0;32m'
@@ -52,7 +54,7 @@ build_plugin() {
     success "Plugin built: ${PLUGIN_NAME}"
 }
 
-# Enable plugin
+# Enable plugin (mirrors test.sh pattern)
 enable_plugin() {
     echo -e "${RED}Set plugin permissions${DEF}"
     docker plugin set "${PLUGIN_NAME}" gid=0 uid=0
@@ -65,14 +67,14 @@ enable_plugin() {
 
     success "Plugin enabled."
 }
-# Remove plugin
+# Remove plugin (mirrors cleanup.sh pattern)
 remove_plugin() {
     docker plugin disable "${PLUGIN_NAME}" --force 2>/dev/null || true
     docker plugin rm      "${PLUGIN_NAME}" --force 2>/dev/null || true
     docker image rm swarm-external-secrets:temp --force 2>/dev/null || true
 }
 
-# Deploy swarm stack
+# Deploy swarm stack (mirrors deploy.sh pattern)
 deploy_stack() {
     local compose_file="$1"
     local stack_name="$2"
@@ -99,7 +101,7 @@ deploy_stack() {
     die "Stack '${stack_name}' did not become ready within ${timeout}s."
 }
 
-# Log stack service output
+# Log stack service output (mirrors deploy.sh: docker service logs)
 log_stack() {
     local stack_name="$1"
     local service_suffix="$2"

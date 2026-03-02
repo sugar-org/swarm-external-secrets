@@ -3,7 +3,6 @@
 set -ex
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
-
 # shellcheck source=smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
@@ -132,4 +131,5 @@ log_stack "${STACK_NAME}" "app"
 info "Verifying rotated secret value (must update in-place, same container)..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
-success "OpenBao smoke test PASSED"
+
+success "OpenBao smoke test PASSED (incl. rotation)"
