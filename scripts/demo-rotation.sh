@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-
 set -ex  # Exit on any error
 cd -- "$(dirname -- "$0")" || exit 1
-
 # Vault Secret Rotation Demo Script
 # This script demonstrates the automatic secret rotation feature
 set -e
@@ -12,12 +10,10 @@ BLU='\033[0;34m'
 DEF='\033[0m'
 echo -e "${BLU}=== Vault Secret Rotation Demo ===${DEF}"
 echo
-
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
-
 # Check prerequisites
 echo -e "${BLU}Checking prerequisites...${DEF}"
 if ! command_exists docker; then
@@ -29,7 +25,6 @@ if ! command_exists vault; then
 fi
 echo -e "${GRN}Prerequisites check passed${DEF}"
 echo
-
 # Build the plugin
 echo -e "${BLU}Building the plugin with rotation feature...${DEF}"
 ./build.sh
@@ -43,7 +38,6 @@ docker plugin set swarm-external-secrets:latest \
     VAULT_ROTATION_INTERVAL="30s" || echo "Plugin configuration may already be set"
 echo -e "${GRN}Plugin configured with 30-second rotation interval${DEF}"
 echo
-
 # Create a simple demo stack
 echo -e "${BLU}Creating demo docker-compose.yml with automatic rotation...${DEF}"
 cat > demo-compose.yml << 'EOF'
@@ -79,7 +73,6 @@ networks:
 EOF
 echo -e "${GRN}Demo compose file created${DEF}"
 echo
-
 # Display the rotation configuration
 echo -e "${BLU}Current rotation configuration:${DEF}"
 echo "- Rotation enabled: true"

@@ -46,5 +46,3 @@ site/*
 approle.token
 
 scripts/plugin/rootfs/*
-aws/
-awscliv2.zip
