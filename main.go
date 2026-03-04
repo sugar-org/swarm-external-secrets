@@ -12,6 +12,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	fmt.Print("Starting Vault Secrets Provider...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
@@ -21,7 +27,7 @@ func main() {
 
 	if *flVersion {
 		fmt.Println("Vault Secrets Provider v1.0.0")
-		return
+		return nil
 	}
 	if *flDebug {
 		log.SetLevel(log.DebugLevel)
@@ -40,7 +46,7 @@ func main() {
 	driver, err := NewDriver()
 	if err != nil {
 		log.Errorf("Failed to initialize vault driver: %v", err)
-		os.Exit(1)
+		return err
 	}
 
 	// Set up signal handling for graceful shutdown
@@ -69,6 +75,8 @@ func main() {
 	log.Println("Starting Vault secrets provider plugin...")
 	if err := handler.ServeUnix("plugin", 0); err != nil {
 		log.Errorf("Failed to serve plugin: %v", err)
-		os.Exit(1)
+		return err
 	}
+
+	return nil
 }

@@ -73,6 +73,15 @@ vault kv get secret/database/mysql
 
 Preferred method (works with docker compose sidecar logger):
 
+> **Note:** File logging is only active when `LOG_LEVEL` is set on the plugin.
+> Enable it before using the sidecar or tailing the log file:
+>
+> ```bash
+> docker plugin set swarm-external-secrets:latest LOG_LEVEL=3
+> ```
+>
+> Values: `1`=Trace, `2`=Debug, `3`=Info, `4`=Warn, `5`=Error.
+
 ```bash
 sudo mkdir -p /run/swarm-external-secrets
 sudo tail -F /run/swarm-external-secrets/plugin.log

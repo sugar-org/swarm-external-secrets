@@ -94,18 +94,27 @@ func (w *rotatingFileWriter) rotateLocked() error {
 		return fmt.Errorf("log file writer is closed")
 	}
 
-	if err := w.file.Close(); err != nil {
-		return fmt.Errorf("close current log file: %w", err)
-	}
-
 	backupPath := w.path + ".1"
 	_ = os.Remove(backupPath)
+
+	// Rename while the file is still open so that if it fails,
+	// w.file remains valid and logging can continue.
 	if err := os.Rename(w.path, backupPath); err != nil {
+		// Rename failed; keep writing to the current (now oversized) file
+		// rather than leaving w.file pointing at a closed descriptor.
 		return fmt.Errorf("rotate log file: %w", err)
+	}
+
+	// Rename succeeded — close the old file descriptor.
+	if err := w.file.Close(); err != nil {
+		// The renamed file couldn't be closed, but it's already been
+		// moved out of the way. Best-effort: continue with a new file.
+		log.Warnf("close rotated log file: %v", err)
 	}
 
 	f, err := os.OpenFile(w.path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
+		w.file = nil
 		return fmt.Errorf("create new log file: %w", err)
 	}
 

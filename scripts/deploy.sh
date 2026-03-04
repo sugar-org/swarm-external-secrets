@@ -73,7 +73,7 @@ docker plugin set swarm-external-secrets:latest \
 
 echo -e ${DEF}Create plugin log directory on host
 sudo mkdir -p /run/swarm-external-secrets
-sudo chmod 755 /run/swarm-external-secrets
+sudo chmod 750 /run/swarm-external-secrets
 
 echo -e ${DEF}Enable the plugin
 docker plugin enable swarm-external-secrets:latest
