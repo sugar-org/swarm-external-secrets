@@ -49,33 +49,51 @@ func (a *AWSProvider) Initialize(config map[string]string) error {
 	return nil
 }
 
-// GetSecret retrieves a secret value from AWS Secrets Manager
 func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
+	// Build the secret name based on the request
 	secretName := a.buildSecretName(req)
 	log.Printf("Reading secret from AWS Secrets Manager: %s", secretName)
 
-	// Get secret value from AWS Secrets Manager
+	// Prepare the AWS Secrets Manager request
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	}
 
+	// Fetch the secret value from AWS
 	result, err := a.client.GetSecretValue(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret from AWS Secrets Manager: %v", err)
 	}
 
-	if result.SecretString == nil {
-		return nil, fmt.Errorf("secret %s has no string value", secretName)
+	// Handle both SecretString and SecretBinary returned by AWS
+	raw, err := getAWSSecretValue(result, secretName)
+	if err != nil {
+		return nil, err
 	}
 
-	// Extract the secret value
-	value, err := a.extractSecretValue(*result.SecretString, req)
+	// Extract the requested value (handles JSON/key based secrets)
+	value, err := a.extractSecretValue(raw, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}
 
 	log.Printf("Successfully retrieved secret from AWS Secrets Manager")
 	return value, nil
+}
+
+// getAWSSecretValue extracts the raw secret value from AWS response.
+// AWS may return the secret as SecretString or SecretBinary depending
+// on how the secret was stored.
+func getAWSSecretValue(result *secretsmanager.GetSecretValueOutput, secretName string) (string, error) {
+	if result.SecretString != nil {
+		return *result.SecretString, nil
+	}
+
+	if result.SecretBinary != nil {
+		return string(result.SecretBinary), nil
+	}
+
+	return "", fmt.Errorf("secret %s has no value", secretName)
 }
 
 // SupportsRotation indicates that AWS Secrets Manager supports secret rotation monitoring
