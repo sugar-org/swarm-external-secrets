@@ -44,4 +44,3 @@ jobs:
 
       - name: Run smoke test for awssm
         run: bash scripts/tests/smoke-test-awssm.sh
-        
