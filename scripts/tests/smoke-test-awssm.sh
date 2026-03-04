@@ -3,6 +3,7 @@
 set -ex
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
+# shellcheck source=smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
 # Configuration
