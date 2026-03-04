@@ -48,13 +48,13 @@ func (a *AWSProvider) Initialize(config map[string]string) error {
 	log.Printf("Successfully initialized AWS Secrets Manager provider for region: %s", a.config.Region)
 	return nil
 }
-
+// GetSecret retrieves a secret value from AWS Secrets Manager
 func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
 	// Build the secret name based on the request
 	secretName := a.buildSecretName(req)
 	log.Printf("Reading secret from AWS Secrets Manager: %s", secretName)
 
-	// Prepare the AWS Secrets Manager request
+	// Get secret value from AWS Secrets Manager
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	}
