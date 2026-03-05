@@ -127,16 +127,14 @@ info "Verifying rotated secret value..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 
-# Rotate secret with a base64 encoded binary value
 BINARY_SECRET="awssm-smoke-binary"
-BINARY_SECRET_BASE64=$(echo -n "${BINARY_SECRET}" | base64)
 
-info "Rotating secret with base64 encoded binary value..."
-awslocal_cmd secretsmanager put-secret-value \
-    --region "${AWS_REGION}" \
-    --secret-id "${SECRET_PATH}" \
-    --secret-binary "${BINARY_SECRET_BASE64}"
+echo -n "${BINARY_SECRET}" > binary_secret
 
+aws secretsmanager put-secret-value \
+  --region "${AWS_REGION}" \
+  --secret-id "${SECRET_PATH}" \
+  --secret-binary fileb://binary_secret
 sleep 30
 
 log_stack "${STACK_NAME}" "app"
