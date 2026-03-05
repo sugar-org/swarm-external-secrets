@@ -186,6 +186,16 @@
       "name": "gid",
       "description": "Group ID to run the plugin as",
       "settable": ["value"]
+    },
+    {
+      "name": "VAULT_SKIP_VERIFY",
+      "description": "Skip TLS certificate verification for Vault (true/false)",
+      "settable": ["value"]
+    },
+    {
+      "name": "OPENBAO_SKIP_VERIFY",
+      "description": "Skip TLS certificate verification for OpenBao (true/false)",
+      "settable": ["value"]
     }
   ]
 }
