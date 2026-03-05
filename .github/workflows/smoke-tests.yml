@@ -44,4 +44,30 @@ jobs:
 
       - name: Run smoke test for awssm
         run: bash scripts/tests/smoke-test-awssm.sh
-        
+
+  smoke-test-azure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start LocalStack Azure
+        run: |
+          docker run -d \
+            --name localstack-azure \
+            -p 4566:4566 \
+            -e LOCALSTACK_AUTH_TOKEN="${{ secrets.LOCALSTACK_AUTH_TOKEN }}" \
+            localstack/localstack-azure-alpha:latest
+          echo "Waiting for LocalStack Azure to be ready..."
+          timeout 60 bash -c 'until curl -s http://localhost:4566/_localstack/health | grep -q available; do sleep 2; done'
+
+      - name: Init Docker Swarm
+        run: docker swarm init
+
+      - name: Run smoke test for azure
+        run: bash scripts/tests/smoke-test-azure.sh
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}

@@ -5,15 +5,27 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"os" // Imported to read environment variables
+	"os"
 	"strings"
+	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore" // Imported for credentials
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
 )
+
+// staticTokenCredential satisfies azcore.TokenCredential using a fixed token.
+// Used for testing against emulators like LocalStack.
+type staticTokenCredential struct {
+	token string
+}
+
+func (s *staticTokenCredential) GetToken(_ context.Context, _ policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	return azcore.AccessToken{Token: s.token, ExpiresOn: time.Now().Add(24 * time.Hour)}, nil
+}
 
 // AzureProvider implements the SecretsProvider interface for Azure Key Vault.
 type AzureProvider struct {
@@ -50,12 +62,12 @@ func (az *AzureProvider) Initialize(config map[string]string) error {
 	var cred azcore.TokenCredential
 	var err error
 
-	// Prioritize Service Principal credentials from environment variables.
-	tenantID := os.Getenv("AZURE_TENANT_ID")
-	clientID := os.Getenv("AZURE_CLIENT_ID")
-	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
-
-	if tenantID != "" && clientID != "" && clientSecret != "" {
+	// Use static access token if provided (e.g. for LocalStack testing).
+	if accessToken := os.Getenv("AZURE_ACCESS_TOKEN"); accessToken != "" {
+		log.Info("Authenticating with Azure using static access token.")
+		cred = &staticTokenCredential{token: accessToken}
+	} else if tenantID, clientID, clientSecret := os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_CLIENT_ID"), os.Getenv("AZURE_CLIENT_SECRET"); tenantID != "" && clientID != "" && clientSecret != "" {
+		// Service Principal credentials from environment variables.
 		log.Info("Authenticating with Azure using Service Principal credentials.")
 		cred, err = azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
 		if err != nil {
