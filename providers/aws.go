@@ -85,13 +85,13 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 // AWS may return the secret as SecretString or SecretBinary depending
 // on how the secret was stored.
 func getAWSSecretValue(result *secretsmanager.GetSecretValueOutput, secretName string) (string, error) {
-	if result.SecretString != nil {
-		return *result.SecretString, nil
-	}
+	if result.SecretString != nil && *result.SecretString != "" {
+        return *result.SecretString, nil
+    }
 
-	if result.SecretBinary != nil {
-		return string(result.SecretBinary), nil
-	}
+	if len(result.SecretBinary) > 0 {
+        return string(result.SecretBinary), nil
+    }
 
 	return "", fmt.Errorf("secret %s has no value", secretName)
 }
