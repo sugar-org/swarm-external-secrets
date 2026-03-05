@@ -7,7 +7,7 @@ on:
       - main
 
 permissions:
-  # Required for actions/checkout@v4
+  # Required for actions/checkout.
   contents: read
 
   # Required for writing pull request comment
@@ -25,11 +25,11 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Run vet
         id: vet
-        uses: safedep/vet-action@v1
+        uses: safedep/vet-action@e2a78850eb517b8305b1085bca947bef29213a22 # v1
         with:
           # Path to the policy file.
           # Remove following line to use the default policy
@@ -42,7 +42,7 @@ jobs:
       # private repository and Code Scanning is not available
       # for your Github subscription
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@ae9ef3a1d2e3413523c3741725c30064970cc0d4 # v3
         if: ${{ steps.vet.outputs.report != '' }}
         with:
           sarif_file: ${{ steps.vet.outputs.report }}
