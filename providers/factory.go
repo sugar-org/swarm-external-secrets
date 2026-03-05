@@ -67,7 +67,7 @@ func GetProviderInfo(providerType string) (map[string]string, error) {
 		info["name"] = "OpenBao"
 		info["description"] = "OpenBao secrets engine (Vault-compatible)"
 		info["auth_methods"] = "token, approle"
-		info["env_vars"] = "OPENBAO_ADDR, OPENBAO_TOKEN, OPENBAO_MOUNT_PATH, OPENBAO_AUTH_METHOD, OPENBAO_ROLE_ID, OPENBAO_SECRET_ID"
+		info["env_vars"] = "OPENBAO_ADDR, OPENBAO_TOKEN, OPENBAO_MOUNT_PATH, OPENBAO_KV_VERSION, OPENBAO_AUTH_METHOD, OPENBAO_ROLE_ID, OPENBAO_SECRET_ID"
 
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)

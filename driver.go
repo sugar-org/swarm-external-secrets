@@ -357,7 +357,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
 	case "openbao":
 		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		req.SecretLabels["openbao_path"] = stripProviderMountPrefix(secretInfo.SecretPath)
 	}
 
 	// Get the new secret value from the provider
@@ -584,16 +584,49 @@ func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
 }
 
 func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+	mountPath := strings.Trim(d.config.Settings["OPENBAO_MOUNT_PATH"], "/")
+	if mountPath == "" {
+		mountPath = "secret"
+	}
+	kvVersion := d.config.Settings["OPENBAO_KV_VERSION"]
+	if kvVersion == "" {
+		kvVersion = "2"
 	}
 
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
+		return formatOpenBaoPath(mountPath, kvVersion, customPath)
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+
+	// Default path structure
+	if req.ServiceName != "" {
+		return formatOpenBaoPath(mountPath, kvVersion, fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName))
+	}
+	return formatOpenBaoPath(mountPath, kvVersion, req.SecretName)
+}
+
+func formatOpenBaoPath(mountPath, kvVersion, rawPath string) string {
+	path := strings.Trim(strings.TrimSpace(rawPath), "/")
+	if strings.HasPrefix(path, mountPath+"/") {
+		path = strings.TrimPrefix(path, mountPath+"/")
+	}
+	path = strings.TrimPrefix(path, "data/")
+
+	if strings.TrimSpace(kvVersion) == "1" {
+		return fmt.Sprintf("%s/%s", mountPath, path)
+	}
+	return fmt.Sprintf("%s/data/%s", mountPath, path)
+}
+
+func stripProviderMountPrefix(secretPath string) string {
+	path := strings.Trim(strings.TrimSpace(secretPath), "/")
+	if idx := strings.Index(path, "/data/"); idx >= 0 {
+		return path[idx+len("/data/"):]
+	}
+	if idx := strings.Index(path, "/"); idx >= 0 {
+		return path[idx+1:]
+	}
+	return path
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {

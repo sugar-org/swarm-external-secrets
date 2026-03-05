@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/openbao/openbao/api/v2"
@@ -22,6 +23,7 @@ type OpenBaoConfig struct {
 	Address    string
 	Token      string
 	MountPath  string
+	KVVersion  string
 	RoleID     string
 	SecretID   string
 	AuthMethod string
@@ -36,6 +38,7 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 		Address:    getConfigOrDefault(config, "OPENBAO_ADDR", "http://localhost:8200"),
 		Token:      config["OPENBAO_TOKEN"],
 		MountPath:  getConfigOrDefault(config, "OPENBAO_MOUNT_PATH", "secret"),
+		KVVersion:  getConfigOrDefault(config, "OPENBAO_KV_VERSION", "2"),
 		RoleID:     config["OPENBAO_ROLE_ID"],
 		SecretID:   config["OPENBAO_SECRET_ID"],
 		AuthMethod: getConfigOrDefault(config, "OPENBAO_AUTH_METHOD", "token"),
@@ -119,11 +122,9 @@ func (o *OpenBaoProvider) CheckSecretChanged(ctx context.Context, secretInfo *Se
 	}
 
 	// Extract current value
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
+	data, err := extractOpenBaoData(secret)
+	if err != nil {
+		return false, err
 	}
 
 	var currentValue []byte
@@ -152,7 +153,8 @@ func (o *OpenBaoProvider) Close() error {
 
 // authenticate handles various OpenBao authentication methods
 func (o *OpenBaoProvider) authenticate() error {
-	switch o.config.AuthMethod {
+	authMethod := strings.ToLower(strings.TrimSpace(o.config.AuthMethod))
+	switch authMethod {
 	case "token":
 		if o.config.Token == "" {
 			return fmt.Errorf("OPENBAO_TOKEN is required for token authentication")
@@ -189,38 +191,42 @@ func (o *OpenBaoProvider) authenticate() error {
 
 // buildSecretPath constructs the OpenBao secret path based on request labels and service information
 func (o *OpenBaoProvider) buildSecretPath(req secrets.Request) string {
+	mountPath := strings.Trim(strings.TrimSpace(o.config.MountPath), "/")
+	if mountPath == "" {
+		mountPath = "secret"
+	}
+
 	// Use custom path from labels if provided
 	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		// For KV v2, ensure we have the /data/ prefix
-		if o.config.MountPath == "secret" {
-			return fmt.Sprintf("%s/data/%s", o.config.MountPath, customPath)
-		}
-		return fmt.Sprintf("%s/%s", o.config.MountPath, customPath)
+		return o.formatSecretPath(mountPath, customPath)
 	}
 
-	// Default path structure for KV v2
-	if o.config.MountPath == "secret" {
-		if req.ServiceName != "" {
-			return fmt.Sprintf("%s/data/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
-		}
-		return fmt.Sprintf("%s/data/%s", o.config.MountPath, req.SecretName)
-	}
-
-	// For other mount paths
+	// Default path structure if labels are not provided
+	basePath := req.SecretName
 	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
+		basePath = fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
 	}
-	return fmt.Sprintf("%s/%s", o.config.MountPath, req.SecretName)
+	return o.formatSecretPath(mountPath, basePath)
+}
+
+func (o *OpenBaoProvider) formatSecretPath(mountPath, rawPath string) string {
+	path := strings.Trim(strings.TrimSpace(rawPath), "/")
+	if strings.HasPrefix(path, mountPath+"/") {
+		path = strings.TrimPrefix(path, mountPath+"/")
+	}
+	path = strings.TrimPrefix(path, "data/")
+
+	if strings.TrimSpace(o.config.KVVersion) == "1" {
+		return fmt.Sprintf("%s/%s", mountPath, path)
+	}
+	return fmt.Sprintf("%s/data/%s", mountPath, path)
 }
 
 // extractSecretValue extracts the appropriate value from the OpenBao response
 func (o *OpenBaoProvider) extractSecretValue(secret *api.Secret, req secrets.Request) ([]byte, error) {
-	// For KV v2, data is nested under "data"
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
+	data, err := extractOpenBaoData(secret)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check for specific field in labels
@@ -249,4 +255,19 @@ func (o *OpenBaoProvider) extractSecretValue(secret *api.Secret, req secrets.Req
 	}
 
 	return nil, fmt.Errorf("no suitable secret value found")
+}
+
+func extractOpenBaoData(secret *api.Secret) (map[string]interface{}, error) {
+	if secret == nil {
+		return nil, fmt.Errorf("secret is nil")
+	}
+
+	if secretData, ok := secret.Data["data"]; ok {
+		if nested, ok := secretData.(map[string]interface{}); ok {
+			return nested, nil
+		}
+		return nil, fmt.Errorf("unexpected OpenBao secret data format")
+	}
+
+	return secret.Data, nil
 }

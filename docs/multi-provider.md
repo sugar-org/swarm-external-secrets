@@ -100,6 +100,7 @@ docker plugin set swarm-external-secrets:latest \
 | `OPENBAO_ADDR` | OpenBao server address | `http://localhost:8200` |
 | `OPENBAO_TOKEN` | OpenBao token for authentication | — |
 | `OPENBAO_MOUNT_PATH` | Mount path for KV engine | `secret` |
+| `OPENBAO_KV_VERSION` | KV engine version (`1` or `2`) | `2` |
 | `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
 | `OPENBAO_ROLE_ID` | Role ID for AppRole authentication | — |
 | `OPENBAO_SECRET_ID` | Secret ID for AppRole authentication | — |
