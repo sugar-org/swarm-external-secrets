@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
@@ -21,19 +22,21 @@ type AWSProvider struct {
 
 // AWSConfig holds the configuration for the AWS Secrets Manager client
 type AWSConfig struct {
-	Region    string
-	AccessKey string
-	SecretKey string
-	Profile   string
+	Region      string
+	AccessKey   string
+	SecretKey   string
+	Profile     string
+	EndpointURL string
 }
 
 // Initialize sets up the AWS provider with the given configuration
 func (a *AWSProvider) Initialize(config map[string]string) error {
 	a.config = &AWSConfig{
-		Region:    getConfigOrDefault(config, "AWS_REGION", "us-east-1"),
-		AccessKey: config["AWS_ACCESS_KEY_ID"],
-		SecretKey: config["AWS_SECRET_ACCESS_KEY"],
-		Profile:   config["AWS_PROFILE"],
+		Region:      getConfigOrDefault(config, "AWS_REGION", "us-east-1"),
+		AccessKey:   config["AWS_ACCESS_KEY_ID"],
+		SecretKey:   config["AWS_SECRET_ACCESS_KEY"],
+		Profile:     config["AWS_PROFILE"],
+		EndpointURL: config["AWS_ENDPOINT_URL"],
 	}
 
 	// Load AWS configuration
@@ -42,8 +45,12 @@ func (a *AWSProvider) Initialize(config map[string]string) error {
 		return fmt.Errorf("failed to load AWS config: %v", err)
 	}
 
-	// Create Secrets Manager client
-	a.client = secretsmanager.NewFromConfig(cfg)
+	// Create Secrets Manager client with optional endpoint override
+	a.client = secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
+		if a.config.EndpointURL != "" {
+			o.BaseEndpoint = aws.String(a.config.EndpointURL)
+		}
+	})
 
 	log.Printf("Successfully initialized AWS Secrets Manager provider for region: %s", a.config.Region)
 	return nil
@@ -107,7 +114,6 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 
 	// Calculate current hash
 	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
-
 	return currentHash != secretInfo.LastHash, nil
 }
 
@@ -118,7 +124,7 @@ func (a *AWSProvider) GetProviderName() string {
 
 // Close performs cleanup for the AWS provider
 func (a *AWSProvider) Close() error {
-	// AWS client doesn't require explicit cleanup
+	// AWS client does not require explicit cleanup
 	return nil
 }
 
@@ -143,13 +149,13 @@ func (a *AWSProvider) loadAWSConfig() (aws.Config, error) {
 	}
 
 	// Override with explicit credentials if provided
+	// The session token ("") is intentionally empty — only required for temporary STS credentials
 	if a.config.AccessKey != "" && a.config.SecretKey != "" {
-		cfg.Credentials = aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
-			return aws.Credentials{
-				AccessKeyID:     a.config.AccessKey,
-				SecretAccessKey: a.config.SecretKey,
-			}, nil
-		})
+		cfg.Credentials = credentials.NewStaticCredentialsProvider(
+			a.config.AccessKey,
+			a.config.SecretKey,
+			"",
+		)
 	}
 
 	return cfg, nil
@@ -161,7 +167,6 @@ func (a *AWSProvider) buildSecretName(req secrets.Request) string {
 	if customPath, exists := req.SecretLabels["aws_secret_name"]; exists {
 		return customPath
 	}
-
 	// Default naming convention
 	if req.ServiceName != "" {
 		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
@@ -180,22 +185,18 @@ func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Reques
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
 		// Default field names to try
-		defaultFields := []string{"value", "password", "secret", "data"}
-
-		// Try to find a value using default field names
-		for _, field := range defaultFields {
+		for _, field := range []string{"value", "password", "secret", "data"} {
+			// Try to find a value using default field names
 			if value, ok := data[field]; ok {
 				return []byte(fmt.Sprintf("%v", value)), nil
 			}
 		}
-
 		// If no specific field found, return the first string value
 		for _, value := range data {
 			if strValue, ok := value.(string); ok {
 				return []byte(strValue), nil
 			}
 		}
-
 		return nil, fmt.Errorf("no suitable secret value found in JSON")
 	}
 
