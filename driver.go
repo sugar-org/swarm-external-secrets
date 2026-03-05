@@ -344,8 +344,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	switch secretInfo.Provider {
 	case "vault":
 		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		// Extract the specific path part from the full path
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		req.SecretLabels["vault_path"] = stripProviderMountPrefix(secretInfo.SecretPath)
 	case "aws":
 		req.SecretLabels["aws_field"] = secretInfo.SecretField
 		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
@@ -357,7 +356,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
 	case "openbao":
 		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		req.SecretLabels["openbao_path"] = stripProviderMountPrefix(secretInfo.SecretPath)
 	}
 
 	// Get the new secret value from the provider
@@ -571,29 +570,70 @@ func (d *SecretsDriver) Stop() error {
 // Helper methods for building provider-specific secret paths/names
 
 func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+	mountPath := getEnvOrDefault("VAULT_MOUNT_PATH", "secret")
+	mountPath = strings.Trim(mountPath, "/")
+	if mountPath == "" {
+		mountPath = "secret"
 	}
 
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["vault_path"]; exists {
+		if mountPath == "secret" {
+			return fmt.Sprintf("%s/data/%s", mountPath, customPath)
+		}
+		return fmt.Sprintf("%s/%s", mountPath, customPath)
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+
+	// Default path structure
+	if mountPath == "secret" {
+		if req.ServiceName != "" {
+			return fmt.Sprintf("%s/data/%s/%s", mountPath, req.ServiceName, req.SecretName)
+		}
+		return fmt.Sprintf("%s/data/%s", mountPath, req.SecretName)
+	}
+	if req.ServiceName != "" {
+		return fmt.Sprintf("%s/%s/%s", mountPath, req.ServiceName, req.SecretName)
+	}
+	return fmt.Sprintf("%s/%s", mountPath, req.SecretName)
 }
 
 func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+	mountPath := getEnvOrDefault("OPENBAO_MOUNT_PATH", "secret")
+	mountPath = strings.Trim(mountPath, "/")
+	if mountPath == "" {
+		mountPath = "secret"
 	}
 
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
+		if mountPath == "secret" {
+			return fmt.Sprintf("%s/data/%s", mountPath, customPath)
+		}
+		return fmt.Sprintf("%s/%s", mountPath, customPath)
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+
+	// Default path structure
+	if mountPath == "secret" {
+		if req.ServiceName != "" {
+			return fmt.Sprintf("%s/data/%s/%s", mountPath, req.ServiceName, req.SecretName)
+		}
+		return fmt.Sprintf("%s/data/%s", mountPath, req.SecretName)
+	}
+	if req.ServiceName != "" {
+		return fmt.Sprintf("%s/%s/%s", mountPath, req.ServiceName, req.SecretName)
+	}
+	return fmt.Sprintf("%s/%s", mountPath, req.SecretName)
+}
+
+func stripProviderMountPrefix(secretPath string) string {
+	path := strings.Trim(strings.TrimSpace(secretPath), "/")
+	if idx := strings.Index(path, "/data/"); idx >= 0 {
+		return path[idx+len("/data/"):]
+	}
+	if idx := strings.Index(path, "/"); idx >= 0 {
+		return path[idx+1:]
+	}
+	return path
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {

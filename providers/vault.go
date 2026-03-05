@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/hashicorp/vault/api"
@@ -119,11 +120,9 @@ func (v *VaultProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secr
 	}
 
 	// Extract current value
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
+	data, err := extractVaultData(secret)
+	if err != nil {
+		return false, err
 	}
 
 	var currentValue []byte
@@ -152,7 +151,7 @@ func (v *VaultProvider) Close() error {
 
 // authenticate handles various Vault authentication methods
 func (v *VaultProvider) authenticate() error {
-	switch v.config.AuthMethod {
+	switch strings.ToLower(strings.TrimSpace(v.config.AuthMethod)) {
 	case "token":
 		if v.config.Token == "" {
 			return fmt.Errorf("VAULT_TOKEN is required for token authentication")
@@ -215,12 +214,9 @@ func (v *VaultProvider) buildSecretPath(req secrets.Request) string {
 
 // extractSecretValue extracts the appropriate value from the Vault response
 func (v *VaultProvider) extractSecretValue(secret *api.Secret, req secrets.Request) ([]byte, error) {
-	// For KV v2, data is nested under "data"
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
+	data, err := extractVaultData(secret)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check for specific field in labels
@@ -249,6 +245,19 @@ func (v *VaultProvider) extractSecretValue(secret *api.Secret, req secrets.Reque
 	}
 
 	return nil, fmt.Errorf("no suitable secret value found")
+}
+
+func extractVaultData(secret *api.Secret) (map[string]interface{}, error) {
+	if secret == nil {
+		return nil, fmt.Errorf("secret is nil")
+	}
+	if secretData, ok := secret.Data["data"]; ok {
+		if nested, ok := secretData.(map[string]interface{}); ok {
+			return nested, nil
+		}
+		return nil, fmt.Errorf("unexpected Vault secret data format")
+	}
+	return secret.Data, nil
 }
 
 // getConfigOrDefault returns config value or environment variable or default

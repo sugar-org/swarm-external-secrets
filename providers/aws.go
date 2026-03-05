@@ -71,12 +71,13 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 		return nil, fmt.Errorf("failed to get secret from AWS Secrets Manager: %v", err)
 	}
 
-	if result.SecretString == nil {
-		return nil, fmt.Errorf("secret %s has no string value", secretName)
+	secretData, err := extractAWSSecretData(result, secretName)
+	if err != nil {
+		return nil, err
 	}
 
 	// Extract the secret value
-	value, err := a.extractSecretValue(*result.SecretString, req)
+	value, err := a.extractSecretValue(secretData, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}
@@ -102,12 +103,13 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 		return false, fmt.Errorf("error reading secret from AWS Secrets Manager: %v", err)
 	}
 
-	if result.SecretString == nil {
-		return false, fmt.Errorf("secret %s has no string value", secretInfo.SecretPath)
+	secretData, err := extractAWSSecretData(result, secretInfo.SecretPath)
+	if err != nil {
+		return false, err
 	}
 
 	// Extract current value
-	currentValue, err := a.extractSecretValueByField(*result.SecretString, secretInfo.SecretField)
+	currentValue, err := a.extractSecretValueByField(secretData, secretInfo.SecretField)
 	if err != nil {
 		return false, fmt.Errorf("failed to extract secret field %s: %v", secretInfo.SecretField, err)
 	}
@@ -174,16 +176,16 @@ func (a *AWSProvider) buildSecretName(req secrets.Request) string {
 	return req.SecretName
 }
 
-// extractSecretValue extracts the appropriate value from the AWS secret string
-func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Request) ([]byte, error) {
+// extractSecretValue extracts the appropriate value from AWS secret payload bytes.
+func (a *AWSProvider) extractSecretValue(secretData []byte, req secrets.Request) ([]byte, error) {
 	// Check for specific field in labels
 	if field, exists := req.SecretLabels["aws_field"]; exists {
-		return a.extractSecretValueByField(secretString, field)
+		return a.extractSecretValueByField(secretData, field)
 	}
 
 	// Try to parse as JSON first
 	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
+	if err := json.Unmarshal(secretData, &data); err == nil {
 		// Default field names to try
 		for _, field := range []string{"value", "password", "secret", "data"} {
 			// Try to find a value using default field names
@@ -200,15 +202,15 @@ func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Reques
 		return nil, fmt.Errorf("no suitable secret value found in JSON")
 	}
 
-	// If not JSON, return the raw string
-	return []byte(secretString), nil
+	// If not JSON, return raw bytes (supports SecretBinary)
+	return secretData, nil
 }
 
-// extractSecretValueByField extracts a specific field from the secret string
-func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]byte, error) {
+// extractSecretValueByField extracts a specific field from AWS secret payload bytes.
+func (a *AWSProvider) extractSecretValueByField(secretData []byte, field string) ([]byte, error) {
 	// Try to parse as JSON first
 	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
+	if err := json.Unmarshal(secretData, &data); err == nil {
 		if value, ok := data[field]; ok {
 			return []byte(fmt.Sprintf("%v", value)), nil
 		}
@@ -225,6 +227,16 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 		return nil, fmt.Errorf("field %s not found in non-JSON secret", field)
 	}
 
-	// If field is "value" and not JSON, return the raw string
-	return []byte(secretString), nil
+	// If field is "value" and not JSON, return raw bytes (supports SecretBinary)
+	return secretData, nil
+}
+
+func extractAWSSecretData(result *secretsmanager.GetSecretValueOutput, secretName string) ([]byte, error) {
+	if result.SecretString != nil {
+		return []byte(*result.SecretString), nil
+	}
+	if result.SecretBinary != nil {
+		return result.SecretBinary, nil
+	}
+	return nil, fmt.Errorf("secret %s has neither string nor binary value", secretName)
 }
