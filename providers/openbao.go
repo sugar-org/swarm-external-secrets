@@ -27,7 +27,7 @@ type OpenBaoConfig struct {
 	AuthMethod string
 	CACert     string
 	ClientCert string
-	clientKey  string
+	ClientKey  string
 }
 
 // Initialize sets up the OpenBao provider with the given configuration
@@ -41,7 +41,7 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 		AuthMethod: getConfigOrDefault(config, "OPENBAO_AUTH_METHOD", "token"),
 		CACert:     config["OPENBAO_CACERT"],
 		ClientCert: config["OPENBAO_CLIENT_CERT"],
-		clientKey:  config["OPENBAO_CLIENT_KEY"],
+		ClientKey:  config["OPENBAO_CLIENT_KEY"],
 	}
 
 	// Configure OpenBao client (using OpenBao API client since OpenBao is compatible)
@@ -53,7 +53,7 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 		tlsConfig := &api.TLSConfig{
 			CACert:     o.config.CACert,
 			ClientCert: o.config.ClientCert,
-			ClientKey:  o.config.clientKey,
+			ClientKey:  o.config.ClientKey,
 		}
 		if err := openBaoConfig.ConfigureTLS(tlsConfig); err != nil {
 			return fmt.Errorf("failed to configure TLS: %v", err)

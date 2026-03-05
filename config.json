@@ -33,6 +33,11 @@
       "settable": ["value"]
     },
     {
+      "name": "VAULT_TOKEN",
+      "description": "Vault authentication token",
+      "settable": ["value"]
+    },
+    {
       "name": "VAULT_ROLE_ID",
       "description": "Vault AppRole role ID",
       "settable": ["value"]
@@ -120,6 +125,11 @@
     {
       "name": "AWS_SECRET_ACCESS_KEY",
       "description": "AWS secret access key",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_ENDPOINT_URL",
+      "description": "AWS endpoint URL (e.g. for LocalStack)",
       "settable": ["value"]
     },
     {

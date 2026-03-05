@@ -42,7 +42,13 @@ groups:
       linter:
         help: Run linting tools
         run: ./scripts/linter.sh
-
+        
+      smoke-test-vault:
+        help: Run Vault smoke test to validate plugin end-to-end
+        run: bash ./scripts/tests/smoke-test-vault.sh
+      smoke-test-openbao:
+        help: Run OpenBao smoke test to validate plugin end-to-end
+        run: bash ./scripts/tests/smoke-test-openbao.sh
   ci:
     # Aggregate tasks useful for CI pipelines
     tasks:

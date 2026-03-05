@@ -27,21 +27,21 @@ type SecretsConfig struct {
 	AuthMethod string
 	CACert     string
 	ClientCert string
-	clientKey  string
+	ClientKey  string
 }
 
 // Initialize sets up the Vault provider with the given configuration
 func (v *VaultProvider) Initialize(config map[string]string) error {
 	v.config = &SecretsConfig{
-		Address:    getConfigOrDefault(config, "VAULT_ADDR", "http://152.53.244.80:8200"),
-		Token:      getConfigOrDefault(config, "VAULT_TOKEN", "hvs.tD053xbJ1C5lo2EbtZnn2JU8"),
+		Address:    getConfigOrDefault(config, "VAULT_ADDR", ""),
+		Token:      getConfigOrDefault(config, "VAULT_TOKEN", ""),
 		MountPath:  getConfigOrDefault(config, "VAULT_MOUNT_PATH", "secret"),
 		RoleID:     config["VAULT_ROLE_ID"],
 		SecretID:   config["VAULT_SECRET_ID"],
 		AuthMethod: getConfigOrDefault(config, "VAULT_AUTH_METHOD", "token"),
 		CACert:     config["VAULT_CACERT"],
 		ClientCert: config["VAULT_CLIENT_CERT"],
-		clientKey:  config["VAULT_CLIENT_KEY"],
+		ClientKey:  config["VAULT_CLIENT_KEY"],
 	}
 
 	// Configure Vault client
@@ -53,7 +53,7 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 		tlsConfig := &api.TLSConfig{
 			CACert:     v.config.CACert,
 			ClientCert: v.config.ClientCert,
-			ClientKey:  v.config.clientKey,
+			ClientKey:  v.config.ClientKey,
 		}
 		if err := SecretsConfig.ConfigureTLS(tlsConfig); err != nil {
 			return fmt.Errorf("failed to configure TLS: %v", err)
