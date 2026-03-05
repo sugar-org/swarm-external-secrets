@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+    "encoding/base64"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -97,9 +98,12 @@ func getAWSSecretValue(result *secretsmanager.GetSecretValueOutput, secretName s
     }
 
 	if len(result.SecretBinary) > 0 {
-        return string(result.SecretBinary), nil
+    decoded, err := base64.StdEncoding.DecodeString(string(result.SecretBinary))
+    if err != nil {
+        return "", fmt.Errorf("failed to decode binary secret %s: %v", secretName, err)
     }
-
+    return string(decoded), nil
+}
 	return "", fmt.Errorf("secret %s has no value", secretName)
 }
 
