@@ -131,11 +131,12 @@ BINARY_SECRET="awssm-smoke-binary"
 
 echo -n "${BINARY_SECRET}" > binary_secret
 
-aws secretsmanager put-secret-value \
+awslocal_cmd secretsmanager put-secret-value \
   --region "${AWS_REGION}" \
   --secret-id "${SECRET_PATH}" \
-  --secret-binary fileb://binary_secret
-sleep 30
+  --secret-binary fileb://binary_secret \
+  --version-stages AWSCURRENT
+
 
 log_stack "${STACK_NAME}" "app"
 
