@@ -49,6 +49,12 @@ groups:
       smoke-test-openbao:
         help: Run OpenBao smoke test to validate plugin end-to-end
         run: bash ./scripts/tests/smoke-test-openbao.sh
+      smoke-test-awssm:
+        help: Run AWS Secrets Manager smoke test to validate plugin end-to-end
+        run: bash ./scripts/tests/smoke-test-awssm.sh
+      smoke-test-azure:
+        help: Run Azure Key Vault smoke test to validate plugin end-to-end
+        run: bash ./scripts/tests/smoke-test-azure.sh
   ci:
     # Aggregate tasks useful for CI pipelines
     tasks:

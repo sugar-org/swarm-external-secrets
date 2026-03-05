@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"os" // Imported to read environment variables
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore" // Imported for credentials
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/docker/go-plugins-helpers/secrets"
@@ -23,7 +25,8 @@ type AzureProvider struct {
 
 // AzureConfig holds the configuration for the Azure Key Vault client.
 type AzureConfig struct {
-	VaultURL string
+	VaultURL    string
+	AccessToken string
 }
 
 // SecretInfoAzure stores metadata about a retrieved secret for rotation checks.
@@ -36,7 +39,8 @@ type SecretInfoAzure struct {
 // Initialize sets up the Azure provider with the given configuration.
 func (az *AzureProvider) Initialize(config map[string]string) error {
 	az.config = &AzureConfig{
-		VaultURL: config["AZURE_VAULT_URL"],
+		VaultURL:    config["AZURE_VAULT_URL"],
+		AccessToken: getConfigOrDefault(config, "AZURE_ACCESS_TOKEN", ""),
 	}
 
 	if az.config.VaultURL == "" {
@@ -50,23 +54,29 @@ func (az *AzureProvider) Initialize(config map[string]string) error {
 	var cred azcore.TokenCredential
 	var err error
 
-	// Prioritize Service Principal credentials from environment variables.
-	tenantID := os.Getenv("AZURE_TENANT_ID")
-	clientID := os.Getenv("AZURE_CLIENT_ID")
-	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
-
-	if tenantID != "" && clientID != "" && clientSecret != "" {
-		log.Info("Authenticating with Azure using Service Principal credentials.")
-		cred, err = azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
-		if err != nil {
-			return fmt.Errorf("failed to create Azure credential using Service Principal: %w", err)
-		}
+	// Prefer explicit access token for local smoke tests and constrained environments.
+	if az.config.AccessToken != "" {
+		log.Info("Authenticating with Azure Key Vault using AZURE_ACCESS_TOKEN.")
+		cred = &StaticTokenCredential{Token: az.config.AccessToken}
 	} else {
-		// Fallback to default credential chain (Managed Identity, Azure CLI, etc.)
-		log.Info("Service Principal credentials not found. Falling back to Default Azure Credential.")
-		cred, err = azidentity.NewDefaultAzureCredential(nil)
-		if err != nil {
-			return fmt.Errorf("failed to create Azure credential using default chain: %w", err)
+		// Prioritize Service Principal credentials from environment variables.
+		tenantID := os.Getenv("AZURE_TENANT_ID")
+		clientID := os.Getenv("AZURE_CLIENT_ID")
+		clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
+
+		if tenantID != "" && clientID != "" && clientSecret != "" {
+			log.Info("Authenticating with Azure using Service Principal credentials.")
+			cred, err = azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
+			if err != nil {
+				return fmt.Errorf("failed to create Azure credential using Service Principal: %w", err)
+			}
+		} else {
+			// Fallback to default credential chain (Managed Identity, Azure CLI, etc.)
+			log.Info("Service Principal credentials not found. Falling back to Default Azure Credential.")
+			cred, err = azidentity.NewDefaultAzureCredential(nil)
+			if err != nil {
+				return fmt.Errorf("failed to create Azure credential using default chain: %w", err)
+			}
 		}
 	}
 
@@ -79,6 +89,23 @@ func (az *AzureProvider) Initialize(config map[string]string) error {
 
 	log.Infof("Successfully initialized Azure Key Vault provider for vault: %s", az.config.VaultURL)
 	return nil
+}
+
+// StaticTokenCredential is a minimal TokenCredential backed by a fixed token.
+// It is primarily used for local smoke tests against mocked Key Vault endpoints.
+type StaticTokenCredential struct {
+	Token string
+}
+
+// GetToken returns the pre-configured token with a short renewable expiry.
+func (s *StaticTokenCredential) GetToken(context.Context, policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	if strings.TrimSpace(s.Token) == "" {
+		return azcore.AccessToken{}, fmt.Errorf("AZURE_ACCESS_TOKEN is empty")
+	}
+	return azcore.AccessToken{
+		Token:     s.Token,
+		ExpiresOn: time.Now().Add(1 * time.Hour),
+	}, nil
 }
 
 // GetSecret retrieves a secret value from Azure Key Vault based on the request.
