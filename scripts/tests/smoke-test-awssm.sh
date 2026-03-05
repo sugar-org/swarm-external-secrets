@@ -114,9 +114,10 @@ awslocal_cmd secretsmanager put-secret-value \
     --region "${AWS_REGION}" \
     --secret-id "${SECRET_PATH}" \
     --secret-string "{\"${SECRET_FIELD}\":\"${SECRET_VALUE_ROTATED}\"}"
+
 success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 
-info "Waiting for plugin rotation interval (15s)..."
+info "Waiting for plugin rotation interval..."
 sleep 30
 
 info "Logging service output after rotation..."
@@ -125,4 +126,22 @@ log_stack "${STACK_NAME}" "app"
 info "Verifying rotated secret value..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
+
+# Rotate secret with a base64 encoded binary value
+BINARY_SECRET="awssm-smoke-binary"
+BINARY_SECRET_BASE64=$(echo -n "${BINARY_SECRET}" | base64)
+
+info "Rotating secret with base64 encoded binary value..."
+awslocal_cmd secretsmanager put-secret-value \
+    --region "${AWS_REGION}" \
+    --secret-id "${SECRET_PATH}" \
+    --secret-binary "${BINARY_SECRET_BASE64}"
+
+sleep 30
+
+log_stack "${STACK_NAME}" "app"
+
+verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${BINARY_SECRET}" 180
+
 success "AWS Secrets Manager smoke test PASSED"
+
