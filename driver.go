@@ -154,18 +154,26 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		d.trackSecret(req, value)
 	}
 
-	// Determine if secret should be reusable
-	doNotReuse := d.shouldNotReuse(req)
+	// Determine whether this request should create a fresh secret value.
+	createSecret := d.shouldCreateSecret(req)
 
 	log.Printf("Successfully returning secret value")
+	return makeSecretsResponse(value, createSecret)
+}
+
+// makeSecretsResponse maps internal positive naming to Docker's external response schema.
+// NOTE: `DoNotReuse` is defined by docker/go-plugins-helpers and cannot be renamed locally.
+func makeSecretsResponse(value []byte, createSecret bool) secrets.Response {
 	return secrets.Response{
-		Value:      value,
-		DoNotReuse: doNotReuse,
+		Value: value,
+		// External API field retained for compatibility.
+		DoNotReuse: createSecret,
 	}
 }
 
-// shouldNotReuse determines if the secret should not be reused
-func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
+// shouldCreateSecret determines whether a fresh secret value should be created
+// instead of reusing a previously issued value.
+func (d *SecretsDriver) shouldCreateSecret(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
 		return strings.ToLower(reuse) == "false"
