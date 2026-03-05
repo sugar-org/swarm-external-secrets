@@ -93,18 +93,19 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 // AWS may return the secret as SecretString or SecretBinary depending
 // on how the secret was stored.
 func getAWSSecretValue(result *secretsmanager.GetSecretValueOutput, secretName string) (string, error) {
-	if result.SecretString != nil && *result.SecretString != "" {
+    if len(result.SecretBinary) > 0 {
+        decoded, err := base64.StdEncoding.DecodeString(string(result.SecretBinary))
+        if err != nil {
+            return "", fmt.Errorf("failed to decode binary secret %s: %v", secretName, err)
+        }
+        return string(decoded), nil
+    }
+
+    if result.SecretString != nil && *result.SecretString != "" {
         return *result.SecretString, nil
     }
 
-	if len(result.SecretBinary) > 0 {
-    decoded, err := base64.StdEncoding.DecodeString(string(result.SecretBinary))
-    if err != nil {
-        return "", fmt.Errorf("failed to decode binary secret %s: %v", secretName, err)
-    }
-    return string(decoded), nil
-}
-	return "", fmt.Errorf("secret %s has no value", secretName)
+    return "", fmt.Errorf("secret %s has no value", secretName)
 }
 
 // SupportsRotation indicates that AWS Secrets Manager supports secret rotation monitoring
