@@ -425,7 +425,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *types.SecretInfo) error {
 
 // ReconcileSecret handles secret reconciliation for a specific secret triggered by webhook.
 func (d *SecretsDriver) ReconcileSecret(vaultSecretName string) error {
-	// Step 1: resolve vault name → docker secret name
+	//resolve vault name->docker secret name
 	d.trackerMutex.RLock()
 	dockerSecretName, mapped := d.vaultNameToDockerSecret[vaultSecretName]
 	if !mapped {
@@ -435,7 +435,7 @@ func (d *SecretsDriver) ReconcileSecret(vaultSecretName string) error {
 	secretInfo, tracked := d.secretTracker[dockerSecretName]
 	d.trackerMutex.RUnlock()
 
-	// Step 2: secret not tracked yet — cannot reconcile
+	//secret not tracked yet — cannot reconcile
 	if !tracked {
 		log.Warnf("⚡ Webhook received for vault secret '%s' (docker: '%s') but it is not yet tracked. "+
 			"A container must request the secret via Get() before webhook reconciliation can work.",
@@ -446,7 +446,7 @@ func (d *SecretsDriver) ReconcileSecret(vaultSecretName string) error {
 		)
 	}
 
-	// Step 3: change detection + rotation
+	//change detection + rotation
 	if d.hasSecretChanged(secretInfo) {
 		log.Printf("Webhook triggered rotation: vault='%s' → docker='%s'", vaultSecretName, dockerSecretName)
 		if err := d.rotateSecret(secretInfo); err != nil {
