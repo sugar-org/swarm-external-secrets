@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
+	"github.com/sugar-org/vault-swarm-plugin/providers/types"
 )
 
 // AzureProvider implements the SecretsProvider interface for Azure Key Vault.
@@ -115,7 +116,7 @@ func (az *AzureProvider) GetProviderName() string {
 }
 
 // CheckSecretChanged checks if a secret's value has changed in Azure Key Vault.
-func (az *AzureProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
+func (az *AzureProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error) {
 	resp, err := az.client.GetSecret(ctx, secretInfo.SecretPath, "", nil)
 	if err != nil {
 		return false, fmt.Errorf("error reading secret '%s' for rotation check: %w", secretInfo.SecretPath, err)

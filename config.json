@@ -2,13 +2,20 @@
   "description": "External secrets plugin for Docker Swarm",
   "documentation": "https://docs.docker.com/engine/extend/",
   "interface": {
-    "types": ["docker.secretdriver/1.0","docker.secretprovider/1.0"],
+    "types": [
+      "docker.secretdriver/1.0",
+      "docker.secretprovider/1.0"
+    ],
     "socket": "plugin.sock"
   },
-  "entrypoint": ["./swarm-external-secrets"],
+  "entrypoint": [
+    "./swarm-external-secrets"
+  ],
   "workdir": "/root",
   "linux": {
-    "capabilities": ["CAP_SYS_ADMIN"]
+    "capabilities": [
+      "CAP_SYS_ADMIN"
+    ]
   },
   "network": {
     "type": "host"
@@ -18,179 +25,273 @@
       "source": "/var/run/docker.sock",
       "destination": "/var/run/docker.sock",
       "type": "bind",
-      "options": ["bind", "rbind"]
+      "options": [
+        "bind",
+        "rbind"
+      ]
     }
   ],
   "env": [
     {
       "name": "VAULT_ADDR",
       "description": "Vault server address",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_AUTH_METHOD",
       "description": "Vault authentication method",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_TOKEN",
       "description": "Vault authentication token",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_ROLE_ID",
       "description": "Vault AppRole role ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_SECRET_ID",
       "description": "Vault AppRole secret ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_MOUNT_PATH",
       "description": "Vault mount path",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_ENABLE_ROTATION",
       "description": "Enable automatic secret rotation (true/false)",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "VAULT_ROTATION_INTERVAL",
       "description": "Secret rotation check interval (e.g., 5m, 1h)",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
+    },
+    {
+      "name": "USE_WEBHOOK",
+      "description": "Enable webhook-based secret sync for Vault provider (true/false)",
+      "settable": [
+        "value"
+      ],
+      "value": "false"
+    },
+    {
+      "name": "WEBHOOK_PORT",
+      "description": "Port for webhook listener",
+      "settable": [
+        "value"
+      ],
+      "value": "9095"
+    },
+    {
+      "name": "WEBHOOK_SECRET",
+      "description": "Secret for webhook signature validation (HMAC-SHA256)",
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "SECRETS_PROVIDER",
       "description": "Secrets provider type (e.g., vault, openbao)",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_ADDR",
       "description": "OpenBao server address",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_AUTH_METHOD",
       "description": "OpenBao authentication method",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_ROLE_ID",
       "description": "OpenBao AppRole role ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_SECRET_ID",
       "description": "OpenBao AppRole secret ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_AUTH_METHOD",
       "description": "OpenBao authentication method",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_TOKEN",
       "description": "OpenBao authentication token",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "OPENBAO_MOUNT_PATH",
       "description": "OpenBao mount path",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "ENABLE_ROTATION",
       "description": "Enable OpenBao secret rotation (true/false)",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "ROTATION_INTERVAL",
       "description": "OpenBao secret rotation check interval (e.g., 5m, 1h)",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AWS_REGION",
       "description": "AWS region",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AWS_ACCESS_KEY_ID",
       "description": "AWS access key ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AWS_SECRET_ACCESS_KEY",
       "description": "AWS secret access key",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AWS_ENDPOINT_URL",
       "description": "AWS endpoint URL (e.g. for LocalStack)",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AZURE_VAULT_URL",
       "description": "Azure Key Vault URL",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AZURE_CLIENT_ID",
       "description": "Azure client ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AZURE_CLIENT_SECRET",
       "description": "Azure client secret",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "AZURE_TENANT_ID",
       "description": "Azure tenant ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
-      "name" : "AZURE_ACCESS_TOKEN",
+      "name": "AZURE_ACCESS_TOKEN",
       "description": "Azure access token for Key Vault",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
-      "name" : "GCP_PROJECT_ID",
+      "name": "GCP_PROJECT_ID",
       "description": "GCP project ID",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
-      "name" : "GOOGLE_APPLICATION_CREDENTIALS",
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
       "description": "Google application credentials required for GCP Secrets manager",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
-      "name" : "GCP_CREDENTIALS_JSON",
+      "name": "GCP_CREDENTIALS_JSON",
       "description": "Google credentials json required for GCP Secrets manager",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "ENABLE_MONITORING",
       "description": "Enable Monitoring secret rotation (true/false) default true",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "MONITORING_PORT",
       "description": "default 8080",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "uid",
       "description": "User ID to run the plugin as",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     },
     {
       "name": "gid",
       "description": "Group ID to run the plugin as",
-      "settable": ["value"]
+      "settable": [
+        "value"
+      ]
     }
   ]
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
+	"github.com/sugar-org/vault-swarm-plugin/providers/types"
 )
 
 // GCPProvider implements the SecretsProvider interface for GCP Secret Manager
@@ -175,7 +176,7 @@ func (g *GCPProvider) SupportsRotation() bool {
 }
 
 // CheckSecretChanged checks if a secret has changed in GCP Secret Manager
-func (g *GCPProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
+func (g *GCPProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error) {
 	secretName := secretInfo.SecretPath
 
 	// Get the current secret value and compute its hash

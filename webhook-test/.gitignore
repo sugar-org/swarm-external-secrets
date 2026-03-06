@@ -1,0 +1,4 @@
+# Ignore downloaded binaries
+*.tgz
+*.zip
+ngrok

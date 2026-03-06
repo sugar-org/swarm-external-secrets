@@ -3,13 +3,15 @@ package providers
 import (
 	"fmt"
 	"strings"
+
+	"github.com/sugar-org/vault-swarm-plugin/providers/vault"
 )
 
 // CreateProvider creates a new provider instance based on the provider type
 func CreateProvider(providerType string) (SecretsProvider, error) {
 	switch strings.ToLower(providerType) {
 	case "vault", "hashicorp-vault":
-		return &VaultProvider{}, nil
+		return &vault.VaultProvider{}, nil
 	case "aws", "aws-secrets-manager":
 		return &AWSProvider{}, nil
 	case "gcp", "gcp-secret-manager", "google":

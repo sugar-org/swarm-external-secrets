@@ -1,4 +1,4 @@
-package providers
+package vault
 
 import (
 	"context"
@@ -9,44 +9,53 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/sugar-org/vault-swarm-plugin/providers/types"
 )
 
 // VaultProvider implements the SecretsProvider interface for HashiCorp Vault
 type VaultProvider struct {
-	client *api.Client
-	config *SecretsConfig
+	client        *api.Client
+	config        *SecretsConfig
+	webhookServer *WebhookServer
 }
 
 // SecretsConfig holds the configuration for the Vault client
 type SecretsConfig struct {
-	Address    string
-	Token      string
-	MountPath  string
-	RoleID     string
-	SecretID   string
-	AuthMethod string
-	CACert     string
-	ClientCert string
-	ClientKey  string
+	Address       string
+	Token         string
+	MountPath     string
+	RoleID        string
+	SecretID      string
+	AuthMethod    string
+	CACert        string
+	ClientCert    string
+	ClientKey     string
+	UseWebhook    bool
+	WebhookPort   string
+	WebhookSecret string
 }
 
 // Initialize sets up the Vault provider with the given configuration
 func (v *VaultProvider) Initialize(config map[string]string) error {
 	v.config = &SecretsConfig{
-		Address:    getConfigOrDefault(config, "VAULT_ADDR", ""),
-		Token:      getConfigOrDefault(config, "VAULT_TOKEN", ""),
-		MountPath:  getConfigOrDefault(config, "VAULT_MOUNT_PATH", "secret"),
-		RoleID:     config["VAULT_ROLE_ID"],
-		SecretID:   config["VAULT_SECRET_ID"],
-		AuthMethod: getConfigOrDefault(config, "VAULT_AUTH_METHOD", "token"),
-		CACert:     config["VAULT_CACERT"],
-		ClientCert: config["VAULT_CLIENT_CERT"],
-		ClientKey:  config["VAULT_CLIENT_KEY"],
+		Address:       getConfigOrDefault(config, "VAULT_ADDR", ""),
+		Token:         getConfigOrDefault(config, "VAULT_TOKEN", ""),
+		MountPath:     getConfigOrDefault(config, "VAULT_MOUNT_PATH", "secret"),
+		RoleID:        config["VAULT_ROLE_ID"],
+		SecretID:      config["VAULT_SECRET_ID"],
+		AuthMethod:    getConfigOrDefault(config, "VAULT_AUTH_METHOD", "token"),
+		CACert:        config["VAULT_CACERT"],
+		ClientCert:    config["VAULT_CLIENT_CERT"],
+		ClientKey:     config["VAULT_CLIENT_KEY"],
+		UseWebhook:    getConfigOrDefault(config, "USE_WEBHOOK", "false") == "true",
+		WebhookPort:   getConfigOrDefault(config, "WEBHOOK_PORT", "9095"),
+		WebhookSecret: config["WEBHOOK_SECRET"],
 	}
 
 	// Configure Vault client
-	SecretsConfig := api.DefaultConfig()
-	SecretsConfig.Address = v.config.Address
+	vaultConfig := api.DefaultConfig()
+	vaultConfig.Address = v.config.Address
 
 	// Configure TLS if certificates are provided
 	if v.config.CACert != "" || v.config.ClientCert != "" {
@@ -55,12 +64,12 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 			ClientCert: v.config.ClientCert,
 			ClientKey:  v.config.ClientKey,
 		}
-		if err := SecretsConfig.ConfigureTLS(tlsConfig); err != nil {
+		if err := vaultConfig.ConfigureTLS(tlsConfig); err != nil {
 			return fmt.Errorf("failed to configure TLS: %v", err)
 		}
 	}
 
-	client, err := api.NewClient(SecretsConfig)
+	client, err := api.NewClient(vaultConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create vault client: %v", err)
 	}
@@ -79,7 +88,7 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 // GetSecret retrieves a secret value from Vault
 func (v *VaultProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
 	secretPath := v.buildSecretPath(req)
-	log.Printf("Reading secret from Vault/OpenBao path: %s", secretPath)
+	log.Printf("Reading secret from Vault path: %s", secretPath)
 
 	// Read secret from Vault
 	secret, err := v.client.Logical().ReadWithContext(ctx, secretPath)
@@ -107,7 +116,7 @@ func (v *VaultProvider) SupportsRotation() bool {
 }
 
 // CheckSecretChanged checks if a secret has changed in Vault
-func (v *VaultProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
+func (v *VaultProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error) {
 	// Read secret from Vault
 	secret, err := v.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
 	if err != nil {
@@ -147,6 +156,40 @@ func (v *VaultProvider) GetProviderName() string {
 // Close performs cleanup for the Vault provider
 func (v *VaultProvider) Close() error {
 	// Vault client doesn't require explicit cleanup
+	return nil
+}
+
+// StartSync begins secret synchronization using either webhook or ticker mode
+func (v *VaultProvider) StartSync(reconcileFunc func(secretName string) error) error {
+	if v.config.UseWebhook {
+		log.Info("Starting Vault provider in WEBHOOK mode")
+
+		webhookConfig := &WebhookConfig{
+			Port:          v.config.WebhookPort,
+			Secret:        v.config.WebhookSecret,
+			ReconcileFunc: reconcileFunc,
+		}
+
+		v.webhookServer = NewWebhookServer(webhookConfig)
+
+		if err := v.webhookServer.Start(); err != nil {
+			return fmt.Errorf("failed to start webhook server: %v", err)
+		}
+
+		log.Infof("Webhook server started on port %s", v.config.WebhookPort)
+		return nil
+	}
+
+	log.Info("Starting Vault provider in TICKER mode (webhook disabled)")
+	// Ticker mode will be handled by the existing driver rotation logic
+	return nil
+}
+
+// StopSync stops the webhook server if running
+func (v *VaultProvider) StopSync() error {
+	if v.webhookServer != nil {
+		return v.webhookServer.Stop()
+	}
 	return nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
+	"github.com/sugar-org/vault-swarm-plugin/providers/types"
 )
 
 // AWSProvider implements the SecretsProvider interface for AWS Secrets Manager
@@ -91,7 +92,7 @@ func (a *AWSProvider) SupportsRotation() bool {
 }
 
 // CheckSecretChanged checks if a secret has changed in AWS Secrets Manager
-func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
+func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error) {
 	// Get secret value from AWS Secrets Manager
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretInfo.SecretPath),

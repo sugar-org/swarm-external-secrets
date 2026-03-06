@@ -5,18 +5,8 @@ import (
 	"time"
 
 	"github.com/docker/go-plugins-helpers/secrets"
+	"github.com/sugar-org/vault-swarm-plugin/providers/types"
 )
-
-// SecretInfo tracks information about secrets being managed
-type SecretInfo struct {
-	DockerSecretName string
-	SecretPath       string
-	SecretField      string
-	ServiceNames     []string
-	LastHash         string // Hash of the secret value for change detection
-	LastUpdated      time.Time
-	Provider         string // Which provider manages this secret
-}
 
 // SecretsProvider defines the interface that all secret providers must implement
 type SecretsProvider interface {
@@ -30,7 +20,7 @@ type SecretsProvider interface {
 	SupportsRotation() bool
 
 	// CheckSecretChanged checks if a secret has changed since last retrieval
-	CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error)
+	CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error)
 
 	// GetProviderName returns the name of this provider
 	GetProviderName() string

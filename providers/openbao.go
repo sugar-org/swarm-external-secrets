@@ -8,6 +8,7 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/openbao/openbao/api/v2"
 	log "github.com/sirupsen/logrus"
+	"github.com/sugar-org/vault-swarm-plugin/providers/types"
 )
 
 // OpenBaoProvider implements the SecretsProvider interface for OpenBao
@@ -107,7 +108,7 @@ func (o *OpenBaoProvider) SupportsRotation() bool {
 }
 
 // CheckSecretChanged checks if a secret has changed in OpenBao
-func (o *OpenBaoProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
+func (o *OpenBaoProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error) {
 	// Read secret from OpenBao
 	secret, err := o.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
 	if err != nil {
