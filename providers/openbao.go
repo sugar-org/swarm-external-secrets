@@ -50,7 +50,7 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 	openBaoConfig := api.DefaultConfig()
 	openBaoConfig.Address = o.config.Address
 
-	// Configure TLS if certificates are provided
+	// Configure TLS if certificates are provided or verification is skipped
 	if o.config.CACert != "" || o.config.ClientCert != "" || o.config.SkipVerify {
 		tlsConfig := &api.TLSConfig{
 			CACert:     o.config.CACert,
