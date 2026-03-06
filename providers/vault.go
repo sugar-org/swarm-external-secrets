@@ -27,7 +27,7 @@ type SecretsConfig struct {
 	AuthMethod string
 	CACert     string
 	ClientCert string
-	ClientKey  string // #nosec G117 -- this is a TLS client key path/filename, not a secret value
+	ClientKey  string
 	SkipVerify bool
 }
 
