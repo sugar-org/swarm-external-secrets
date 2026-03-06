@@ -50,7 +50,7 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 	SecretsConfig := api.DefaultConfig()
 	SecretsConfig.Address = v.config.Address
 
-	// Configure TLS if certificates are provided
+	// Configure TLS if certificates are provided or verification is skipped
 	if v.config.CACert != "" || v.config.ClientCert != "" || v.config.SkipVerify {
 		tlsConfig := &api.TLSConfig{
 			CACert:     v.config.CACert,
