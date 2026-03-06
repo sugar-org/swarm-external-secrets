@@ -91,9 +91,18 @@ func (a *AWSProvider) SupportsRotation() bool {
 	return true
 }
 
-// CheckSecretChanged checks if a secret has changed in AWS Secrets Manager
+// CheckSecretChanged checks if a secret has changed in AWS Secrets Manager.
+//
+// It uses the same value-extraction logic as GetSecret so that the hash
+// comparison is always apples-to-apples:
+//   - If a specific field was configured (aws_field label), use that field.
+//   - Otherwise fall back to auto-detection (same priority list used by GetSecret).
+//
+// This fixes a mismatch where GetSecret would successfully find "password" via
+// auto-detection but CheckSecretChanged would fail to find "value" (the default
+// field name) in a JSON secret like {"password":"..."}, causing it to return
+// (false, err) and silently skip rotation.
 func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.SecretInfo) (bool, error) {
-	// Get secret value from AWS Secrets Manager
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretInfo.SecretPath),
 	}
@@ -107,13 +116,23 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *types.
 		return false, fmt.Errorf("secret %s has no string value", secretInfo.SecretPath)
 	}
 
-	// Extract current value
-	currentValue, err := a.extractSecretValueByField(*result.SecretString, secretInfo.SecretField)
-	if err != nil {
-		return false, fmt.Errorf("failed to extract secret field %s: %v", secretInfo.SecretField, err)
+	var currentValue []byte
+
+	// Use field-specific extraction only when a real field was explicitly
+	// configured. The default sentinel "value" means "no label was set",
+	// so fall back to auto-detection to mirror GetSecret behaviour.
+	if secretInfo.SecretField != "" && secretInfo.SecretField != "value" {
+		currentValue, err = a.extractSecretValueByField(*result.SecretString, secretInfo.SecretField)
+		if err != nil {
+			return false, fmt.Errorf("failed to extract secret field %s: %v", secretInfo.SecretField, err)
+		}
+	} else {
+		currentValue, err = a.extractSecretValueAutoDetect(*result.SecretString)
+		if err != nil {
+			return false, fmt.Errorf("failed to extract secret value: %v", err)
+		}
 	}
 
-	// Calculate current hash
 	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
 	return currentHash != secretInfo.LastHash, nil
 }
@@ -149,8 +168,8 @@ func (a *AWSProvider) loadAWSConfig() (aws.Config, error) {
 		return aws.Config{}, err
 	}
 
-	// Override with explicit credentials if provided
-	// The session token ("") is intentionally empty — only required for temporary STS credentials
+	// Override with explicit credentials if provided.
+	// The session token ("") is intentionally empty — only required for temporary STS credentials.
 	if a.config.AccessKey != "" && a.config.SecretKey != "" {
 		cfg.Credentials = credentials.NewStaticCredentialsProvider(
 			a.config.AccessKey,
@@ -175,39 +194,42 @@ func (a *AWSProvider) buildSecretName(req secrets.Request) string {
 	return req.SecretName
 }
 
-// extractSecretValue extracts the appropriate value from the AWS secret string
+// extractSecretValue extracts the appropriate value from the AWS secret string.
+// When no specific field label is set, it delegates to auto-detection.
 func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Request) ([]byte, error) {
-	// Check for specific field in labels
 	if field, exists := req.SecretLabels["aws_field"]; exists {
 		return a.extractSecretValueByField(secretString, field)
 	}
+	return a.extractSecretValueAutoDetect(secretString)
+}
 
-	// Try to parse as JSON first
+// extractSecretValueAutoDetect tries a priority list of common field names and
+// falls back to the first string value found, then to the raw secret string.
+// This is the shared logic used by both GetSecret and CheckSecretChanged when
+// no explicit aws_field label is present.
+func (a *AWSProvider) extractSecretValueAutoDetect(secretString string) ([]byte, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
-		// Default field names to try
+		// Try common field names in priority order
 		for _, field := range []string{"value", "password", "secret", "data"} {
-			// Try to find a value using default field names
-			if value, ok := data[field]; ok {
-				return []byte(fmt.Sprintf("%v", value)), nil
+			if v, ok := data[field]; ok {
+				return []byte(fmt.Sprintf("%v", v)), nil
 			}
 		}
-		// If no specific field found, return the first string value
-		for _, value := range data {
-			if strValue, ok := value.(string); ok {
-				return []byte(strValue), nil
+		// Fall back to first string value found
+		for _, v := range data {
+			if strVal, ok := v.(string); ok {
+				return []byte(strVal), nil
 			}
 		}
 		return nil, fmt.Errorf("no suitable secret value found in JSON")
 	}
-
-	// If not JSON, return the raw string
+	// Not JSON — return raw string
 	return []byte(secretString), nil
 }
 
-// extractSecretValueByField extracts a specific field from the secret string
+// extractSecretValueByField extracts a specific named field from the secret string
 func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]byte, error) {
-	// Try to parse as JSON first
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
 		if value, ok := data[field]; ok {
@@ -221,11 +243,11 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 		return nil, fmt.Errorf("field %s not found in secret; available fields: %v", field, keys)
 	}
 
-	// If not JSON and field is requested, return error
+	// If not JSON and a specific field is requested, that's an error
 	if field != "value" {
 		return nil, fmt.Errorf("field %s not found in non-JSON secret", field)
 	}
 
-	// If field is "value" and not JSON, return the raw string
+	// field == "value" on a non-JSON secret: return raw string
 	return []byte(secretString), nil
 }
