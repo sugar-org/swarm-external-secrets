@@ -10,5 +10,6 @@ type SecretInfo struct {
 	ServiceNames     []string
 	LastHash         string // Hash of the secret value for change detection
 	LastUpdated      time.Time
-	Provider         string // Which provider manages this secret
+	Provider         string            // Which provider manages this secret
+	Labels           map[string]string // Driver labels from compose, persisted for rotation
 }

@@ -259,17 +259,26 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 	log.Printf("Current provider %s tracking secret: %s at path: %s with field: %s",
 		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
 
+	// Snapshot labels so rotation can reuse them even if Docker does not
+	// forward SecretLabels on subsequent plugin calls (observed on older
+	// Docker versions used by CI runners).
+	labelsCopy := make(map[string]string, len(req.SecretLabels))
+	for k, v := range req.SecretLabels {
+		labelsCopy[k] = v
+	}
+
 	secretInfo := &types.SecretInfo{
 		DockerSecretName: req.SecretName,
 		SecretPath:       secretPath,
 		SecretField:      secretField,
-		ServiceNames:     []string{req.ServiceName}, // Start with current service
+		ServiceNames:     []string{req.ServiceName},
 		LastHash:         hash,
 		LastUpdated:      time.Now(),
 		Provider:         d.provider.GetProviderName(),
+		Labels:           labelsCopy,
 	}
 
-	// If already tracking, update service names and hash
+	// If already tracking, update service names, hash, and labels
 	if existing, exists := d.secretTracker[req.SecretName]; exists {
 		serviceFound := false
 		for _, svc := range existing.ServiceNames {
@@ -283,6 +292,11 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		}
 		existing.LastHash = hash
 		existing.LastUpdated = time.Now()
+		// Refresh labels only when Docker actually provides them, so we never
+		// overwrite a good snapshot with an empty map.
+		if len(req.SecretLabels) > 0 {
+			existing.Labels = labelsCopy
+		}
 	} else {
 		d.secretTracker[req.SecretName] = secretInfo
 	}
@@ -372,33 +386,17 @@ func (d *SecretsDriver) hasSecretChanged(secretInfo *types.SecretInfo) bool {
 	return changed
 }
 
-// rotateSecret handles the secret rotation process
+// rotateSecret handles the secret rotation process.
+// It uses labels captured at track time so rotation works correctly even on
+// Docker versions that do not forward SecretLabels to the plugin on every call.
 func (d *SecretsDriver) rotateSecret(secretInfo *types.SecretInfo) error {
 	log.Printf("Starting rotation for secret: %s", secretInfo.DockerSecretName)
 
-	// Create a dummy request to get the new secret value
+	// Use labels snapshotted at first Get() call — these are always correct
+	// even when Docker stops forwarding them on subsequent plugin invocations.
 	req := secrets.Request{
 		SecretName:   secretInfo.DockerSecretName,
-		SecretLabels: make(map[string]string),
-	}
-
-	// Set appropriate field and path labels based on provider
-	switch secretInfo.Provider {
-	case "vault":
-		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
-	case "aws":
-		req.SecretLabels["aws_field"] = secretInfo.SecretField
-		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
-	case "gcp":
-		req.SecretLabels["gcp_field"] = secretInfo.SecretField
-		req.SecretLabels["gcp_secret_name"] = secretInfo.SecretPath
-	case "azure":
-		req.SecretLabels["azure_field"] = secretInfo.SecretField
-		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
-	case "openbao":
-		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		SecretLabels: secretInfo.Labels,
 	}
 
 	// Get the new secret value from the provider
@@ -426,19 +424,11 @@ func (d *SecretsDriver) rotateSecret(secretInfo *types.SecretInfo) error {
 }
 
 // ReconcileSecret handles secret reconciliation for a specific secret triggered by webhook.
-//
-// Flow:
-//  1. Resolve the inbound vaultSecretName (from webhook payload) to a Docker secret name
-//     using the reverse map populated by trackSecret().
-//  2. If the Docker secret is already tracked, run change-detection and rotate if needed.
-//  3. If it is not yet tracked (no container has requested it since startup), return an
-//     informative error — the plugin cannot act on secrets it has never seen.
 func (d *SecretsDriver) ReconcileSecret(vaultSecretName string) error {
 	// Step 1: resolve vault name → docker secret name
 	d.trackerMutex.RLock()
 	dockerSecretName, mapped := d.vaultNameToDockerSecret[vaultSecretName]
 	if !mapped {
-		// Fallback: assume vault name == docker secret name
 		dockerSecretName = vaultSecretName
 		log.Warnf("No reverse-map entry for vault secret '%s', falling back to using it as docker secret name", vaultSecretName)
 	}
