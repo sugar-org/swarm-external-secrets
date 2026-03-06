@@ -33,8 +33,6 @@ pre-commit:
     gosec:
       glob: "**/*.go"
       run: gosec ./...
-      skip:
-        - exit_code: 1
 
     eof-newline:
       help: Fail when a staged file does not end with a POSIX newline
