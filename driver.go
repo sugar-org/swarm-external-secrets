@@ -58,27 +58,6 @@ func NewDriver() (*SecretsDriver, error) {
 		}
 	}
 
-	enableRotation := true
-	rotationEnv := getEnvOrDefault("ENABLE_ROTATION", "true")
-	if v, err := strconv.ParseBool(rotationEnv); err == nil {
-		enableRotation = v
-	} else {
-		log.Warnf("Invalid boolean value for ENABLE_ROTATION: %q, defaulting to true", rotationEnv)
-	}
-
-	enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
-	config := &SecretsConfig{
-		ProviderType:   providerType,
-		EnableRotation: enableRotation,
-		RotationInterval: parseDurationOrDefault(
-			getEnvOrDefault("ROTATION_INTERVAL", "10s"),
-		),
-		EnableMonitoring: enableMonitoring,
-		MonitoringPort: parseIntOrDefault(
-			getEnvOrDefault("MONITORING_PORT", "8080"),
-		),
-		Settings: settings,
-	}
 	enableRotation := parseBoolEnv("ENABLE_ROTATION", true)
 	enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
 
@@ -150,7 +129,6 @@ func NewDriver() (*SecretsDriver, error) {
 	log.Printf("Successfully initialized driver with %s provider", provider.GetProviderName())
 	return driver, nil
 }
-
 // Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
