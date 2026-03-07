@@ -18,9 +18,6 @@ The Vault Swarm Plugin supports multiple secrets providers, allowing you to use 
 | `VAULT_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
 | `VAULT_ROLE_ID` | Role ID for AppRole authentication | — |
 | `VAULT_SECRET_ID` | Secret ID for AppRole authentication | — |
-| `VAULT_CACERT` | Path to CA certificate for TLS verification | — |
-| `VAULT_CLIENT_CERT` | Path to client certificate | — |
-| `VAULT_CLIENT_KEY` | Path to client key | — |
 | `VAULT_SKIP_VERIFY` | Skip TLS verification (not recommended for production) | `false` |
 
 **Example:**
@@ -107,9 +104,6 @@ docker plugin set swarm-external-secrets:latest \
 | `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
 | `OPENBAO_ROLE_ID` | Role ID for AppRole authentication | — |
 | `OPENBAO_SECRET_ID` | Secret ID for AppRole authentication | — |
-| `OPENBAO_CACERT` | Path to CA certificate for TLS verification | — |
-| `OPENBAO_CLIENT_CERT` | Path to client certificate | — |
-| `OPENBAO_CLIENT_KEY` | Path to client key | — |
 | `OPENBAO_SKIP_VERIFY` | Skip TLS verification (not recommended for production) | `false` |
 
 **Example:**
