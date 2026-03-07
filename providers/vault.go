@@ -28,6 +28,7 @@ type SecretsConfig struct {
 	CACert     string
 	ClientCert string
 	ClientKey  string
+	SkipVerify bool
 }
 
 // Initialize sets up the Vault provider with the given configuration
@@ -42,18 +43,20 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 		CACert:     config["VAULT_CACERT"],
 		ClientCert: config["VAULT_CLIENT_CERT"],
 		ClientKey:  config["VAULT_CLIENT_KEY"],
+		SkipVerify: getConfigOrDefault(config, "VAULT_SKIP_VERIFY", "false") == "true",
 	}
 
 	// Configure Vault client
 	SecretsConfig := api.DefaultConfig()
 	SecretsConfig.Address = v.config.Address
 
-	// Configure TLS if certificates are provided
-	if v.config.CACert != "" || v.config.ClientCert != "" {
+	// Configure TLS if certificates are provided or verification is skipped
+	if v.config.CACert != "" || v.config.ClientCert != "" || v.config.SkipVerify {
 		tlsConfig := &api.TLSConfig{
 			CACert:     v.config.CACert,
 			ClientCert: v.config.ClientCert,
 			ClientKey:  v.config.ClientKey,
+			Insecure:   v.config.SkipVerify,
 		}
 		if err := SecretsConfig.ConfigureTLS(tlsConfig); err != nil {
 			return fmt.Errorf("failed to configure TLS: %v", err)

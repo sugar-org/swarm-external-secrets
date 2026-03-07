@@ -88,6 +88,7 @@ docker plugin set "${PLUGIN_NAME}" \
     VAULT_MOUNT_PATH="secret" \
     ENABLE_ROTATION="true" \
     ROTATION_INTERVAL="10s" \
+    VAULT_SKIP_VERIFY="false" \
     ENABLE_MONITORING="false"
 success "Plugin configured with Vault token."
 
