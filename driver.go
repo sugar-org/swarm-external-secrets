@@ -59,28 +59,26 @@ func NewDriver() (*SecretsDriver, error) {
 	}
 
 	enableRotation := true
-    rotationEnv := getEnvOrDefault("ENABLE_ROTATION", "true")
-    if v, err := strconv.ParseBool(rotationEnv); err == nil {
-	    enableRotation = v
-    } else {
-	    log.Warnf("Invalid boolean value for ENABLE_ROTATION: %q, defaulting to true", rotationEnv)
-    }
+	rotationEnv := getEnvOrDefault("ENABLE_ROTATION", "true")
+	if v, err := strconv.ParseBool(rotationEnv); err == nil {
+		enableRotation = v
+	} else {
+		log.Warnf("Invalid boolean value for ENABLE_ROTATION: %q, defaulting to true", rotationEnv)
+	}
 
-<<<<<<< HEAD
-    enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
-    config := &SecretsConfig{
-        ProviderType:      providerType,
-        EnableRotation:    enableRotation,
-        RotationInterval:  parseDurationOrDefault(
-            getEnvOrDefault("ROTATION_INTERVAL", "10s"),
-        ),
-        EnableMonitoring:  enableMonitoring,
-        MonitoringPort:    parseIntOrDefault(
-            getEnvOrDefault("MONITORING_PORT", "8080"),
-        ),
-        Settings: settings,
-    }
-=======
+	enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
+	config := &SecretsConfig{
+		ProviderType:   providerType,
+		EnableRotation: enableRotation,
+		RotationInterval: parseDurationOrDefault(
+			getEnvOrDefault("ROTATION_INTERVAL", "10s"),
+		),
+		EnableMonitoring: enableMonitoring,
+		MonitoringPort: parseIntOrDefault(
+			getEnvOrDefault("MONITORING_PORT", "8080"),
+		),
+		Settings: settings,
+	}
 	enableRotation := parseBoolEnv("ENABLE_ROTATION", true)
 	enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
 
@@ -96,7 +94,6 @@ func NewDriver() (*SecretsDriver, error) {
 		),
 		Settings: settings,
 	}
->>>>>>> 64d3166 (refactor: move parseBoolEnv to utils.go)
 
 	// Create the appropriate provider
 	provider, err := providers.CreateProvider(config.ProviderType)
@@ -250,13 +247,13 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 	case "gcp":
 		secretPath = d.buildGCPSecretName(req)
 	case "azure":
-        var err error
-        secretPath, err = d.buildAzureSecretName(req)
-        if err != nil {
-            log.Errorf("failed to build azure secret name: %v", err)
-            return
-        
-        }
+		var err error
+		secretPath, err = d.buildAzureSecretName(req)
+		if err != nil {
+			log.Errorf("failed to build azure secret name: %v", err)
+			return
+
+		}
 	case "openbao":
 		secretPath = d.buildOpenBaoSecretPath(req)
 	default:
