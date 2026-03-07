@@ -85,6 +85,7 @@ docker plugin set "${PLUGIN_NAME}" \
     OPENBAO_MOUNT_PATH="secret" \
     ENABLE_ROTATION="true" \
     ROTATION_INTERVAL="10s" \
+    OPENBAO_SKIP_VERIFY="false" \
     ENABLE_MONITORING="false"
 success "Plugin configured with OpenBao token."
 
