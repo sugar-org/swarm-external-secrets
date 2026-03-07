@@ -1,11 +1,11 @@
 package main
-
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // getEnvOrDefault returns environment variable value or default
