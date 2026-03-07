@@ -41,17 +41,6 @@ type SecretsConfig struct {
 	MonitoringPort   int
 	Settings         map[string]string
 }
-func parseBoolEnv(key string, defaultVal bool) bool {
-    raw := getEnvOrDefault(key, strconv.FormatBool(defaultVal))
-
-    v, err := strconv.ParseBool(raw)
-    if err != nil {
-        log.Warnf("Invalid boolean value for %s: %q, defaulting to %t", key, raw, defaultVal)
-        return defaultVal
-    }
-
-    return v
-}
 
 // NewDriver creates a new Driver instance with multi-provider support
 func NewDriver() (*SecretsDriver, error) {
@@ -77,6 +66,7 @@ func NewDriver() (*SecretsDriver, error) {
 	    log.Warnf("Invalid boolean value for ENABLE_ROTATION: %q, defaulting to true", rotationEnv)
     }
 
+<<<<<<< HEAD
     enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
     config := &SecretsConfig{
         ProviderType:      providerType,
@@ -90,6 +80,23 @@ func NewDriver() (*SecretsDriver, error) {
         ),
         Settings: settings,
     }
+=======
+	enableRotation := parseBoolEnv("ENABLE_ROTATION", true)
+	enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
+
+	config := &SecretsConfig{
+		ProviderType:   providerType,
+		EnableRotation: enableRotation,
+		RotationInterval: parseDurationOrDefault(
+			getEnvOrDefault("ROTATION_INTERVAL", "10s"),
+		),
+		EnableMonitoring: enableMonitoring,
+		MonitoringPort: parseIntOrDefault(
+			getEnvOrDefault("MONITORING_PORT", "8080"),
+		),
+		Settings: settings,
+	}
+>>>>>>> 64d3166 (refactor: move parseBoolEnv to utils.go)
 
 	// Create the appropriate provider
 	provider, err := providers.CreateProvider(config.ProviderType)
@@ -504,8 +511,8 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 
 		for i, secretRef := range containerSpec.Secrets {
 			// Match exact name or versioned variants (e.g., secret-1, secret-2)
-            if secretRef.SecretName == oldSecretName ||
-	            strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
+			if secretRef.SecretName == oldSecretName ||
+				strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
 				// Update to use the new secret name and ID
 				updatedSecrets[i] = &swarm.SecretReference{
 					File:       secretRef.File,
@@ -689,40 +696,42 @@ func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 
 	return name
 }
+
 // normalizeGCPSecretName ensures the name matches GCP Secret Manager requirements.
 // Reference (GCP Secret Manager API):
 // https://cloud.google.com/secret-manager/docs/reference/rest/v1/projects.secrets/create
 // Secret ID must be <= 255 characters and match allowed pattern.
 // normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
 func normalizeGCPSecretName(secretName string) (string, error) {
-    if len(secretName) == 0 {
-        return "s", nil
-    }
+	if len(secretName) == 0 {
+		return "s", nil
+	}
 
-    result := ""
-    for i, char := range secretName {
-        if i == 0 {
-            if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
-                result += string(char)
-            } else {
-                result += "s"
-            }
-        } else {
-            if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-                (char >= '0' && char <= '9') || char == '_' || char == '-' {
-                result += string(char)
-            } else {
-                result += "_"
-            }
-        }
-    }
+	result := ""
+	for i, char := range secretName {
+		if i == 0 {
+			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
+				result += string(char)
+			} else {
+				result += "s"
+			}
+		} else {
+			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+				(char >= '0' && char <= '9') || char == '_' || char == '-' {
+				result += string(char)
+			} else {
+				result += "_"
+			}
+		}
+	}
 
-    if len(result) > 255 {
-        return "", fmt.Errorf("secret name exceeds 255 characters (GCP limit as per Secret Manager spec)")
-    }
+	if len(result) > 255 {
+		return "", fmt.Errorf("secret name exceeds 255 characters (GCP limit as per Secret Manager spec)")
+	}
 
-    return result, nil
+	return result, nil
 }
+
 // buildAzureSecretName ensures the name matches Azure Key Vault requirements.
 // Reference (Azure Key Vault naming rules):
 // https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-identifiers
