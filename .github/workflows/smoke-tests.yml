@@ -44,4 +44,29 @@ jobs:
 
       - name: Run smoke test for awssm
         run: bash scripts/tests/smoke-test-awssm.sh
-        
+
+  smoke-test-gcp:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.GCP_KEY_JSON != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Init Docker Swarm
+        run: docker swarm init
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Write GCP credentials
+        run: |
+          echo '${{ secrets.GCP_KEY_JSON }}' > /tmp/gcp-key.json
+
+      - name: Run smoke test for GCP
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
+        run: bash scripts/tests/smoke-test-gcp.sh

@@ -31,6 +31,9 @@ go.work.sum
 # env file
 .env
 
+# Docker Plugin build artifacts
+plugin/rootfs/
+
 # Editor/IDE
 # .idea/
 # .vscode/
