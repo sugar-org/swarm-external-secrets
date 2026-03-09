@@ -63,6 +63,11 @@
       "settable": ["value"]
     },
     {
+      "name": "VAULT_SKIP_VERIFY",
+      "description": "Skip TLS certificate verification for Vault (true/false)",
+      "settable": ["value"]
+    },
+    {
       "name": "SECRETS_PROVIDER",
       "description": "Secrets provider type (e.g., vault, openbao)",
       "settable": ["value"]
@@ -98,13 +103,18 @@
       "settable": ["value"]
     },
     {
+      "name": "OPENBAO_SKIP_VERIFY",
+      "description": "Skip TLS certificate verification for OpenBao (true/false)",
+      "settable": ["value"]
+    },
+    {
       "name": "ENABLE_ROTATION",
-      "description": "Enable OpenBao secret rotation (true/false)",
+      "description": "Enable secret rotation (true/false)",
       "settable": ["value"]
     },
     {
       "name": "ROTATION_INTERVAL",
-      "description": "OpenBao secret rotation check interval (e.g., 5m, 1h)",
+      "description": "Secret rotation check interval (e.g., 5m, 1h)",
       "settable": ["value"]
     },
     {
