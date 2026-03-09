@@ -694,6 +694,10 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 
 func shortID() string {
 	b := make([]byte, 4)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		log.WithError(err).Warn("failed to read random bytes for shortID; using time-based fallback")
+		sum := sha256.Sum256([]byte(time.Now().String()))
+		return fmt.Sprintf("%x", sum[:4])
+	}
 	return fmt.Sprintf("%x", b)
 }
