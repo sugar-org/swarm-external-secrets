@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sugar-org/vault-swarm-plugin/monitoring"
@@ -693,11 +693,5 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 // }
 
 func shortID() string {
-	b := make([]byte, 4)
-	if _, err := rand.Read(b); err != nil {
-		log.WithError(err).Warn("failed to read random bytes for shortID; using time-based fallback")
-		sum := sha256.Sum256([]byte(time.Now().String()))
-		return fmt.Sprintf("%x", sum[:4])
-	}
-	return fmt.Sprintf("%x", b)
+	return uuid.New().String()[:8]
 }
