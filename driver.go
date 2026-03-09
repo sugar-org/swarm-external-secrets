@@ -121,7 +121,7 @@ func NewDriver() (*SecretsDriver, error) {
 
 	// Webhook vs Ticker decision
 	// USE_WEBHOOK=true is only honoured for the Vault provider.
-	// All other providers (AWS, Azure, OpenBao, GCP) always use the ticker.
+	// All other providers (AWS, Azure, OpenBao, GCP) always use the ticker .
 	if config.UseWebhook && config.ProviderType == "vault" {
 		log.Printf("USE_WEBHOOK=true detected for Vault provider — starting webhook server on port %d", config.WebhookPort)
 		webhookCfg := &providers.WebhookConfig{
