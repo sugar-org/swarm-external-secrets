@@ -3,6 +3,7 @@
 set -ex
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
+
 # shellcheck source=smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
@@ -87,6 +88,7 @@ docker plugin set "${PLUGIN_NAME}" \
     VAULT_MOUNT_PATH="secret" \
     ENABLE_ROTATION="true" \
     ROTATION_INTERVAL="10s" \
+    VAULT_SKIP_VERIFY="false" \
     ENABLE_MONITORING="false"
 success "Plugin configured with Vault token."
 
@@ -134,4 +136,4 @@ info "Verifying rotated secret value (waiting for in-place update, up to 180s)..
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 
-success "Vault smoke test PASSED (incl. rotation)"
+success "Vault smoke test PASSED"
