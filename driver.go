@@ -568,6 +568,36 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	return nil
 }
 
+// forceServiceUpdate forces a service to update (recreate tasks)
+// TODO - This method is currently not used, check later if needed
+// func (d *SecretsDriver) forceServiceUpdate(service swarm.Service) error {
+// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+// 	defer cancel()
+
+// 	// Get current service spec
+// 	serviceSpec := service.Spec
+
+// 	// Add/update a label to force the update
+// 	if serviceSpec.Labels == nil {
+// 		serviceSpec.Labels = make(map[string]string)
+// 	}
+// 	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
+
+// 	// Update the service
+// 	updateOptions := types.ServiceUpdateOptions{}
+// 	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to update service: %v", err)
+// 	}
+
+// 	if len(updateResponse.Warnings) > 0 {
+// 		log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
+// 	}
+
+//		log.Printf("Forced update for service: %s", service.Spec.Name)
+//		return nil
+//	}
+//
 // Stop gracefully stops the monitoring and cleans up resources
 func (d *SecretsDriver) Stop() error {
 	if d.monitorCancel != nil {
@@ -712,3 +742,16 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 	}
 	return result
 }
+
+// func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
+// 	// Use custom path from labels if provided
+// 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
+// 		return fmt.Sprintf("secret/data/%s", customPath)
+// 	}
+
+// 	// Default path structure for KV v2
+// 	if req.ServiceName != "" {
+// 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+// 	}
+// 	return fmt.Sprintf("secret/data/%s", req.SecretName)
+// }Collapse comment

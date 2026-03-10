@@ -21,7 +21,7 @@ import (
 // The function receives the Docker secret name that needs to be reconciled.
 type ReconcileFunc func(secretName string) error
 
-// ----- HCP Vault Secrets webhook payload types -----
+// HCP Vault Secrets webhook payload types -----
 
 // WebhookPayload represents the top-level structure of an HCP Vault Secrets
 // webhook event.  Only the fields the plugin cares about are kept; unknown
@@ -116,7 +116,7 @@ func (ws *WebhookServer) Stop() error {
 	return ws.server.Shutdown(ctx)
 }
 
-// ----- HTTP handlers -----
+// HTTP handlers
 
 func (ws *WebhookServer) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -133,7 +133,7 @@ func (ws *WebhookServer) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// ---- HMAC validation (optional but recommended) ----
+	// HMAC validation
 	if ws.config.Secret != "" {
 		sig := r.Header.Get("X-HCP-Webhook-Signature")
 		if sig == "" {
@@ -148,7 +148,7 @@ func (ws *WebhookServer) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// ---- Parse payload ----
+	// Parse payload
 	var payload WebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
 		log.Errorf("webhook: failed to parse payload: %v", err)
@@ -159,14 +159,14 @@ func (ws *WebhookServer) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Printf("webhook: received event_action=%s event_source=%s secret=%s",
 		payload.EventAction, payload.EventSource, payload.EventPayload.Name)
 
-	// ---- HCP verification ping ----
+	// HCP verification ping
 	if strings.EqualFold(payload.EventAction, "test") {
 		log.Info("webhook: responding to HCP verification ping")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// ---- Filter to actionable secret events ----
+	// Filter to actionable secret events
 	if !isSecretEvent(payload.EventSource) {
 		log.Printf("webhook: ignoring non-secret event source: %s", payload.EventSource)
 		w.WriteHeader(http.StatusOK)
@@ -186,7 +186,7 @@ func (ws *WebhookServer) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ---- Trigger reconciliation asynchronously ----
+	// Trigger reconciliation asynchronously
 	go func() {
 		log.Printf("webhook: reconciling secret %q (action=%s)", secretName, payload.EventAction)
 		if err := ws.reconcile(secretName); err != nil {
@@ -206,7 +206,7 @@ func (ws *WebhookServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"status":"ok","webhook_enabled":true}`)
 }
 
-// ----- Helpers -----
+// Helpers
 
 // verifyHMAC checks the X-HCP-Webhook-Signature header against the raw body.
 // HCP uses HMAC-SHA256 with the shared token to compute the hex-encoded
