@@ -35,6 +35,7 @@ type Monitor struct {
 	listeners   []chan *Metrics
 	listenersMu sync.RWMutex
 	lastLogTime time.Time
+	stopOnce    sync.Once
 }
 
 // NewMonitor creates a new monitoring instance
@@ -58,21 +59,24 @@ func (m *Monitor) Start() {
 	log.Printf("Started system monitoring with interval: %v", m.interval)
 }
 
-// Stop stops the monitoring process
+// Stop stops the monitoring process. It is safe to call multiple times;
+// only the first call performs the actual shutdown.
 func (m *Monitor) Stop() {
-	if m.cancel != nil {
-		m.cancel()
-	}
+	m.stopOnce.Do(func() {
+		if m.cancel != nil {
+			m.cancel()
+		}
 
-	// Close all listener channels
-	m.listenersMu.Lock()
-	for _, listener := range m.listeners {
-		close(listener)
-	}
-	m.listeners = nil
-	m.listenersMu.Unlock()
+		// Close all listener channels
+		m.listenersMu.Lock()
+		for _, listener := range m.listeners {
+			close(listener)
+		}
+		m.listeners = nil
+		m.listenersMu.Unlock()
 
-	log.Printf("Stopped system monitoring")
+		log.Printf("Stopped system monitoring")
+	})
 }
 
 // GetMetrics returns a copy of current metrics
