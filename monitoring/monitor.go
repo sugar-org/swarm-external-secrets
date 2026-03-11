@@ -31,7 +31,7 @@ type Monitor struct {
 	metrics     *Metrics
 	ctx         context.Context
 	cancel      context.CancelFunc
-	once        sync.Once
+	stopOnce    sync.Once
 	interval    time.Duration
 	listeners   []chan *Metrics
 	listenersMu sync.RWMutex
@@ -61,8 +61,8 @@ func (m *Monitor) Start() {
 
 // Stop stops the monitoring process
 func (m *Monitor) Stop() {
-	// this function runs only once we have field `once sync.Once` in Monitor struct
-	m.once.Do(func() {
+    // Stop is idempotent
+	m.stopOnce.Do(func() {
 		if m.cancel != nil {
 			m.cancel()
 		}
