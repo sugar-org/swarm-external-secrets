@@ -69,7 +69,7 @@ func (m *Monitor) Stop() {
 
 		// close all listener chan
 		m.listenersMu.Lock()
-		defer m.listenersMu.Lock()
+		defer m.listenersMu.Unlock()
 		for _, listener := range m.listeners {
 			close(listener)
 		}
