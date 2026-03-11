@@ -31,6 +31,7 @@ type Monitor struct {
 	metrics     *Metrics
 	ctx         context.Context
 	cancel      context.CancelFunc
+	stopOnce    sync.Once
 	interval    time.Duration
 	listeners   []chan *Metrics
 	listenersMu sync.RWMutex
@@ -60,19 +61,21 @@ func (m *Monitor) Start() {
 
 // Stop stops the monitoring process
 func (m *Monitor) Stop() {
-	if m.cancel != nil {
-		m.cancel()
-	}
+    // Stop is idempotent
+	m.stopOnce.Do(func() {
+		if m.cancel != nil {
+			m.cancel()
+		}
 
-	// Close all listener channels
-	m.listenersMu.Lock()
-	for _, listener := range m.listeners {
-		close(listener)
-	}
-	m.listeners = nil
-	m.listenersMu.Unlock()
-
-	log.Printf("Stopped system monitoring")
+		// close all listener chan
+		m.listenersMu.Lock()
+		defer m.listenersMu.Unlock()
+		for _, listener := range m.listeners {
+			close(listener)
+		}
+		m.listeners = nil
+		log.Printf("Stopped system monitoring")
+	})
 }
 
 // GetMetrics returns a copy of current metrics
