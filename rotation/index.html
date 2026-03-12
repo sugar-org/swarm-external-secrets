@@ -776,26 +776,26 @@
 </thead>
 <tbody>
 <tr>
-<td><code>VAULT_ENABLE_ROTATION</code></td>
+<td><code>ENABLE_ROTATION</code></td>
 <td>Enable/disable automatic rotation</td>
 <td><code>true</code></td>
 </tr>
 <tr>
-<td><code>VAULT_ROTATION_INTERVAL</code></td>
+<td><code>ROTATION_INTERVAL</code></td>
 <td>How often to check for changes</td>
-<td><code>5m</code></td>
+<td><code>10s</code></td>
 </tr>
 </tbody>
 </table>
 <h3 id="example-configuration">Example Configuration<a class="headerlink" href="#example-configuration" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Enable rotation with 2-minute check interval</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">VAULT_ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">VAULT_ROTATION_INTERVAL</span><span class="o">=</span><span class="s2">&quot;2m&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">ROTATION_INTERVAL</span><span class="o">=</span><span class="s2">&quot;2m&quot;</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Disable rotation</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nv">VAULT_ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;false&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;false&quot;</span>
 </code></pre></div>
 <h2 id="usage-example">Usage Example<a class="headerlink" href="#usage-example" title="Permanent link">&para;</a></h2>
 <ol>
@@ -845,7 +845,7 @@
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>If rotation is not working:</p>
 <ol>
-<li>Check if rotation is enabled: <code>VAULT_ENABLE_ROTATION=true</code></li>
+<li>Check if rotation is enabled: <code>ENABLE_ROTATION=true</code></li>
 <li>Verify plugin has access to Docker socket</li>
 <li>Ensure plugin is running on a manager node</li>
 <li>Check plugin logs for error messages</li>
