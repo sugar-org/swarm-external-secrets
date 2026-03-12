@@ -91,7 +91,7 @@ ENABLE_MONITORING=true
 MONITORING_PORT=8080
 
 # Rotation monitoring interval (default: 10s)
-VAULT_ROTATION_INTERVAL=30s
+ROTATION_INTERVAL=30s
 ```
 
 ### Docker Plugin Configuration
@@ -100,7 +100,7 @@ VAULT_ROTATION_INTERVAL=30s
 docker plugin set swarm-external-secrets:latest \
     ENABLE_MONITORING=true \
     MONITORING_PORT=9090 \
-    VAULT_ROTATION_INTERVAL=1m
+    ROTATION_INTERVAL=1m
 ```
 
 ## Integration Examples
