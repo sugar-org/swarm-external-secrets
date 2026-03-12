@@ -89,6 +89,7 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 func (a *AWSProvider) SupportsRotation() bool {
 	return true
 }
+
 // CheckSecretChanged checks if a secret has changed in AWS Secrets Manager
 func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
 	// Get secret value from AWS Secrets Manager
@@ -116,10 +117,6 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 
 	if currentHash != secretInfo.LastHash {
 		log.Infof("Secret changed for %s", secretInfo.SecretPath)
-
-		// update stored hash
-		secretInfo.LastHash = currentHash
-
 		return true, nil
 	}
 
@@ -195,12 +192,10 @@ func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Reques
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
 		// Default field names to try
 		for _, field := range []string{"value", "password", "secret", "data"} {
-			// Try to find a value using default field names
 			if value, ok := data[field]; ok {
 				return []byte(fmt.Sprintf("%v", value)), nil
 			}
 		}
-		// If no specific field found, return the first string value
 		for _, value := range data {
 			if strValue, ok := value.(string); ok {
 				return []byte(strValue), nil
@@ -209,19 +204,16 @@ func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Reques
 		return nil, fmt.Errorf("no suitable secret value found in JSON")
 	}
 
-	// If not JSON, return the raw string
 	return []byte(secretString), nil
 }
 
 // extractSecretValueByField extracts a specific field from the secret string
 func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]byte, error) {
-	// Try to parse as JSON first
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
 		if value, ok := data[field]; ok {
 			return []byte(fmt.Sprintf("%v", value)), nil
 		}
-		// Improved error message: show available keys
 		keys := make([]string, 0, len(data))
 		for k := range data {
 			keys = append(keys, k)
@@ -229,11 +221,9 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 		return nil, fmt.Errorf("field %s not found in secret; available fields: %v", field, keys)
 	}
 
-	// If not JSON and field is requested, return error
 	if field != "value" {
 		return nil, fmt.Errorf("field %s not found in non-JSON secret", field)
 	}
 
-	// If field is "value" and not JSON, return the raw string
 	return []byte(secretString), nil
 }
