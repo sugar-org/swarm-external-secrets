@@ -89,7 +89,6 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 func (a *AWSProvider) SupportsRotation() bool {
 	return true
 }
-
 // CheckSecretChanged checks if a secret has changed in AWS Secrets Manager
 func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
 	// Get secret value from AWS Secrets Manager
@@ -115,16 +114,17 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 	// Calculate current hash
 	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
 
-    if currentHash != secretInfo.LastHash {
-        log.Infof("Secret changed for %s", secretInfo.SecretPath)
+	if currentHash != secretInfo.LastHash {
+		log.Infof("Secret changed for %s", secretInfo.SecretPath)
 
-        // update stored hash
-        secretInfo.LastHash = currentHash
+		// update stored hash
+		secretInfo.LastHash = currentHash
 
-    return true, nil
-    }
+		return true, nil
+	}
 
-return false, nil
+	return false, nil
+}
 
 // GetProviderName returns the name of this provider
 func (a *AWSProvider) GetProviderName() string {
