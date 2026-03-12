@@ -114,8 +114,17 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 
 	// Calculate current hash
 	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
-	return currentHash != secretInfo.LastHash, nil
-}
+
+    if currentHash != secretInfo.LastHash {
+        log.Infof("Secret changed for %s", secretInfo.SecretPath)
+
+        // update stored hash
+        secretInfo.LastHash = currentHash
+
+    return true, nil
+    }
+
+return false, nil
 
 // GetProviderName returns the name of this provider
 func (a *AWSProvider) GetProviderName() string {
