@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    image: busybox:latest
+    command: >
+      sh -c "
+        while true; do
+          echo 'Current secret:' && cat /run/secrets/smoke_secret
+          sleep 5
+        done
+      "
+    secrets:
+      - smoke_secret
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    networks:
+      - smoke-network
+
+secrets:
+  smoke_secret:
+    driver: swarm-external-secrets:latest
+    labels:
+      openbao_path: "database/mysql"
+      openbao_field: "password"
+
+networks:
+  smoke-network:
+    driver: overlay
