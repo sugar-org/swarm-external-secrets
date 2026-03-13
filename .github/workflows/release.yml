@@ -103,7 +103,6 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
           GHCR: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
-          DHR: ${{ env.DOCKERHUB_USERNAME }}/swarm-external-secrets
         run: |
           docker build -t plugin:temp .
           mkdir -p ./plugin/rootfs
@@ -111,13 +110,18 @@ jobs:
           docker export plugin-rootfs | tar -x -C ./plugin/rootfs
           docker rm plugin-rootfs && docker rmi plugin:temp
           cp config.json ./plugin/
-          IMAGES="${GHCR}"
+
+          # Always publish to GHCR
+          docker plugin create "${GHCR}:${VERSION}" ./plugin
+          docker plugin push "${GHCR}:${VERSION}"
+          docker plugin create "${GHCR}:latest" ./plugin
+          docker plugin push "${GHCR}:latest"
+
+          # Publish to Docker Hub only if credentials are configured
           if [ -n "${DOCKERHUB_USERNAME}" ]; then
-            IMAGES="${IMAGES} ${DHR}"
+            DHR="${DOCKERHUB_USERNAME}/swarm-external-secrets"
+            docker plugin create "${DHR}:${VERSION}" ./plugin
+            docker plugin push "${DHR}:${VERSION}"
+            docker plugin create "${DHR}:latest" ./plugin
+            docker plugin push "${DHR}:latest"
           fi
-          for IMAGE in ${IMAGES}; do
-            docker plugin create ${IMAGE}:${VERSION} ./plugin
-            docker plugin push  ${IMAGE}:${VERSION}
-            docker plugin create ${IMAGE}:latest ./plugin
-            docker plugin push  ${IMAGE}:latest
-          done
