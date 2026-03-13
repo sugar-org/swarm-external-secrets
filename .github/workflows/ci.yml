@@ -59,9 +59,9 @@ jobs:
         run: |
           docker build -t swarm-external-secrets:test .
           mkdir -p ./plugin/rootfs
-          docker create --name c swarm-external-secrets:test
-          docker export c | tar -x -C ./plugin/rootfs
-          docker rm c
+          docker create --name plugin-rootfs swarm-external-secrets:test
+          docker export plugin-rootfs | tar -x -C ./plugin/rootfs
+          docker rm plugin-rootfs
           cp config.json ./plugin/
           docker plugin create test-org/swarm-external-secrets:test ./plugin
           docker plugin inspect test-org/swarm-external-secrets:test
