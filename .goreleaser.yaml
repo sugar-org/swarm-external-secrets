@@ -40,7 +40,7 @@ sboms:
   - id: spdx
     artifacts: archive
     documents:
-    - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.spdx.json"
   - id: cyclonedx
     artifacts: archive
     args:
@@ -48,9 +48,9 @@ sboms:
       - "--file"
       - "$document"
       - "--output"
-     - "cyclonedx-json"
+      - "cyclonedx-json"
     documents:
-      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.cdx.json"
     
 changelog:
   use: github
