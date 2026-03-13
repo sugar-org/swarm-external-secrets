@@ -93,6 +93,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
@@ -110,7 +111,11 @@ jobs:
           docker export plugin-rootfs | tar -x -C ./plugin/rootfs
           docker rm plugin-rootfs && docker rmi plugin:temp
           cp config.json ./plugin/
-          for IMAGE in "${GHCR}" "${DHR}"; do
+          IMAGES="${GHCR}"
+          if [ -n "${DOCKERHUB_USERNAME}" ]; then
+            IMAGES="${IMAGES} ${DHR}"
+          fi
+          for IMAGE in ${IMAGES}; do
             docker plugin create ${IMAGE}:${VERSION} ./plugin
             docker plugin push  ${IMAGE}:${VERSION}
             docker plugin create ${IMAGE}:latest ./plugin
