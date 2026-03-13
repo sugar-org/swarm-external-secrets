@@ -106,9 +106,9 @@ jobs:
         run: |
           docker build -t plugin:temp .
           mkdir -p ./plugin/rootfs
-          docker create --name c plugin:temp
-          docker export c | tar -x -C ./plugin/rootfs
-          docker rm c && docker rmi plugin:temp
+          docker create --name plugin-rootfs plugin:temp
+          docker export plugin-rootfs | tar -x -C ./plugin/rootfs
+          docker rm plugin-rootfs && docker rmi plugin:temp
           cp config.json ./plugin/
           for IMAGE in "${GHCR}" "${DHR}"; do
             docker plugin create ${IMAGE}:${VERSION} ./plugin
