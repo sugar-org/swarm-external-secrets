@@ -58,22 +58,22 @@ changelog:
   abbrev: 0
   groups:
     - title: "Features"
-      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?feat(\([[:word:]]+\))?!?:.+$'
       order: 0
     - title: "Bug Fixes"
-      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?fix(\([[:word:]]+\))?!?:.+$'
       order: 1
     - title: "Documentation"
-      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?docs(\([[:word:]]+\))?!?:.+$'
       order: 2
     - title: "Performance"
-      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?perf(\([[:word:]]+\))?!?:.+$'
       order: 3
     - title: "Refactor"
-      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?refactor(\([[:word:]]+\))?!?:.+$'
       order: 4
     - title: "CI/Build"
-      regexp: '^.*?(ci|build)(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?(ci|build)(\([[:word:]]+\))?!?:.+$'
       order: 5
     - title: "Other Changes"
       order: 999
