@@ -59,20 +59,20 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 			Insecure:   o.config.SkipVerify,
 		}
 		if err := openBaoConfig.ConfigureTLS(tlsConfig); err != nil {
-			return fmt.Errorf("failed to configure TLS: %v", err)
+			return fmt.Errorf("failed to configure TLS: %w", err)
 		}
 	}
 
 	client, err := api.NewClient(openBaoConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create OpenBao client: %v", err)
+		return fmt.Errorf("failed to create OpenBao client: %w", err)
 	}
 
 	o.client = client
 
 	// Authenticate with OpenBao
 	if err := o.authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate with OpenBao: %v", err)
+		return fmt.Errorf("failed to authenticate with OpenBao: %w", err)
 	}
 
 	log.Printf("Successfully initialized OpenBao provider using %s method", o.config.AuthMethod)
@@ -87,7 +87,7 @@ func (o *OpenBaoProvider) GetSecret(ctx context.Context, req secrets.Request) ([
 	// Read secret from OpenBao
 	secret, err := o.client.Logical().ReadWithContext(ctx, secretPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read secret from OpenBao: %v", err)
+		return nil, fmt.Errorf("failed to read secret from OpenBao: %w", err)
 	}
 
 	if secret == nil {
@@ -97,7 +97,7 @@ func (o *OpenBaoProvider) GetSecret(ctx context.Context, req secrets.Request) ([
 	// Extract the secret value
 	value, err := o.extractSecretValue(secret, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract secret value: %v", err)
+		return nil, fmt.Errorf("failed to extract secret value: %w", err)
 	}
 
 	log.Printf("Successfully retrieved secret from OpenBao")
@@ -114,7 +114,7 @@ func (o *OpenBaoProvider) CheckSecretChanged(ctx context.Context, secretInfo *Se
 	// Read secret from OpenBao
 	secret, err := o.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
 	if err != nil {
-		return false, fmt.Errorf("error reading secret from OpenBao: %v", err)
+		return false, fmt.Errorf("error reading secret from OpenBao: %w", err)
 	}
 
 	if secret == nil {
@@ -174,7 +174,7 @@ func (o *OpenBaoProvider) authenticate() error {
 
 		resp, err := o.client.Logical().Write("auth/approle/login", data)
 		if err != nil {
-			return fmt.Errorf("approle authentication failed: %v", err)
+			return fmt.Errorf("approle authentication failed: %w", err)
 		}
 
 		if resp.Auth == nil {

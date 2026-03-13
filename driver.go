@@ -57,32 +57,37 @@ func NewDriver() (*SecretsDriver, error) {
 		}
 	}
 
+	enableRotation := parseBoolEnv("ENABLE_ROTATION", true)
+	enableMonitoring := parseBoolEnv("ENABLE_MONITORING", true)
+
 	config := &SecretsConfig{
-		ProviderType:     providerType,
-		EnableRotation:   getEnvOrDefault("ENABLE_ROTATION", "true") == "true",
-		RotationInterval: parseDurationOrDefault(getEnvOrDefault("ROTATION_INTERVAL", "10s")),
-		EnableMonitoring: getEnvOrDefault("ENABLE_MONITORING", "true") == "true",
-		MonitoringPort:   parseIntOrDefault(getEnvOrDefault("MONITORING_PORT", "8080")),
-		Settings:         settings,
+		ProviderType:   providerType,
+		EnableRotation: enableRotation,
+		RotationInterval: parseDurationOrDefault(
+			getEnvOrDefault("ROTATION_INTERVAL", "10s"),
+		),
+		EnableMonitoring: enableMonitoring,
+		MonitoringPort: parseIntOrDefault(
+			getEnvOrDefault("MONITORING_PORT", "8080"),
+		),
+		Settings: settings,
 	}
 
 	// Create the appropriate provider
 	provider, err := providers.CreateProvider(config.ProviderType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create provider: %v", err)
+		return nil, fmt.Errorf("failed to create provider: %w", err)
 	}
 
 	// Initialize the provider
 	if err := provider.Initialize(settings); err != nil {
-		log.Errorf("failed to initialize %s provider: %v", config.ProviderType, err)
-		return nil, fmt.Errorf("failed to initialize %s provider: %v", config.ProviderType, err)
+		return nil, fmt.Errorf("failed to initialize %s provider: %w", config.ProviderType, err)
 	}
 
 	// Create Docker client
 	dockerClient, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Errorf("failed to create docker client: %v", err)
-		return nil, fmt.Errorf("failed to create docker client: %v", err)
+		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
 
 	// Create context for monitoring
@@ -123,7 +128,6 @@ func NewDriver() (*SecretsDriver, error) {
 	log.Printf("Successfully initialized driver with %s provider", provider.GetProviderName())
 	return driver, nil
 }
-
 // Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
@@ -168,13 +172,15 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
-		return strings.ToLower(reuse) == "false"
+		return strings.EqualFold(reuse, "false")
 	}
 
+	name := strings.ToLower(req.SecretName)
+
 	// Don't reuse dynamic secrets or certificates
-	if strings.Contains(req.SecretName, "cert") ||
-		strings.Contains(req.SecretName, "token") ||
-		strings.Contains(req.SecretName, "dynamic") {
+	if strings.Contains(name, "cert") ||
+		strings.Contains(name, "token") ||
+		strings.Contains(name, "dynamic") {
 		return true
 	}
 
@@ -218,7 +224,13 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 	case "gcp":
 		secretPath = d.buildGCPSecretName(req)
 	case "azure":
-		secretPath = d.buildAzureSecretName(req)
+		var err error
+		secretPath, err = d.buildAzureSecretName(req)
+		if err != nil {
+			log.Errorf("failed to build azure secret name: %v", err)
+			return
+
+		}
 	case "openbao":
 		secretPath = d.buildOpenBaoSecretPath(req)
 	default:
@@ -366,12 +378,12 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 
 	newValue, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to get updated secret from provider: %v", err)
+		return fmt.Errorf("failed to get updated secret from provider: %w", err)
 	}
 
 	// Update Docker secret (this now handles service updates internally)
 	if err := d.updateDockerSecret(secretInfo.DockerSecretName, newValue); err != nil {
-		return fmt.Errorf("failed to update docker secret: %v", err)
+		return fmt.Errorf("failed to update docker secret: %w", err)
 	}
 
 	// Update tracking information
@@ -392,7 +404,7 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	// List existing secrets to find the one to update
 	secrets, err := d.dockerClient.SecretList(ctx, swarm.SecretListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list secrets: %v", err)
+		return fmt.Errorf("failed to list secrets: %w", err)
 	}
 
 	var existingSecret *swarm.Secret
@@ -422,7 +434,7 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	// Create the new secret
 	createResponse, err := d.dockerClient.SecretCreate(ctx, newSecretSpec)
 	if err != nil {
-		return fmt.Errorf("failed to create new secret version: %v", err)
+		return fmt.Errorf("failed to create new secret version: %w", err)
 	}
 
 	log.Printf("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
@@ -433,7 +445,7 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 		if cleanupErr := d.dockerClient.SecretRemove(ctx, createResponse.ID); cleanupErr != nil {
 			log.Warnf("failed to remove new secret %s after service update error: %v", createResponse.ID, cleanupErr)
 		}
-		return fmt.Errorf("failed to update services to use new secret: %v", err)
+		return fmt.Errorf("failed to update services to use new secret: %w", err)
 	}
 
 	// Remove the old secret only after services are updated
@@ -453,7 +465,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	// List all services
 	services, err := d.dockerClient.ServiceList(ctx, swarm.ServiceListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list services: %v", err)
+		return fmt.Errorf("failed to list services: %w", err)
 	}
 
 	var updatedServices []string
@@ -461,15 +473,24 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	for _, service := range services {
 		// Check if service uses this secret and update the reference
 		needsUpdate := false
-		updatedSecrets := make([]*swarm.SecretReference, len(service.Spec.TaskTemplate.ContainerSpec.Secrets))
 
-		for i, secretRef := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
+		taskTemplate := service.Spec.TaskTemplate
+		containerSpec := taskTemplate.ContainerSpec
+		if containerSpec == nil {
+			log.Debugf("Skipping service %s: no container spec defined", service.Spec.Name)
+			continue
+		}
+
+		updatedSecrets := make([]*swarm.SecretReference, len(containerSpec.Secrets))
+
+		for i, secretRef := range containerSpec.Secrets {
+			// Match exact name or versioned variants (e.g., secret-1, secret-2)
 			if secretRef.SecretName == oldSecretName ||
 				strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
 				// Update to use the new secret name and ID
 				updatedSecrets[i] = &swarm.SecretReference{
 					File:       secretRef.File,
-					SecretID:   newSecretID, // Use actual Docker secret ID
+					SecretID:   newSecretID,
 					SecretName: newSecretName,
 				}
 				needsUpdate = true
@@ -492,7 +513,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 			updateOptions := swarm.ServiceUpdateOptions{}
 			updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
 			if err != nil {
-				return fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
+				return fmt.Errorf("failed to update service %s: %w", service.Spec.Name, err)
 			}
 
 			if len(updateResponse.Warnings) > 0 {
@@ -540,31 +561,50 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 // 	return nil
 // }
 
-// Stop gracefully stops the monitoring and cleans up resources
+// Stop gracefully stops monitoring components and releases resources.
+// It attempts to shut down all components and collects any errors
+// instead of failing fast, so we don't miss cleanup steps.
 func (d *SecretsDriver) Stop() error {
+	var errs []error
+
+	// Cancel monitoring context if running
 	if d.monitorCancel != nil {
 		d.monitorCancel()
 	}
 
+	// Stop monitoring loop if initialized
 	if d.monitor != nil {
 		d.monitor.Stop()
 	}
 
+	// Stop web interface and capture any shutdown error
 	if d.webInterface != nil {
 		if err := d.webInterface.Stop(); err != nil {
 			log.Warnf("Error stopping web interface: %v", err)
+			errs = append(errs, err)
 		}
 	}
 
+	// Close provider and record error if it occurs
 	if d.provider != nil {
 		if err := d.provider.Close(); err != nil {
 			log.Warnf("Error closing provider: %v", err)
+			errs = append(errs, err)
 		}
 	}
 
+	// Close Docker client if initialized
 	if d.dockerClient != nil {
-		return d.dockerClient.Close()
+		if err := d.dockerClient.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
+
+	// If any shutdown errors occurred, return a combined error
+	if len(errs) > 0 {
+		return fmt.Errorf("shutdown errors: %v", errs)
+	}
+
 	return nil
 }
 
@@ -609,7 +649,12 @@ func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
 
 func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["gcp_secret_name"]; exists {
-		return customName
+		name, err := normalizeGCPSecretName(customName)
+		if err != nil {
+			log.Warnf("invalid GCP secret name %q: %v", customName, err)
+			return customName
+		}
+		return name
 	}
 
 	secretName := req.SecretName
@@ -617,14 +662,25 @@ func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
 	}
 
-	return normalizeGCPSecretName(secretName)
+	name, err := normalizeGCPSecretName(secretName)
+	if err != nil {
+		log.Warnf("invalid GCP secret name %q: %v", secretName, err)
+		return secretName
+	}
+
+	return name
 }
 
+// normalizeGCPSecretName ensures the name matches GCP Secret Manager requirements.
+// Reference (GCP Secret Manager API):
+// https://cloud.google.com/secret-manager/docs/reference/rest/v1/projects.secrets/create
+// Secret ID must be <= 255 characters and match allowed pattern.
 // normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
-func normalizeGCPSecretName(secretName string) string {
+func normalizeGCPSecretName(secretName string) (string, error) {
 	if len(secretName) == 0 {
-		return "s"
+		return "s", nil
 	}
+
 	result := ""
 	for i, char := range secretName {
 		if i == 0 {
@@ -642,12 +698,24 @@ func normalizeGCPSecretName(secretName string) string {
 			}
 		}
 	}
-	return result
+
+	if len(result) > 255 {
+		return "", fmt.Errorf("secret name exceeds 255 characters (GCP limit as per Secret Manager spec)")
+	}
+
+	return result, nil
 }
 
-func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
+// buildAzureSecretName ensures the name matches Azure Key Vault requirements.
+// Reference (Azure Key Vault naming rules):
+// https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-identifiers
+// Secret name must be <= 127 characters and match ^[0-9a-zA-Z-]+$
+func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) (string, error) {
 	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
-		return customName
+		if len(customName) > 127 {
+			return "", fmt.Errorf("secret name exceeds 127 characters (Azure Key Vault limit)")
+		}
+		return customName, nil
 	}
 
 	secretName := req.SecretName
@@ -657,25 +725,36 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 
 	// Azure Key Vault secret names must match regex: ^[0-9a-zA-Z-]+$
 	result := ""
+
 	for _, char := range secretName {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == '-' {
+		if (char >= 'a' && char <= 'z') ||
+			(char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') ||
+			char == '-' {
 			result += string(char)
 		} else {
 			result += "-"
 		}
 	}
 
-	// Remove consecutive hyphens and leading/trailing hyphens
+	// Remove consecutive hyphens
 	for strings.Contains(result, "--") {
 		result = strings.ReplaceAll(result, "--", "-")
 	}
+
+	// Trim leading/trailing hyphens
 	result = strings.Trim(result, "-")
 
 	if result == "" || (result[0] >= '0' && result[0] <= '9') {
 		result = "secret-" + result
 	}
-	return result
+
+	// Explicit length validation (Azure limit: 127 chars)
+	if len(result) > 127 {
+		return "", fmt.Errorf("secret name exceeds 127 characters (Azure Key Vault limit)")
+	}
+
+	return result, nil
 }
 
 // func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {

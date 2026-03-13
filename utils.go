@@ -1,9 +1,11 @@
 package main
-
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // getEnvOrDefault returns environment variable value or default
@@ -35,4 +37,17 @@ func parseIntOrDefault(intStr string) int {
 		}
 	}
 	return 8080 // Default port
+}
+
+// parseBoolEnv parses boolean environment variable or returns default
+func parseBoolEnv(key string, defaultVal bool) bool {
+	raw := getEnvOrDefault(key, strconv.FormatBool(defaultVal))
+
+	v, err := strconv.ParseBool(raw)
+	if err != nil {
+		log.Warnf("Invalid boolean value for %s: %q, defaulting to %t", key, raw, defaultVal)
+		return defaultVal
+	}
+
+	return v
 }

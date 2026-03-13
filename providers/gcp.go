@@ -84,7 +84,7 @@ func (g *GCPProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 	secretData := result.Payload.Data
 	extractedValue, err := g.extractSecretValue(string(secretData), req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract secret value: %v", err)
+		return nil, fmt.Errorf("failed to extract secret value: %w", err)
 	}
 
 	return extractedValue, nil
