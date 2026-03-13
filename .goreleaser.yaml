@@ -29,7 +29,7 @@ archives:
     format: tar.gz
     files:
       - config.json
-      - README.md
+      - readme.md
       - LICENSE
 
 checksum:
