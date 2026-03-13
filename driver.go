@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sugar-org/vault-swarm-plugin/monitoring"
@@ -126,7 +127,9 @@ func NewDriver() (*SecretsDriver, error) {
 
 // Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
-	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
+	reqID := shortID()
+	start := time.Now()
+	log.Printf("[%s] resolving %s via %s", reqID, req.SecretName, d.provider.GetProviderName())
 
 	if req.SecretName == "" {
 		return secrets.Response{
@@ -141,13 +144,11 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	// Get secret from the provider
 	value, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
-		log.Printf("Error getting secret from provider: %v", err)
+		log.Printf("[%s] failed %s (%s): %v", reqID, req.SecretName, time.Since(start), err)
 		return secrets.Response{
 			Err: fmt.Sprintf("failed to get secret: %v", err),
 		}
 	}
-
-	log.Printf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
 
 	// Track this secret for monitoring if rotation is enabled
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
@@ -157,7 +158,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	// Determine if secret should be reusable
 	doNotReuse := d.shouldNotReuse(req)
 
-	log.Printf("Successfully returning secret value")
+	log.Printf("[%s] resolved %s (%s)", reqID, req.SecretName, time.Since(start))
 	return secrets.Response{
 		Value:      value,
 		DoNotReuse: doNotReuse,
@@ -687,6 +688,10 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 // 	// Default path structure for KV v2
 // 	if req.ServiceName != "" {
 // 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-// 	}
+// }
 // 	return fmt.Sprintf("secret/data/%s", req.SecretName)
 // }
+
+func shortID() string {
+	return uuid.New().String()[:8]
+}
