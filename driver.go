@@ -74,12 +74,14 @@ func NewDriver() (*SecretsDriver, error) {
 
 	// Initialize the provider
 	if err := provider.Initialize(settings); err != nil {
+		log.Errorf("failed to initialize %s provider: %v", config.ProviderType, err)
 		return nil, fmt.Errorf("failed to initialize %s provider: %v", config.ProviderType, err)
 	}
 
 	// Create Docker client
 	dockerClient, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
+		log.Errorf("failed to create docker client: %v", err)
 		return nil, fmt.Errorf("failed to create docker client: %v", err)
 	}
 
@@ -475,7 +477,8 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 		updatedSecrets := make([]*swarm.SecretReference, len(service.Spec.TaskTemplate.ContainerSpec.Secrets))
 
 		for i, secretRef := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if secretRef.SecretName == oldSecretName {
+			if secretRef.SecretName == oldSecretName ||
+				strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
 				// Update to use the new secret name and ID
 				updatedSecrets[i] = &swarm.SecretReference{
 					File:       secretRef.File,

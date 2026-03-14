@@ -26,13 +26,6 @@ type AzureConfig struct {
 	VaultURL string
 }
 
-// SecretInfoAzure stores metadata about a retrieved secret for rotation checks.
-type SecretInfoAzure struct {
-	SecretPath  string
-	SecretField string
-	LastHash    string
-}
-
 // Initialize sets up the Azure provider with the given configuration.
 func (az *AzureProvider) Initialize(config map[string]string) error {
 	az.config = &AzureConfig{

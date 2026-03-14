@@ -23,20 +23,20 @@ The following environment variables control the rotation behavior:
 
 | Variable | Description | Default |
 |---|---|---|
-| `VAULT_ENABLE_ROTATION` | Enable/disable automatic rotation | `true` |
-| `VAULT_ROTATION_INTERVAL` | How often to check for changes | `5m` |
+| `ENABLE_ROTATION` | Enable/disable automatic rotation | `true` |
+| `ROTATION_INTERVAL` | How often to check for changes | `10s` |
 
 ### Example Configuration
 
 ```bash
 # Enable rotation with 2-minute check interval
 docker plugin set swarm-external-secrets:latest \
-    VAULT_ENABLE_ROTATION="true" \
-    VAULT_ROTATION_INTERVAL="2m"
+    ENABLE_ROTATION="true" \
+    ROTATION_INTERVAL="2m"
 
 # Disable rotation
 docker plugin set swarm-external-secrets:latest \
-    VAULT_ENABLE_ROTATION="false"
+    ENABLE_ROTATION="false"
 ```
 
 ## Usage Example
@@ -90,7 +90,7 @@ docker service logs <service-name>
 
 If rotation is not working:
 
-1. Check if rotation is enabled: `VAULT_ENABLE_ROTATION=true`
+1. Check if rotation is enabled: `ENABLE_ROTATION=true`
 2. Verify plugin has access to Docker socket
 3. Ensure plugin is running on a manager node
 4. Check plugin logs for error messages

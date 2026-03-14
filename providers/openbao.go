@@ -27,7 +27,8 @@ type OpenBaoConfig struct {
 	AuthMethod string
 	CACert     string
 	ClientCert string
-	clientKey  string
+	ClientKey  string
+	SkipVerify bool
 }
 
 // Initialize sets up the OpenBao provider with the given configuration
@@ -41,19 +42,21 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 		AuthMethod: getConfigOrDefault(config, "OPENBAO_AUTH_METHOD", "token"),
 		CACert:     config["OPENBAO_CACERT"],
 		ClientCert: config["OPENBAO_CLIENT_CERT"],
-		clientKey:  config["OPENBAO_CLIENT_KEY"],
+		ClientKey:  config["OPENBAO_CLIENT_KEY"],
+		SkipVerify: getConfigOrDefault(config, "OPENBAO_SKIP_VERIFY", "false") == "true",
 	}
 
 	// Configure OpenBao client (using OpenBao API client since OpenBao is compatible)
 	openBaoConfig := api.DefaultConfig()
 	openBaoConfig.Address = o.config.Address
 
-	// Configure TLS if certificates are provided
-	if o.config.CACert != "" || o.config.ClientCert != "" {
+	// Configure TLS if certificates are provided or verification is skipped
+	if o.config.CACert != "" || o.config.ClientCert != "" || o.config.SkipVerify {
 		tlsConfig := &api.TLSConfig{
 			CACert:     o.config.CACert,
 			ClientCert: o.config.ClientCert,
-			ClientKey:  o.config.clientKey,
+			ClientKey:  o.config.ClientKey,
+			Insecure:   o.config.SkipVerify,
 		}
 		if err := openBaoConfig.ConfigureTLS(tlsConfig); err != nil {
 			return fmt.Errorf("failed to configure TLS: %v", err)
