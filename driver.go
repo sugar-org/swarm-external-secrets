@@ -124,10 +124,12 @@ func NewDriver() (*SecretsDriver, error) {
 	return driver, nil
 }
 
-// Get method implements the secrets.Driver interface
+// Get implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
-	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
+	log.Printf("Received secret request for: %s using provider: %s",
+		req.SecretName, d.provider.GetProviderName())
 
+	// Secret name is required
 	if req.SecretName == "" {
 		return secrets.Response{
 			Err: "secret name is required",
@@ -138,7 +140,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Get secret from the provider
+	// Fetch secret from provider
 	value, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
 		log.Printf("Error getting secret from provider: %v", err)
@@ -147,31 +149,42 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		}
 	}
 
-	log.Printf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
+	log.Printf("Successfully retrieved secret from %s provider",
+		d.provider.GetProviderName())
 
-	// Track this secret for monitoring if rotation is enabled
+	// If rotation is enabled and supported by the provider,
+	// register this secret for monitoring and future rotation.
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
 		d.trackSecret(req, value)
 	}
 
-	// Determine if secret should be reusable
-	doNotReuse := d.shouldNotReuse(req)
+	// Determine whether to create a new secret
+	// or reuse the existing one.
+	createSecret := d.shouldCreateSecret(req)
 
 	log.Printf("Successfully returning secret value")
+
 	return secrets.Response{
 		Value:      value,
-		DoNotReuse: doNotReuse,
+		DoNotReuse: createSecret, // keep API contract intact
 	}
 }
 
-// shouldNotReuse determines if the secret should not be reused
-func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
+// shouldCreateSecret decides if we need to create a new secret.
+//
+// A new secret is created if:
+//  1. The "vault_reuse" label explicitly disables reuse.
+//  2. The secret name suggests it represents a dynamic value
+//     such as a certificate or token.
+//
+// Dynamic secrets may change or expire, so generating a fresh value
+// ensures we return correct and up-to-date data.
+func (d *SecretsDriver) shouldCreateSecret(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
 		return strings.ToLower(reuse) == "false"
 	}
 
-	// Don't reuse dynamic secrets or certificates
 	if strings.Contains(req.SecretName, "cert") ||
 		strings.Contains(req.SecretName, "token") ||
 		strings.Contains(req.SecretName, "dynamic") {
