@@ -54,6 +54,47 @@ docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="azure"
 docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="openbao"
 ```
 
+### Multi-Provider in Swarm via Multiple Plugin Instances
+
+Use separate plugin instances (unique plugin names) per provider, then reference each driver from the same stack.
+
+```bash
+# Vault instance
+docker plugin create vault-secret:latest ./plugin_vault
+docker plugin set vault-secret:latest \
+  SECRETS_PROVIDER="vault" \
+  VAULT_ADDR="http://127.0.0.1:8200" \
+  VAULT_AUTH_METHOD="token" \
+  VAULT_TOKEN="<vault-token>"
+docker plugin enable vault-secret:latest
+
+# OpenBao instance
+docker plugin create openbao-secret:latest ./plugin_openbao
+docker plugin set openbao-secret:latest \
+  SECRETS_PROVIDER="openbao" \
+  OPENBAO_ADDR="http://127.0.0.1:8201" \
+  OPENBAO_AUTH_METHOD="token" \
+  OPENBAO_TOKEN="<openbao-token>"
+docker plugin enable openbao-secret:latest
+```
+
+Then in Compose:
+
+```yaml
+secrets:
+  vault_secret:
+    driver: vault-secret:latest
+    labels:
+      vault_path: "database/mysql"
+      vault_field: "password"
+
+  openbao_secret:
+    driver: openbao-secret:latest
+    labels:
+      openbao_path: "database/mysql"
+      openbao_field: "password"
+```
+
 ## New: Real-time Monitoring
 
 Access the monitoring dashboard at `http://localhost:8080` (configurable port):

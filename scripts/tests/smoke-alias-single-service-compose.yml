@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    image: busybox:latest
+    command: >
+      sh -c "
+        while true; do
+          echo 'vault:' && cat /run/secrets/vault_secret;
+          echo 'openbao:' && cat /run/secrets/openbao_secret;
+          sleep 5;
+        done
+      "
+    secrets:
+      - vault_secret
+      - openbao_secret
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    networks:
+      - smoke-network
+
+secrets:
+  vault_secret:
+    driver: vault-secret:latest
+    labels:
+      vault_path: "database/mysql"
+      vault_field: "password"
+
+  openbao_secret:
+    driver: openbao-secret:latest
+    labels:
+      openbao_path: "database/mysql"
+      openbao_field: "password"
+
+networks:
+  smoke-network:
+    driver: overlay
