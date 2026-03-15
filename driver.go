@@ -305,10 +305,10 @@ func (d *SecretsDriver) checkForSecretChanges() {
 	var wg sync.WaitGroup
 
 	for secretName, secretInfo := range secrets {
+		sem <- struct{}{}
 		wg.Add(1)
 		go func(secretName string, secretInfo *providers.SecretInfo) {
 			defer wg.Done()
-			sem <- struct{}{}
 			defer func() { <-sem }()
 
 			if !d.hasSecretChanged(secretInfo) {
