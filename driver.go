@@ -124,7 +124,7 @@ func NewDriver() (*SecretsDriver, error) {
 	return driver, nil
 }
 
-// Get implements the secrets.Driver interface
+// Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Received secret request for: %s using provider: %s",
 		req.SecretName, d.provider.GetProviderName())
@@ -140,7 +140,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Fetch secret from provider
+	// Get secret from the provider
 	value, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
 		log.Printf("Error getting secret from provider: %v", err)
@@ -152,14 +152,11 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Successfully retrieved secret from %s provider",
 		d.provider.GetProviderName())
 
-	// If rotation is enabled and supported by the provider,
-	// register this secret for monitoring and future rotation.
+	// Track this secret for monitoring if rotation is enabled
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
 		d.trackSecret(req, value)
 	}
-
-	// Determine whether to create a new secret
-	// or reuse the existing one.
+    // Determine if secret should be reusable
 	createSecret := d.shouldCreateSecret(req)
 
 	log.Printf("Successfully returning secret value")
