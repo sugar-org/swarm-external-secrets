@@ -156,26 +156,21 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
 		d.trackSecret(req, value)
 	}
-    // Determine if secret should be reusable
+    // Determine whether the caller should request a freshly issued secret.
 	createSecret := d.shouldCreateSecret(req)
 
 	log.Printf("Successfully returning secret value")
 
 	return secrets.Response{
 		Value:      value,
-		DoNotReuse: createSecret, // keep API contract intact
+		// Docker's plugin API uses DoNotReuse. We map from the clearer
+		// local "create secret" decision to preserve wire compatibility.
+		DoNotReuse: createSecret, 
 	}
 }
 
-// shouldCreateSecret decides if we need to create a new secret.
-//
-// A new secret is created if:
-//  1. The "vault_reuse" label explicitly disables reuse.
-//  2. The secret name suggests it represents a dynamic value
-//     such as a certificate or token.
-//
-// Dynamic secrets may change or expire, so generating a fresh value
-// ensures we return correct and up-to-date data.
+// shouldCreateSecret determines whether a new secret should be issued
+// for this request instead of reusing a previously returned value.
 func (d *SecretsDriver) shouldCreateSecret(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
