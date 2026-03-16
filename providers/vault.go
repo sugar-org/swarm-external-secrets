@@ -59,20 +59,20 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 			Insecure:   v.config.SkipVerify,
 		}
 		if err := SecretsConfig.ConfigureTLS(tlsConfig); err != nil {
-			return fmt.Errorf("failed to configure TLS: %v", err)
+			return fmt.Errorf("failed to configure TLS: %w", err)
 		}
 	}
 
 	client, err := api.NewClient(SecretsConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create vault client: %v", err)
+		return fmt.Errorf("failed to create vault client: %w", err)
 	}
 
 	v.client = client
 
 	// Authenticate with Vault
 	if err := v.authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate with vault: %v", err)
+		return fmt.Errorf("failed to authenticate with vault: %w", err)
 	}
 
 	log.Printf("Successfully initialized Vault provider using %s method", v.config.AuthMethod)
@@ -87,7 +87,7 @@ func (v *VaultProvider) GetSecret(ctx context.Context, req secrets.Request) ([]b
 	// Read secret from Vault
 	secret, err := v.client.Logical().ReadWithContext(ctx, secretPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read secret from vault: %v", err)
+		return nil, fmt.Errorf("failed to read secret from vault: %w", err)
 	}
 
 	if secret == nil {
@@ -97,7 +97,7 @@ func (v *VaultProvider) GetSecret(ctx context.Context, req secrets.Request) ([]b
 	// Extract the secret value
 	value, err := v.extractSecretValue(secret, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract secret value: %v", err)
+		return nil, fmt.Errorf("failed to extract secret value: %w", err)
 	}
 
 	log.Printf("Successfully retrieved secret from Vault")
@@ -114,7 +114,7 @@ func (v *VaultProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secr
 	// Read secret from Vault
 	secret, err := v.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
 	if err != nil {
-		return false, fmt.Errorf("error reading secret from vault: %v", err)
+		return false, fmt.Errorf("error reading secret from vault: %w", err)
 	}
 
 	if secret == nil {
@@ -174,7 +174,7 @@ func (v *VaultProvider) authenticate() error {
 
 		resp, err := v.client.Logical().Write("auth/approle/login", data)
 		if err != nil {
-			return fmt.Errorf("approle authentication failed: %v", err)
+			return fmt.Errorf("approle authentication failed: %w", err)
 		}
 
 		if resp.Auth == nil {
