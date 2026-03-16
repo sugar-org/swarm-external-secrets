@@ -933,6 +933,7 @@
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># OpenBao</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;openbao&quot;</span>
 </code></pre></div>
+<p>For multi-instance usage (for example, Vault + OpenBao with separate plugin names in Swarm), see <a href="./docs/multi-provider.md"><code>docs/multi-provider.md</code></a>.</p>
 <h2 id="new-real-time-monitoring">New: Real-time Monitoring<a class="headerlink" href="#new-real-time-monitoring" title="Permanent link">&para;</a></h2>
 <p>Access the monitoring dashboard at <code>http://localhost:8080</code> (configurable port):</p>
 <ul>
