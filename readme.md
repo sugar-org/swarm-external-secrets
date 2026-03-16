@@ -54,6 +54,8 @@ docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="azure"
 docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="openbao"
 ```
 
+For multi-instance usage (for example, Vault + OpenBao with separate plugin names in Swarm), see [`docs/multi-provider.md`](./docs/multi-provider.md).
+
 ## New: Real-time Monitoring
 
 Access the monitoring dashboard at `http://localhost:8080` (configurable port):
