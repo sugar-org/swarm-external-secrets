@@ -253,18 +253,6 @@ secrets:
       openbao_field: "password"
 ```
 
-### Reproducible Validation Script
-
-Use:
-
-```bash
-./scripts/tests/smoke-test-vault-openbao-multi-instance.sh
-```
-
-This script validates both required combinations:
-- Vault/OpenBao in two separate plugin instances consumed by one service
-- Vault/OpenBao in two separate plugin instances consumed by two services
-
 ## Provider-Specific Notes
 
 ### AWS Secrets Manager
