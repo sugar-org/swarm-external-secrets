@@ -175,6 +175,84 @@ secrets:
       azure_field: "connection_string"
 ```
 
+## Multiple Providers in the Same Swarm Cluster
+
+For production isolation, run one provider per plugin instance (unique plugin name) and reference each instance as a separate secret driver.
+
+### Example: Vault + OpenBao as Two Plugin Instances
+
+```bash
+# Vault plugin instance
+docker plugin create vault-secret:latest ./plugin_vault
+docker plugin set vault-secret:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="http://127.0.0.1:8200" \
+    VAULT_AUTH_METHOD="token" \
+    VAULT_TOKEN="<vault-token>"
+docker plugin enable vault-secret:latest
+
+# OpenBao plugin instance
+docker plugin create openbao-secret:latest ./plugin_openbao
+docker plugin set openbao-secret:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="http://127.0.0.1:8201" \
+    OPENBAO_AUTH_METHOD="token" \
+    OPENBAO_TOKEN="<openbao-token>"
+docker plugin enable openbao-secret:latest
+```
+
+### One Service Using Both Providers
+
+```yaml
+services:
+  app:
+    image: busybox:latest
+    secrets:
+      - vault_secret
+      - openbao_secret
+
+secrets:
+  vault_secret:
+    driver: vault-secret:latest
+    labels:
+      vault_path: "database/mysql"
+      vault_field: "password"
+
+  openbao_secret:
+    driver: openbao-secret:latest
+    labels:
+      openbao_path: "database/mysql"
+      openbao_field: "password"
+```
+
+### Two Services Using Different Providers
+
+```yaml
+services:
+  app_vault:
+    image: busybox:latest
+    secrets:
+      - vault_secret
+
+  app_openbao:
+    image: busybox:latest
+    secrets:
+      - openbao_secret
+
+secrets:
+  vault_secret:
+    driver: vault-secret:latest
+    labels:
+      vault_path: "database/mysql"
+      vault_field: "password"
+
+  openbao_secret:
+    driver: openbao-secret:latest
+    labels:
+      openbao_path: "database/mysql"
+      openbao_field: "password"
+```
+
 ## Provider-Specific Notes
 
 ### AWS Secrets Manager
