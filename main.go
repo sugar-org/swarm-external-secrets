@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,7 +18,7 @@ var (
 )
 
 func main() {
-	fmt.Print("Starting swarm-external-secrets...")
+	log.Println("Starting swarm-external-secrets...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
 		flDebug   = flag.Bool("debug", false, "Enable debug logging")
@@ -27,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *flVersion {
-		fmt.Printf("swarm-external-secrets %s (commit=%s, built=%s)\n", version, commit, date)
+		log.Printf("swarm-external-secrets %s (commit=%s, built=%s)", version, commit, date)
 		return
 	}
 	if *flDebug {
