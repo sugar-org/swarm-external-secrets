@@ -104,15 +104,10 @@ jobs:
           VERSION: ${{ github.ref_name }}
           GHCR: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
         run: |
-          docker build -t plugin:temp .
-          mkdir -p ./plugin/rootfs
-          docker create --name plugin-rootfs plugin:temp
-          docker export plugin-rootfs | tar -x -C ./plugin/rootfs
-          docker rm plugin-rootfs && docker rmi plugin:temp
-          cp config.json ./plugin/
+          chmod +x ./scripts/build-plugin.sh
+          ./scripts/build-plugin.sh "swarm-external-secrets:test" "${GHCR}:${VERSION}"
 
           # Always publish to GHCR
-          docker plugin create "${GHCR}:${VERSION}" ./plugin
           docker plugin push "${GHCR}:${VERSION}"
           docker plugin create "${GHCR}:latest" ./plugin
           docker plugin push "${GHCR}:latest"
