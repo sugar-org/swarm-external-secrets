@@ -126,8 +126,10 @@ func NewDriver() (*SecretsDriver, error) {
 
 // Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
-	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
+	log.Printf("Received secret request for: %s using provider: %s",
+		req.SecretName, d.provider.GetProviderName())
 
+	// Secret name is required
 	if req.SecretName == "" {
 		return secrets.Response{
 			Err: "secret name is required",
@@ -147,31 +149,34 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		}
 	}
 
-	log.Printf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
+	log.Printf("Successfully retrieved secret from %s provider",
+		d.provider.GetProviderName())
 
 	// Track this secret for monitoring if rotation is enabled
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
 		d.trackSecret(req, value)
 	}
-
-	// Determine if secret should be reusable
-	doNotReuse := d.shouldNotReuse(req)
+    // Determine whether the caller should request a freshly issued secret.
+	createSecret := d.shouldCreateSecret(req)
 
 	log.Printf("Successfully returning secret value")
+
 	return secrets.Response{
 		Value:      value,
-		DoNotReuse: doNotReuse,
+		// Docker's plugin API uses DoNotReuse. We map from the clearer
+		// local "create secret" decision to preserve wire compatibility.
+		DoNotReuse: createSecret, 
 	}
 }
 
-// shouldNotReuse determines if the secret should not be reused
-func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
+// shouldCreateSecret determines whether a new secret should be issued
+// for this request instead of reusing a previously returned value.
+func (d *SecretsDriver) shouldCreateSecret(req secrets.Request) bool {
 	// Check for explicit label
 	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
 		return strings.ToLower(reuse) == "false"
 	}
 
-	// Don't reuse dynamic secrets or certificates
 	if strings.Contains(req.SecretName, "cert") ||
 		strings.Contains(req.SecretName, "token") ||
 		strings.Contains(req.SecretName, "dynamic") {
