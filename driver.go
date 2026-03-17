@@ -754,4 +754,4 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 // 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
 // 	}
 // 	return fmt.Sprintf("secret/data/%s", req.SecretName)
-// }Collapse comment
+// }
