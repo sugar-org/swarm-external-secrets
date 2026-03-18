@@ -21,7 +21,7 @@ jobs:
       - name: Find matching CI run
         id: ci-run
         env:
-          GH_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           ci_run_id="$(
@@ -38,7 +38,7 @@ jobs:
 
       - name: Download plugin image artifact
         env:
-          GH_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ./ci-artifacts
           gh run download "${{ steps.ci-run.outputs.ci_run_id }}" \
