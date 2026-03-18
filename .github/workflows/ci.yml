@@ -45,3 +45,14 @@ jobs:
         run: |
           chmod +x ./scripts/build-plugin.sh
           ./scripts/build-plugin.sh "swarm-external-secrets:test" "test-org/swarm-external-secrets:test"
+      - name: Save plugin image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p ./artifacts
+          docker save --output ./artifacts/swarm-external-secrets-plugin.tar swarm-external-secrets:test
+      - name: Upload plugin image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@7d27270e0cfd253e666c44abac0711308d2d042f # v6.0.0
+        with:
+          name: plugin-image
+          path: ./artifacts/swarm-external-secrets-plugin.tar
