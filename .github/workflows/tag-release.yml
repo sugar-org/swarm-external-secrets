@@ -51,9 +51,10 @@ jobs:
           docker load --input ./ci-artifacts/swarm-external-secrets-plugin.tar
           docker image inspect swarm-external-secrets:test >/dev/null
 
-      - uses: mathieudutour/github-tag-action@d28fa2ccfbd16e871a4bdf35e11b3ad1bd56c0c1 # v6.2
-        with:
-          github_token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
-          default_bump: patch
-          tag_prefix: v
-          release_branches: main
+      - uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 # 1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: main
+          TAG_PREFIX: v
