@@ -286,5 +286,5 @@ secrets:
     labels:
       vault_path: "database/mysql"
       vault_field: "password"
-      secret_reuse: "false"
+      secret_reuse: "true"
 ```
