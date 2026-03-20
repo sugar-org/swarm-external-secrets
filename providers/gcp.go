@@ -122,7 +122,7 @@ func (g *GCPProvider) buildSecretName(req secrets.Request) (string, error) {
 
 // extractSecretValue extracts the appropriate value from the GCP secret string
 func (g *GCPProvider) extractSecretValue(secretString string, req secrets.Request) ([]byte, error) {
-	// Check for specific field in labelsstrings
+	// Check for specific field in labels
 	if field, exists := req.SecretLabels["gcp_field"]; exists {
 		return g.extractSecretValueByField(secretString, field)
 	}
