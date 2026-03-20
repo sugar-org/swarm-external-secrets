@@ -64,14 +64,24 @@ func (g *GCPProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 	// Build the full secret name for GCP Secret Manager
 	secretName, err := g.buildSecretName(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build secret path: %v", err)
+		return nil, fmt.Errorf("failed to build secret path: %w", err)
 	}
 
 	log.Infof("Reading secret from GCP Secret Manager: %s", secretName)
 
-	// Create the request to access the latest version of the secret
+	// Check if the secret name already contains a version path
+	var secretPath string
+	if strings.Contains(secretName, "/versions/") {
+		// Use the provided version path directly
+		secretPath = secretName
+	} else {
+		// Append /versions/latest to access the latest version
+		secretPath = secretName + "/versions/latest"
+	}
+
+	// Create the request to access the secret version
 	secretRequest := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: secretName + "/versions/latest",
+		Name: secretPath,
 	}
 
 	// Call the API to get the secret
@@ -189,6 +199,10 @@ func (g *GCPProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 
 	// Safety check: ensure driver.go passed us a fully formatted path
 	if !strings.HasPrefix(secretName, "projects/") {
+		// Validate that a project ID is configured before constructing the resource name
+		if strings.TrimSpace(g.config.ProjectID) == "" {
+			return false, fmt.Errorf("GCP project ID is not configured; cannot resolve secret path %q", secretName)
+		}
 		secretName = fmt.Sprintf("projects/%s/secrets/%s", g.config.ProjectID, secretName)
 	}
 
