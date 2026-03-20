@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,7 +11,7 @@ import (
 )
 
 func main() {
-	fmt.Print("Starting Vault Secrets Provider...")
+	log.Print("Starting Vault Secrets Provider...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
 		flDebug   = flag.Bool("debug", false, "Enable debug logging")
@@ -20,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	if *flVersion {
-		fmt.Println("Vault Secrets Provider v1.0.0")
+		log.Println("Vault Secrets Provider v1.0.0")
 		return
 	}
 	if *flDebug {
@@ -30,7 +29,7 @@ func main() {
 	// Initialize the Vault driver
 	driver, err := NewDriver()
 	if err != nil {
-		log.Fatalf("Failed to initialize vault driver: %v", err)
+		log.Printf("Failed to initialize vault driver: %v", err)
 	}
 
 	// Set up signal handling for graceful shutdown
