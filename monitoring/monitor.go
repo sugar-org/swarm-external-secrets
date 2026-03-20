@@ -61,7 +61,7 @@ func (m *Monitor) Start() {
 
 // Stop stops the monitoring process
 func (m *Monitor) Stop() {
-    // Stop is idempotent
+	// Stop is idempotent
 	m.stopOnce.Do(func() {
 		if m.cancel != nil {
 			m.cancel()
