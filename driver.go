@@ -287,7 +287,7 @@ func (d *SecretsDriver) startMonitoring() {
 // checkForSecretChanges monitors tracked secrets for changes
 func (d *SecretsDriver) checkForSecretChanges() {
 	d.trackerMutex.RLock()
-	secrets := make(map[string]*providers.SecretInfo)
+	secrets := make(map[string]*providers.SecretInfo, len(d.secretTracker))
 	for k, v := range d.secretTracker {
 		secrets[k] = v
 	}
@@ -300,21 +300,38 @@ func (d *SecretsDriver) checkForSecretChanges() {
 
 	log.Printf("Checking %d tracked secrets for changes", len(secrets))
 
+	const maxConcurrentSecretChecks = 5
+
+	sem := make(chan struct{}, maxConcurrentSecretChecks)
+	var wg sync.WaitGroup
+
 	for secretName, secretInfo := range secrets {
-		if d.hasSecretChanged(secretInfo) {
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(secretName string, secretInfo *providers.SecretInfo) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if !d.hasSecretChanged(secretInfo) {
+				return
+			}
+
 			log.Printf("Detected change in secret: %s", secretName)
 			if err := d.rotateSecret(secretInfo); err != nil {
 				log.Errorf("Failed to rotate secret %s: %v", secretName, err)
 				if d.monitor != nil {
 					d.monitor.IncrementRotationErrors()
 				}
-			} else {
-				if d.monitor != nil {
-					d.monitor.IncrementSecretRotations()
-				}
+				return
 			}
-		}
+
+			if d.monitor != nil {
+				d.monitor.IncrementSecretRotations()
+			}
+		}(secretName, secretInfo)
 	}
+
+	wg.Wait()
 }
 
 // hasSecretChanged checks if a secret has changed using the provider
