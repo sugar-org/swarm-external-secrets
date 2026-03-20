@@ -12,6 +12,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	fmt.Print("Starting Vault Secrets Provider...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
@@ -21,16 +27,26 @@ func main() {
 
 	if *flVersion {
 		fmt.Println("Vault Secrets Provider v1.0.0")
-		return
+		return nil
 	}
 	if *flDebug {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	logCloser := setupPluginFileLogging()
+	if logCloser != nil {
+		defer func() {
+			if err := logCloser.Close(); err != nil {
+				log.Warnf("Error closing plugin log file: %v", err)
+			}
+		}()
+	}
+
 	// Initialize the Vault driver
 	driver, err := NewDriver()
 	if err != nil {
-		log.Fatalf("Failed to initialize vault driver: %v", err)
+		log.Errorf("Failed to initialize vault driver: %v", err)
+		return err
 	}
 
 	// Set up signal handling for graceful shutdown
@@ -44,6 +60,11 @@ func main() {
 		if err := driver.Stop(); err != nil {
 			log.Errorf("Error during cleanup: %v", err)
 		}
+		if logCloser != nil {
+			if err := logCloser.Close(); err != nil {
+				log.Warnf("Error closing plugin log file: %v", err)
+			}
+		}
 		os.Exit(0)
 	}()
 
@@ -53,6 +74,9 @@ func main() {
 	// Serve the plugin - must match config.json socket name
 	log.Println("Starting Vault secrets provider plugin...")
 	if err := handler.ServeUnix("plugin", 0); err != nil {
-		log.Fatalf("Failed to serve plugin: %v", err)
+		log.Errorf("Failed to serve plugin: %v", err)
+		return err
 	}
+
+	return nil
 }

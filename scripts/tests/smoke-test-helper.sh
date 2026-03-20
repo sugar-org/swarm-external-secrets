@@ -59,6 +59,10 @@ enable_plugin() {
     echo -e "${RED}Set plugin permissions${DEF}"
     docker plugin set "${PLUGIN_NAME}" gid=0 uid=0
 
+    echo -e "${RED}Create plugin log directory${DEF}"
+    sudo mkdir -p /run/swarm-external-secrets
+    sudo chmod 750 /run/swarm-external-secrets
+
     echo -e "${RED}Enable the plugin${DEF}"
     docker plugin enable "${PLUGIN_NAME}"
 

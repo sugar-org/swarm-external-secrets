@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -129,6 +130,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
 
 	if req.SecretName == "" {
+		d.logPluginError(req, errors.New("secret name is required"), "invalid secret request")
 		return secrets.Response{
 			Err: "secret name is required",
 		}
@@ -141,7 +143,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	// Get secret from the provider
 	value, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
-		log.Printf("Error getting secret from provider: %v", err)
+		d.logPluginError(req, err, "failed to fetch secret from provider")
 		return secrets.Response{
 			Err: fmt.Sprintf("failed to get secret: %v", err),
 		}
@@ -162,6 +164,23 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		Value:      value,
 		DoNotReuse: doNotReuse,
 	}
+}
+
+func (d *SecretsDriver) logPluginError(req secrets.Request, err error, message string) {
+	if err == nil {
+		return
+	}
+
+	providerName := "unknown"
+	if d.provider != nil {
+		providerName = d.provider.GetProviderName()
+	}
+
+	log.WithFields(log.Fields{
+		"provider":    providerName,
+		"secret_name": req.SecretName,
+		"service":     req.ServiceName,
+	}).Errorf("%s: %v", message, err)
 }
 
 // shouldNotReuse determines if the secret should not be reused
