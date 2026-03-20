@@ -166,6 +166,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 
 // shouldNotReuse determines if the secret should not be reused
 func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
+
 	// Check for provider-agnostic reuse label
 	if reuse, exists := req.SecretLabels["secret_reuse"]; exists {
 		return strings.ToLower(reuse) == "true"

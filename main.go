@@ -29,7 +29,7 @@ func main() {
 	// Initialize the Vault driver
 	driver, err := NewDriver()
 	if err != nil {
-		log.Printf("Failed to initialize vault driver: %v", err)
+		log.Fatalf("Failed to initialize vault driver: %v", err)
 	}
 
 	// Set up signal handling for graceful shutdown
