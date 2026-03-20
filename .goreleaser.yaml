@@ -1,0 +1,104 @@
+version: 2
+
+project_name: swarm-external-secrets
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: swarm-external-secrets
+    binary: swarm-external-secrets
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - config.json
+      - readme.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - id: spdx
+    artifacts: archive
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.spdx.json"
+  - id: cyclonedx
+    artifacts: archive
+    args:
+      - "$artifact"
+      - "--file"
+      - "$document"
+      - "--output"
+      - "cyclonedx-json"
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.cdx.json"
+    
+changelog:
+  use: github
+  sort: asc
+  abbrev: 0
+  groups:
+    - title: "Features"
+      regexp: '^.*?feat(\([[:word:]]+\))?!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))?!?:.+$'
+      order: 1
+    - title: "Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))?!?:.+$'
+      order: 2
+    - title: "Performance"
+      regexp: '^.*?perf(\([[:word:]]+\))?!?:.+$'
+      order: 3
+    - title: "Refactor"
+      regexp: '^.*?refactor(\([[:word:]]+\))?!?:.+$'
+      order: 4
+    - title: "CI/Build"
+      regexp: '^.*?(ci|build)(\([[:word:]]+\))?!?:.+$'
+      order: 5
+    - title: "Other Changes"
+      order: 999
+  filters:
+    exclude:
+      - "^chore"
+      - "^test"
+      - "merge conflict"
+      - "Merge pull request"
+      - "Merge branch"
+
+release:
+  github:
+    owner: OpenScienceLabs
+    name: swarm-external-secrets
+  draft: false
+  prerelease: auto
+  make_latest: true
+  header: |
+    ## What's Changed
+  footer: |
+    ## New Contributors
+
+    See the full contributor list at https://github.com/OpenScienceLabs/swarm-external-secrets/graphs/contributors
+
+    **Full Changelog**: https://github.com/OpenScienceLabs/swarm-external-secrets/compare/{{ .PreviousTag }}...{{ .Tag }}

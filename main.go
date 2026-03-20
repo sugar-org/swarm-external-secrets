@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,8 +10,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Populated at build time via -ldflags "-X main.version=... -X main.commit=... -X main.date=..."
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
-	fmt.Print("Starting Vault Secrets Provider...")
+	log.Println("Starting swarm-external-secrets...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
 		flDebug   = flag.Bool("debug", false, "Enable debug logging")
@@ -20,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *flVersion {
-		fmt.Println("Vault Secrets Provider v1.0.0")
+		log.Printf("swarm-external-secrets %s (commit=%s, built=%s)", version, commit, date)
 		return
 	}
 	if *flDebug {
