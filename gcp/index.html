@@ -1,0 +1,2060 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://sugar-org.github.io/swarm-external-secrets/gcp/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../multi-provider/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>GCP Secret Manager - Swarm External Secrets</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#gcp-secret-manager-operation-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Swarm External Secrets" class="md-header__button md-logo" aria-label="Swarm External Secrets" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Swarm External Secrets
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              GCP Secret Manager
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sugar-org/swarm-external-secrets" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Swarm External Secrets" class="md-nav__button md-logo" aria-label="Swarm External Secrets" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Swarm External Secrets
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sugar-org/swarm-external-secrets" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Providers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Providers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCP Secret Manager
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCP Secret Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-install-go-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Go Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-enable-secret-manager-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Enable Secret Manager API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-gcp-project-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. GCP Project Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. GCP Project Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-cli-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — CLI (Recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option A — CLI (Recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4a1-enable-the-secret-manager-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.1 — Enable the Secret Manager API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4a2-create-a-service-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.2 — Create a Service Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4a3-grant-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.3 — Grant Permissions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4a4-download-the-key-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.4 — Download the Key File
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-gcp-console-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — GCP Console UI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option B — GCP Console UI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4b1-create-a-service-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4B.1 — Create a Service Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4b2-download-the-json-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4B.2 — Download the JSON Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-install-the-gcloud-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Install the gcloud CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-create-secrets-in-gcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Create Secrets in GCP
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Create Secrets in GCP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#via-cli-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Via CLI (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#via-gcp-console-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Via GCP Console UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-build-install-the-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Build &amp; Install the Plugin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Build &amp; Install the Plugin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-navigate-to-the-project-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — Navigate to the project directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-initialize-docker-swarm-if-not-already-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Initialize Docker Swarm (if not already done)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-remove-any-old-plugin-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — Remove any old plugin version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-build-the-docker-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — Build the Docker image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-create-the-plugin-rootfs-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — Create the plugin rootfs directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-extract-the-binary-into-rootfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6 — Extract the binary into rootfs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-copy-the-plugin-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7 — Copy the plugin config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-create-the-docker-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8 — Create the Docker plugin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-clean-up-the-build-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 9 — Clean up the build directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-configure-enable-the-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Configure &amp; Enable the Plugin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Configure &amp; Enable the Plugin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-load-your-gcp-key-as-an-environment-variable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — Load your GCP key as an environment variable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-disable-the-plugin-temporarily-before-reconfiguring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Disable the plugin temporarily (before reconfiguring)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-apply-gcp-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — Apply GCP configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-set-permissions-and-enable-the-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — Set permissions and enable the plugin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-verify-the-plugin-is-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — Verify the plugin is running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-deploy-a-stack-using-gcp-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Deploy a Stack Using GCP Secrets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Deploy a Stack Using GCP Secrets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-review-the-docker-composeyml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — Review the docker-compose.yml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-create-the-required-gcp-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Create the required GCP secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-deploy-the-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — Deploy the stack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-verify-the-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — Verify the deployment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-read-secrets-directly-from-a-running-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — Read secrets directly from a running container
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-updating-secrets-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Updating Secrets (Rotation)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Updating Secrets (Rotation)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-update-via-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — Update via CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-update-via-gcp-console-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — Update via GCP Console UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify-the-plugin-picked-up-the-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify the Plugin Picked Up the Change
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-provider/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Provider
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing Guidelines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-install-go-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Go Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-enable-secret-manager-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Enable Secret Manager API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-gcp-project-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. GCP Project Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. GCP Project Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-cli-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — CLI (Recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option A — CLI (Recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4a1-enable-the-secret-manager-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.1 — Enable the Secret Manager API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4a2-create-a-service-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.2 — Create a Service Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4a3-grant-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.3 — Grant Permissions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4a4-download-the-key-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4A.4 — Download the Key File
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-gcp-console-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — GCP Console UI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option B — GCP Console UI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4b1-create-a-service-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4B.1 — Create a Service Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4b2-download-the-json-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4B.2 — Download the JSON Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-install-the-gcloud-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Install the gcloud CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-create-secrets-in-gcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Create Secrets in GCP
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Create Secrets in GCP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#via-cli-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Via CLI (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#via-gcp-console-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Via GCP Console UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-build-install-the-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Build &amp; Install the Plugin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Build &amp; Install the Plugin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-navigate-to-the-project-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — Navigate to the project directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-initialize-docker-swarm-if-not-already-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Initialize Docker Swarm (if not already done)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-remove-any-old-plugin-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — Remove any old plugin version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-build-the-docker-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — Build the Docker image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-create-the-plugin-rootfs-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — Create the plugin rootfs directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-extract-the-binary-into-rootfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6 — Extract the binary into rootfs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-copy-the-plugin-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7 — Copy the plugin config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-create-the-docker-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8 — Create the Docker plugin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-clean-up-the-build-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 9 — Clean up the build directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-configure-enable-the-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Configure &amp; Enable the Plugin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Configure &amp; Enable the Plugin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-load-your-gcp-key-as-an-environment-variable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — Load your GCP key as an environment variable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-disable-the-plugin-temporarily-before-reconfiguring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Disable the plugin temporarily (before reconfiguring)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-apply-gcp-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — Apply GCP configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-set-permissions-and-enable-the-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — Set permissions and enable the plugin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-verify-the-plugin-is-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — Verify the plugin is running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-deploy-a-stack-using-gcp-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Deploy a Stack Using GCP Secrets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Deploy a Stack Using GCP Secrets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-review-the-docker-composeyml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — Review the docker-compose.yml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-create-the-required-gcp-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Create the required GCP secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-deploy-the-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — Deploy the stack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-verify-the-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — Verify the deployment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-read-secrets-directly-from-a-running-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — Read secrets directly from a running container
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-updating-secrets-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Updating Secrets (Rotation)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Updating Secrets (Rotation)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-update-via-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — Update via CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-update-via-gcp-console-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — Update via GCP Console UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify-the-plugin-picked-up-the-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify the Plugin Picked Up the Change
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="gcp-secret-manager-operation-guide">GCP Secret Manager — Operation Guide<a class="headerlink" href="#gcp-secret-manager-operation-guide" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Provider:</strong> Google Cloud Platform (GCP) Secret Manager
+<strong>Plugin:</strong> <a href="https://github.com/sugar-org/swarm-external-secrets">swarm-external-secrets</a></p>
+</blockquote>
+<p>This guide walks you through setting up and using GCP Secret Manager as a secrets provider for <code>swarm-external-secrets</code> — from enabling the API all the way to reading live secrets inside a running Docker container.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-prerequisites">Prerequisites</a></li>
+<li><a href="#2-install-go-dependencies">Install Go Dependencies</a></li>
+<li><a href="#3-enable-secret-manager-api">Enable Secret Manager API</a></li>
+<li><a href="#4-gcp-project-setup">GCP Project Setup</a></li>
+<li><a href="#option-a--cli-recommended">Option A — CLI (Recommended)</a></li>
+<li><a href="#option-b--gcp-console-ui">Option B — GCP Console UI</a></li>
+<li><a href="#5-install-the-gcloud-cli">Install the gcloud CLI</a></li>
+<li><a href="#6-create-secrets-in-gcp">Create Secrets in GCP</a></li>
+<li><a href="#7-build--install-the-plugin">Build &amp; Install the Plugin</a></li>
+<li><a href="#8-configure--enable-the-plugin">Configure &amp; Enable the Plugin</a></li>
+<li><a href="#9-deploy-a-stack-using-gcp-secrets">Deploy a Stack Using GCP Secrets</a></li>
+<li><a href="#10-updating-secrets-rotation">Updating Secrets (Rotation)</a></li>
+</ol>
+<hr />
+<h2 id="1-prerequisites">1. Prerequisites<a class="headerlink" href="#1-prerequisites" title="Permanent link">&para;</a></h2>
+<p>Before you begin, make sure you have:</p>
+<ul>
+<li>A <a href="https://console.cloud.google.com/">Google Cloud account</a> with billing enabled</li>
+<li>Docker with Swarm mode available</li>
+<li>Go installed (for dependency management)</li>
+<li><code>gcloud</code> CLI installed (covered in <a href="#5-install-the-gcloud-cli">Step 5</a>)</li>
+<li>Your <strong>GCP Project ID</strong> handy (e.g., <code>my-project-12345</code>)</li>
+</ul>
+<blockquote>
+<p><strong>Finding your Project ID:</strong> You can find it on the GCP Home Dashboard or by clicking the project selector at the top of the console.</p>
+<p><img alt="Find Project ID" src="../assets/gcp/find_projectid.png" /></p>
+</blockquote>
+<hr />
+<h2 id="2-install-go-dependencies">2. Install Go Dependencies<a class="headerlink" href="#2-install-go-dependencies" title="Permanent link">&para;</a></h2>
+<p>Run the following commands in your project root to pull in the required GCP libraries:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>go<span class="w"> </span>get<span class="w"> </span>cloud.google.com/go/secretmanager/apiv1
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>go<span class="w"> </span>get<span class="w"> </span>google.golang.org/api/option
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>go<span class="w"> </span>mod<span class="w"> </span>tidy
+</code></pre></div>
+<hr />
+<h2 id="3-enable-secret-manager-api">3. Enable Secret Manager API<a class="headerlink" href="#3-enable-secret-manager-api" title="Permanent link">&para;</a></h2>
+<p>Before anything else, the Secret Manager API must be enabled on your GCP project.</p>
+<p>Go to <a href="https://console.cloud.google.com/">console.cloud.google.com</a>, search for <strong>Secret Manager</strong>, and enable the API. If prompted to enable billing, do so.</p>
+<p><img alt="Enable Secret Manager API" src="../assets/gcp/enable_api.png" /></p>
+<hr />
+<h2 id="4-gcp-project-setup">4. GCP Project Setup<a class="headerlink" href="#4-gcp-project-setup" title="Permanent link">&para;</a></h2>
+<p>You need to:
+- Enable the API
+- Create a Service Account for the plugin
+- Grant it the correct permissions
+- Download a JSON key file</p>
+<p>Choose your preferred method below.</p>
+<hr />
+<h3 id="option-a-cli-recommended">Option A — CLI (Recommended)<a class="headerlink" href="#option-a-cli-recommended" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>Replace <code>YOUR_PROJECT_ID</code> with your actual GCP Project ID throughout.</p>
+</blockquote>
+<h4 id="4a1-enable-the-secret-manager-api">4A.1 — Enable the Secret Manager API<a class="headerlink" href="#4a1-enable-the-secret-manager-api" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>gcloud<span class="w"> </span>services<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>secretmanager.googleapis.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+</code></pre></div>
+<h4 id="4a2-create-a-service-account">4A.2 — Create a Service Account<a class="headerlink" href="#4a2-create-a-service-account" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>gcloud<span class="w"> </span>iam<span class="w"> </span>service-accounts<span class="w"> </span>create<span class="w"> </span>swarm-secrets-sa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--display-name<span class="o">=</span><span class="s2">&quot;Swarm External Secrets GCP&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+</code></pre></div>
+<h4 id="4a3-grant-permissions">4A.3 — Grant Permissions<a class="headerlink" href="#4a3-grant-permissions" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Grant read access to secrets</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>gcloud<span class="w"> </span>projects<span class="w"> </span>add-iam-policy-binding<span class="w"> </span>YOUR_PROJECT_ID<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>--member<span class="o">=</span><span class="s2">&quot;serviceAccount:swarm-secrets-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span>--role<span class="o">=</span><span class="s2">&quot;roles/secretmanager.secretAccessor&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># Grant admin access (needed for listing/managing secrets)</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>gcloud<span class="w"> </span>projects<span class="w"> </span>add-iam-policy-binding<span class="w"> </span>YOUR_PROJECT_ID<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span>--member<span class="o">=</span><span class="s2">&quot;serviceAccount:swarm-secrets-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span>--role<span class="o">=</span><span class="s2">&quot;roles/secretmanager.admin&quot;</span>
+</code></pre></div>
+<h4 id="4a4-download-the-key-file">4A.4 — Download the Key File<a class="headerlink" href="#4a4-download-the-key-file" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>gcloud<span class="w"> </span>iam<span class="w"> </span>service-accounts<span class="w"> </span>keys<span class="w"> </span>create<span class="w"> </span>gcp-key.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--iam-account<span class="o">=</span>swarm-secrets-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com
+</code></pre></div>
+<blockquote>
+<p><strong>Already have <code>gcp-key.json</code>?</strong> If you completed the UI setup below, skip this step — you already have the key.</p>
+</blockquote>
+<hr />
+<h3 id="option-b-gcp-console-ui">Option B — GCP Console UI<a class="headerlink" href="#option-b-gcp-console-ui" title="Permanent link">&para;</a></h3>
+<h4 id="4b1-create-a-service-account">4B.1 — Create a Service Account<a class="headerlink" href="#4b1-create-a-service-account" title="Permanent link">&para;</a></h4>
+<ol>
+<li>In the GCP Console, search for <strong>Service Accounts</strong> (under <strong>IAM &amp; Admin</strong>).</li>
+<li>Click <strong>+ CREATE SERVICE ACCOUNT</strong>.</li>
+<li>Name it <code>docker-secrets-plugin</code>, then click <strong>Create and Continue</strong>.</li>
+<li>Under <strong>"Select a role"</strong>, search for and select <strong>Secret Manager Secret Accessor</strong>.</li>
+</ol>
+<blockquote>
+<p>⚠️ <strong>Critical:</strong> Skipping this step will result in <code>403 Permission Denied</code> errors.</p>
+</blockquote>
+<ol>
+<li>Click <strong>Done</strong>.</li>
+</ol>
+<h4 id="4b2-download-the-json-key">4B.2 — Download the JSON Key<a class="headerlink" href="#4b2-download-the-json-key" title="Permanent link">&para;</a></h4>
+<ol>
+<li>Click on the <code>docker-secrets-plugin</code> service account in the list.</li>
+<li>Go to the <strong>KEYS</strong> tab.</li>
+<li>Click <strong>ADD KEY</strong> → <strong>Create new key</strong>.</li>
+<li>Select <strong>JSON</strong> and click <strong>Create</strong>.</li>
+<li>A <code>.json</code> file will be downloaded. Move it to your project folder and rename it to <code>gcp-key.json</code>.</li>
+</ol>
+<hr />
+<h2 id="5-install-the-gcloud-cli">5. Install the gcloud CLI<a class="headerlink" href="#5-install-the-gcloud-cli" title="Permanent link">&para;</a></h2>
+<p><strong>macOS / Linux:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>curl<span class="w"> </span>https://sdk.cloud.google.com<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
+</code></pre></div>
+<p>Follow the prompts and accept the permissions when asked.</p>
+<p><strong>After installation, initialize and log in:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>gcloud<span class="w"> </span>init
+</code></pre></div>
+<p>This will open a browser to authenticate. Make sure to:
+- Log in with the <strong>same Google account</strong> you used to set up the GCP project.
+- Select the <strong>correct project</strong> that contains your secrets.</p>
+<hr />
+<h2 id="6-create-secrets-in-gcp">6. Create Secrets in GCP<a class="headerlink" href="#6-create-secrets-in-gcp" title="Permanent link">&para;</a></h2>
+<h3 id="via-cli-recommended">Via CLI (Recommended)<a class="headerlink" href="#via-cli-recommended" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Create the secret</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>gcloud<span class="w"> </span>secrets<span class="w"> </span>create<span class="w"> </span>my-database-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span>--replication-policy<span class="o">=</span><span class="s2">&quot;automatic&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Add the initial secret version (the actual value)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nb">echo</span><span class="w"> </span>-n<span class="w"> </span><span class="s1">&#39;{&quot;password&quot;:&quot;super-secret-value-v1&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span>gcloud<span class="w"> </span>secrets<span class="w"> </span>versions<span class="w"> </span>add<span class="w"> </span>my-database-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span>--data-file<span class="o">=</span>-<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+</code></pre></div>
+<blockquote>
+<p><strong>Secret format:</strong> Values are stored as JSON objects. The key inside the JSON (e.g., <code>"password"</code>) is what you'll reference via the <code>gcp_field</code> label later.</p>
+</blockquote>
+<hr />
+<h3 id="via-gcp-console-ui">Via GCP Console UI<a class="headerlink" href="#via-gcp-console-ui" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to <a href="https://console.cloud.google.com/security/secret-manager">Secret Manager</a>.</li>
+<li>Select your project from the top dropdown.</li>
+<li>Click <strong>+ CREATE SECRET</strong>.</li>
+<li>Fill in the details:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Name</strong></td>
+<td><code>my-database-password</code></td>
+</tr>
+<tr>
+<td><strong>Secret value</strong></td>
+<td><code>{"password":"super-secret-value-v1"}</code></td>
+</tr>
+<tr>
+<td><strong>Replication policy</strong></td>
+<td>Automatic</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Click <strong>CREATE SECRET</strong>.</li>
+</ol>
+<hr />
+<h2 id="7-build-install-the-plugin">7. Build &amp; Install the Plugin<a class="headerlink" href="#7-build-install-the-plugin" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>Run these commands from the root of the <code>swarm-external-secrets</code> project.</p>
+</blockquote>
+<h4 id="step-1-navigate-to-the-project-directory">Step 1 — Navigate to the project directory<a class="headerlink" href="#step-1-navigate-to-the-project-directory" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>/path/to/swarm-external-secrets
+</code></pre></div>
+<h4 id="step-2-initialize-docker-swarm-if-not-already-done">Step 2 — Initialize Docker Swarm (if not already done)<a class="headerlink" href="#step-2-initialize-docker-swarm-if-not-already-done" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>docker<span class="w"> </span>swarm<span class="w"> </span>init
+</code></pre></div>
+<blockquote>
+<p>If you see <code>"This node is already part of a swarm"</code>, that's fine — continue.</p>
+</blockquote>
+<h4 id="step-3-remove-any-old-plugin-version">Step 3 — Remove any old plugin version<a class="headerlink" href="#step-3-remove-any-old-plugin-version" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span>disable<span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span>--force<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>docker<span class="w"> </span>plugin<span class="w"> </span>rm<span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span>--force<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+</code></pre></div>
+<h4 id="step-4-build-the-docker-image">Step 4 — Build the Docker image<a class="headerlink" href="#step-4-build-the-docker-image" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>Dockerfile<span class="w"> </span>-t<span class="w"> </span>swarm-external-secrets:temp<span class="w"> </span>.
+</code></pre></div>
+<h4 id="step-5-create-the-plugin-rootfs-directory">Step 5 — Create the plugin rootfs directory<a class="headerlink" href="#step-5-create-the-plugin-rootfs-directory" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>plugin/rootfs
+</code></pre></div>
+<h4 id="step-6-extract-the-binary-into-rootfs">Step 6 — Extract the binary into rootfs<a class="headerlink" href="#step-6-extract-the-binary-into-rootfs" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Remove any leftover container from a previous run</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>docker<span class="w"> </span>rm<span class="w"> </span>-f<span class="w"> </span>temp-container<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Create (but don&#39;t run) a container from the image</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>docker<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>temp-container<span class="w"> </span>swarm-external-secrets:temp
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Export the container&#39;s full filesystem into plugin/rootfs</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>docker<span class="w"> </span><span class="nb">export</span><span class="w"> </span>temp-container<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-x<span class="w"> </span>-C<span class="w"> </span>plugin/rootfs
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Clean up</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>docker<span class="w"> </span>rm<span class="w"> </span>temp-container
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>docker<span class="w"> </span>rmi<span class="w"> </span>swarm-external-secrets:temp
+</code></pre></div>
+<h4 id="step-7-copy-the-plugin-config">Step 7 — Copy the plugin config<a class="headerlink" href="#step-7-copy-the-plugin-config" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>cp<span class="w"> </span>config.json<span class="w"> </span>plugin/
+</code></pre></div>
+<h4 id="step-8-create-the-docker-plugin">Step 8 — Create the Docker plugin<a class="headerlink" href="#step-8-create-the-docker-plugin" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span>create<span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span>plugin/
+</code></pre></div>
+<h4 id="step-9-clean-up-the-build-directory">Step 9 — Clean up the build directory<a class="headerlink" href="#step-9-clean-up-the-build-directory" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span>plugin/
+</code></pre></div>
+<hr />
+<h2 id="8-configure-enable-the-plugin">8. Configure &amp; Enable the Plugin<a class="headerlink" href="#8-configure-enable-the-plugin" title="Permanent link">&para;</a></h2>
+<h4 id="step-1-load-your-gcp-key-as-an-environment-variable">Step 1 — Load your GCP key as an environment variable<a class="headerlink" href="#step-1-load-your-gcp-key-as-an-environment-variable" title="Permanent link">&para;</a></h4>
+<p>Because the plugin runs in an isolated container, it cannot directly access files on your host. Instead, pass the key contents inline:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nv">GCP_KEY_CONTENT</span><span class="o">=</span><span class="k">$(</span>cat<span class="w"> </span>gcp-key.json<span class="k">)</span>
+</code></pre></div>
+<h4 id="step-2-disable-the-plugin-temporarily-before-reconfiguring">Step 2 — Disable the plugin temporarily (before reconfiguring)<a class="headerlink" href="#step-2-disable-the-plugin-temporarily-before-reconfiguring" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span>disable<span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span>--force<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+</code></pre></div>
+<h4 id="step-3-apply-gcp-configuration">Step 3 — Apply GCP configuration<a class="headerlink" href="#step-3-apply-gcp-configuration" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;gcp&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nv">GCP_PROJECT_ID</span><span class="o">=</span><span class="s2">&quot;YOUR_PROJECT_ID&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nv">GCP_CREDENTIALS_JSON</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">GCP_KEY_CONTENT</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="nv">ROTATION_INTERVAL</span><span class="o">=</span><span class="s2">&quot;30s&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">    </span><span class="nv">ENABLE_MONITORING</span><span class="o">=</span><span class="s2">&quot;false&quot;</span>
+</code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> <code>GCP_CREDENTIALS_JSON</code> embeds the key file contents directly, so you don't need to worry about file paths inside the container.</p>
+</blockquote>
+<h4 id="step-4-set-permissions-and-enable-the-plugin">Step 4 — Set permissions and enable the plugin<a class="headerlink" href="#step-4-set-permissions-and-enable-the-plugin" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">gid</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">uid</span><span class="o">=</span><span class="m">0</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>swarm-external-secrets:latest
+</code></pre></div>
+<h4 id="step-5-verify-the-plugin-is-running">Step 5 — Verify the plugin is running<a class="headerlink" href="#step-5-verify-the-plugin-is-running" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span>ls
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>ID             NAME                            DESCRIPTION   ENABLED
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>abc123         swarm-external-secrets:latest   ...           true
+</code></pre></div>
+<hr />
+<h2 id="9-deploy-a-stack-using-gcp-secrets">9. Deploy a Stack Using GCP Secrets<a class="headerlink" href="#9-deploy-a-stack-using-gcp-secrets" title="Permanent link">&para;</a></h2>
+<h4 id="step-1-review-the-docker-composeyml">Step 1 — Review the docker-compose.yml<a class="headerlink" href="#step-1-review-the-docker-composeyml" title="Permanent link">&para;</a></h4>
+<p>The <code>docker-compose.yml</code> in the project root is pre-configured with GCP secret labels:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">secrets</span><span class="p">:</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">mysql_root_password</span><span class="p">:</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">      </span><span class="nt">gcp_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;projects/YOUR_PROJECT_ID/secrets/mysql-root-password&quot;</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">      </span><span class="nt">gcp_field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;root_password&quot;</span>
+</code></pre></div>
+<blockquote>
+<p>⚠️ <strong>Important:</strong> Replace <code>YOUR_PROJECT_ID</code> with your actual project ID. Also make sure the referenced GCP secrets exist and contain JSON values with the matching field key (e.g., <code>{"root_password":"your-value"}</code>).</p>
+</blockquote>
+<hr />
+<h4 id="step-2-create-the-required-gcp-secrets">Step 2 — Create the required GCP secrets<a class="headerlink" href="#step-2-create-the-required-gcp-secrets" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># --- mysql-root-password ---</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>gcloud<span class="w"> </span>secrets<span class="w"> </span>create<span class="w"> </span>mysql-root-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span>--replication-policy<span class="o">=</span><span class="s2">&quot;automatic&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="nb">echo</span><span class="w"> </span>-n<span class="w"> </span><span class="s1">&#39;{&quot;root_password&quot;:&quot;my-root-pass-123&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">    </span>gcloud<span class="w"> </span>secrets<span class="w"> </span>versions<span class="w"> </span>add<span class="w"> </span>mysql-root-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="w">    </span>--data-file<span class="o">=</span>-<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a>
+<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="c1"># --- mysql-user-password ---</span>
+<a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>gcloud<span class="w"> </span>secrets<span class="w"> </span>create<span class="w"> </span>mysql-user-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="w">    </span>--replication-policy<span class="o">=</span><span class="s2">&quot;automatic&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+<a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a>
+<a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a><span class="nb">echo</span><span class="w"> </span>-n<span class="w"> </span><span class="s1">&#39;{&quot;user_password&quot;:&quot;my-user-pass-456&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a><span class="w">    </span>gcloud<span class="w"> </span>secrets<span class="w"> </span>versions<span class="w"> </span>add<span class="w"> </span>mysql-user-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-18" name="__codelineno-24-18" href="#__codelineno-24-18"></a><span class="w">    </span>--data-file<span class="o">=</span>-<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-19" name="__codelineno-24-19" href="#__codelineno-24-19"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+</code></pre></div>
+<hr />
+<h4 id="step-3-deploy-the-stack">Step 3 — Deploy the stack<a class="headerlink" href="#step-3-deploy-the-stack" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>docker<span class="w"> </span>stack<span class="w"> </span>deploy<span class="w"> </span>-c<span class="w"> </span>docker-compose.yml<span class="w"> </span>myapp
+</code></pre></div>
+<hr />
+<h4 id="step-4-verify-the-deployment">Step 4 — Verify the deployment<a class="headerlink" href="#step-4-verify-the-deployment" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Wait a few seconds for services to start</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>sleep<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># Check service status</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>docker<span class="w"> </span>service<span class="w"> </span>ls
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="c1"># Check service logs</span>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>docker<span class="w"> </span>service<span class="w"> </span>logs<span class="w"> </span>myapp_busybox<span class="w"> </span>--tail<span class="w"> </span><span class="m">20</span>
+</code></pre></div>
+<hr />
+<h4 id="step-5-read-secrets-directly-from-a-running-container">Step 5 — Read secrets directly from a running container<a class="headerlink" href="#step-5-read-secrets-directly-from-a-running-container" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Get the task ID of the running container</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="nv">TASK_ID</span><span class="o">=</span><span class="k">$(</span>docker<span class="w"> </span>service<span class="w"> </span>ps<span class="w"> </span>myapp_busybox<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">    </span>--filter<span class="w"> </span><span class="s2">&quot;desired-state=running&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">    </span>--format<span class="w"> </span><span class="s1">&#39;{{.ID}}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="c1"># Resolve the actual container ID</span>
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="nv">CONTAINER_ID</span><span class="o">=</span><span class="k">$(</span>docker<span class="w"> </span>inspect<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TASK_ID</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="w">    </span>--format<span class="w"> </span><span class="s1">&#39;{{.Status.ContainerStatus.ContainerID}}&#39;</span><span class="k">)</span>
+<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>
+<a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="c1"># Read the secrets</span>
+<a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;--- mysql_root_password ---&quot;</span>
+<a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CONTAINER_ID</span><span class="s2">&quot;</span><span class="w"> </span>cat<span class="w"> </span>/run/secrets/mysql_root_password
+<a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>
+<a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;--- mysql_password ---&quot;</span>
+<a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CONTAINER_ID</span><span class="s2">&quot;</span><span class="w"> </span>cat<span class="w"> </span>/run/secrets/mysql_password
+</code></pre></div>
+<hr />
+<h2 id="10-updating-secrets-rotation">10. Updating Secrets (Rotation)<a class="headerlink" href="#10-updating-secrets-rotation" title="Permanent link">&para;</a></h2>
+<p>The plugin always reads the <strong>latest version</strong> of a secret. Adding a new version automatically triggers rotation on the next polling interval.</p>
+<hr />
+<h3 id="option-a-update-via-cli">Option A — Update via CLI<a class="headerlink" href="#option-a-update-via-cli" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nb">echo</span><span class="w"> </span>-n<span class="w"> </span><span class="s1">&#39;{&quot;root_password&quot;:&quot;UPDATED-root-pass-789&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">    </span>gcloud<span class="w"> </span>secrets<span class="w"> </span>versions<span class="w"> </span>add<span class="w"> </span>mysql-root-password<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="w">    </span>--data-file<span class="o">=</span>-<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="w">    </span>--project<span class="o">=</span>YOUR_PROJECT_ID
+</code></pre></div>
+<hr />
+<h3 id="option-b-update-via-gcp-console-ui">Option B — Update via GCP Console UI<a class="headerlink" href="#option-b-update-via-gcp-console-ui" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to <a href="https://console.cloud.google.com/security/secret-manager">Secret Manager</a>.</li>
+<li>Click on the secret name (e.g., <code>mysql-root-password</code>).</li>
+<li>Click <strong>+ NEW VERSION</strong>.</li>
+<li>Enter the new value: <code>{"root_password":"UPDATED-root-pass-789"}</code></li>
+<li>Click <strong>ADD NEW VERSION</strong>.</li>
+</ol>
+<hr />
+<h3 id="verify-the-plugin-picked-up-the-change">Verify the Plugin Picked Up the Change<a class="headerlink" href="#verify-the-plugin-picked-up-the-change" title="Permanent link">&para;</a></h3>
+<p>After updating a secret, wait for the rotation interval (default: <code>30s</code>) and then check the logs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>sleep<span class="w"> </span><span class="m">35</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>docker<span class="w"> </span>service<span class="w"> </span>logs<span class="w"> </span>myapp_busybox<span class="w"> </span>--tail<span class="w"> </span><span class="m">10</span>
+</code></pre></div>
+<p>You should see the plugin logging that it fetched and applied the updated secret value.</p>
+<hr />
+<blockquote>
+<p><strong>Tip:</strong> Both the CLI and Console UI methods create a new <em>version</em> of the secret — they are functionally identical. The plugin always resolves to the latest active version automatically.</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025, Swarm External Secrets contributors
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.annotate", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest", "navigation.expand"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
