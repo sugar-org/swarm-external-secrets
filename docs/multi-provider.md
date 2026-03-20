@@ -277,14 +277,19 @@ secrets:
 
 ## Secret Reuse Control
 
-The `secret_reuse` label controls whether a secret should be fetched fresh from the provider on every request or reused from the Docker Swarm cache. This works consistently across all providers.
+The `secret_reuse` label controls whether Docker Swarm should cache and reuse a secret value or fetch it fresh from the provider on every request.
 
+**Default behaviour:** secrets are always fetched fresh from the provider.
+
+**With `secret_reuse: "true"`:** Docker Swarm caches the secret value and reuses it without calling the provider again.
+
+### Usage
 ```yaml
-secrets:
+secrets: 
   mysql_password:
     driver: swarm-external-secrets:latest
     labels:
       vault_path: "database/mysql"
       vault_field: "password"
-      secret_reuse: "true"
+      secret_reuse: "true"   # reuse cached value, do not fetch again
 ```
