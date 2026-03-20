@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"encoding/base64"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -58,6 +59,7 @@ func (a *AWSProvider) Initialize(config map[string]string) error {
 
 // GetSecret retrieves a secret value from AWS Secrets Manager
 func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
+	// Build the secret name based on the request
 	secretName := a.buildSecretName(req)
 	log.Printf("Reading secret from AWS Secrets Manager: %s", secretName)
 
@@ -66,23 +68,45 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 		SecretId: aws.String(secretName),
 	}
 
+	// Fetch the secret value from AWS
 	result, err := a.client.GetSecretValue(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret from AWS Secrets Manager: %v", err)
 	}
 
-	if result.SecretString == nil {
-		return nil, fmt.Errorf("secret %s has no string value", secretName)
+	// Handle both SecretString and SecretBinary returned by AWS
+	raw, err := getAWSSecretValue(result, secretName)
+	if err != nil {
+		return nil, err
 	}
 
-	// Extract the secret value
-	value, err := a.extractSecretValue(*result.SecretString, req)
+	// Extract the requested value (handles JSON/key based secrets)
+	value, err := a.extractSecretValue(raw, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}
 
 	log.Printf("Successfully retrieved secret from AWS Secrets Manager")
 	return value, nil
+}
+
+// getAWSSecretValue extracts the raw secret value from AWS response.
+// AWS may return the secret as SecretString or SecretBinary depending
+// on how the secret was stored.
+func getAWSSecretValue(result *secretsmanager.GetSecretValueOutput, secretName string) (string, error) {
+	if len(result.SecretBinary) > 0 {
+		decoded, err := base64.StdEncoding.DecodeString(string(result.SecretBinary))
+		if err != nil {
+			return "", fmt.Errorf("failed to decode binary secret %s: %v", secretName, err)
+		}
+		return string(decoded), nil
+	}
+
+	if result.SecretString != nil && *result.SecretString != "" {
+		return *result.SecretString, nil
+	}
+
+	return "", fmt.Errorf("secret %s has no value", secretName)
 }
 
 // SupportsRotation indicates that AWS Secrets Manager supports secret rotation monitoring
@@ -102,12 +126,14 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 		return false, fmt.Errorf("error reading secret from AWS Secrets Manager: %v", err)
 	}
 
-	if result.SecretString == nil {
-		return false, fmt.Errorf("secret %s has no string value", secretInfo.SecretPath)
+	// Handle both SecretString and SecretBinary returned by AWS
+	raw, err := getAWSSecretValue(result, secretInfo.SecretPath)
+	if err != nil {
+		return false, err
 	}
 
 	// Extract current value
-	currentValue, err := a.extractSecretValueByField(*result.SecretString, secretInfo.SecretField)
+	currentValue, err := a.extractSecretValueByField(raw, secretInfo.SecretField)
 	if err != nil {
 		return false, fmt.Errorf("failed to extract secret field %s: %v", secretInfo.SecretField, err)
 	}
@@ -186,12 +212,10 @@ func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Reques
 	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
 		// Default field names to try
 		for _, field := range []string{"value", "password", "secret", "data"} {
-			// Try to find a value using default field names
 			if value, ok := data[field]; ok {
 				return []byte(fmt.Sprintf("%v", value)), nil
 			}
 		}
-		// If no specific field found, return the first string value
 		for _, value := range data {
 			if strValue, ok := value.(string); ok {
 				return []byte(strValue), nil
@@ -212,7 +236,6 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 		if value, ok := data[field]; ok {
 			return []byte(fmt.Sprintf("%v", value)), nil
 		}
-		// Improved error message: show available keys
 		keys := make([]string, 0, len(data))
 		for k := range data {
 			keys = append(keys, k)
@@ -220,11 +243,9 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 		return nil, fmt.Errorf("field %s not found in secret; available fields: %v", field, keys)
 	}
 
-	// If not JSON and field is requested, return error
 	if field != "value" {
 		return nil, fmt.Errorf("field %s not found in non-JSON secret", field)
 	}
 
-	// If field is "value" and not JSON, return the raw string
 	return []byte(secretString), nil
 }
