@@ -12,7 +12,7 @@
 # Test binary, built with `go test -c`
 *.test
 
-./test/* 
+./test/*
 test
 
 # Code coverage profiles and other test artifacts
@@ -31,8 +31,6 @@ go.work.sum
 # env file
 .env
 
-# Docker Plugin build artifacts
-plugin/rootfs/
 
 # Editor/IDE
 # .idea/
@@ -40,7 +38,7 @@ plugin/rootfs/
 # MkDocs build output
 .site/*
 site/*
-# remove the go binary 
+# remove the go binary
 ./vault-swarm
 ./installer
 ./test-build
@@ -49,3 +47,4 @@ site/*
 approle.token
 
 scripts/plugin/rootfs/*
+plugin/rootfs/*

@@ -16,6 +16,7 @@ theme:
     - search.highlight
     - search.share
     - search.suggest
+    - navigation.expand
   icon:
     repo: fontawesome/brands/github
   palette:
@@ -57,6 +58,8 @@ markdown_extensions:
 
 nav:
   - Swarm External Secrets: readme.md
+  - Providers:
+      - GCP Secret Manager: gcp.md
   - Multi-Provider: multi-provider.md
   - Monitoring: monitoring.md
   - Rotation: rotation.md
