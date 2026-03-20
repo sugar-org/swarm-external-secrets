@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -35,4 +36,17 @@ func parseIntOrDefault(intStr string) int {
 		}
 	}
 	return 8080 // Default port
+}
+
+// parseBoolOrDefault parses a boolean string, returning the fallback for any
+// unrecognised value.
+func parseBoolOrDefault(s string, fallback bool) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	default:
+		return fallback
+	}
 }
