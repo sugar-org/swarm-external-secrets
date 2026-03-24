@@ -344,8 +344,13 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	switch secretInfo.Provider {
 	case "vault":
 		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		// Extract the specific path part from the full path
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		// Extract the specific path part from the full path by trimming the mount prefix
+		mountPath := d.getVaultMountPath()
+		if mountPath == "secret" {
+			req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, mountPath+"/data/")
+		} else {
+			req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, mountPath+"/")
+		}
 	case "aws":
 		req.SecretLabels["aws_field"] = secretInfo.SecretField
 		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
@@ -357,7 +362,12 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
 	case "openbao":
 		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		mountPath := d.getOpenBaoMountPath()
+		if mountPath == "secret" {
+			req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, mountPath+"/data/")
+		} else {
+			req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, mountPath+"/")
+		}
 	}
 
 	// Get the new secret value from the provider
@@ -570,30 +580,56 @@ func (d *SecretsDriver) Stop() error {
 
 // Helper methods for building provider-specific secret paths/names
 
+// getVaultMountPath returns the configured Vault mount path, defaulting to "secret"
+func (d *SecretsDriver) getVaultMountPath() string {
+	if mp, ok := d.config.Settings["VAULT_MOUNT_PATH"]; ok && mp != "" {
+		return mp
+	}
+	return "secret"
+}
+
+// getOpenBaoMountPath returns the configured OpenBao mount path, defaulting to "secret"
+func (d *SecretsDriver) getOpenBaoMountPath() string {
+	if mp, ok := d.config.Settings["OPENBAO_MOUNT_PATH"]; ok && mp != "" {
+		return mp
+	}
+	return "secret"
+}
+
+// buildMountedPath builds a full secret path using the given mount path.
+// For the default "secret" mount (KV v2), paths include a "/data/" segment.
+// For custom mounts, the path is used directly.
+func buildMountedPath(mountPath, subPath string) string {
+	if mountPath == "secret" {
+		return fmt.Sprintf("%s/data/%s", mountPath, subPath)
+	}
+	return fmt.Sprintf("%s/%s", mountPath, subPath)
+}
+
 func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
+	mountPath := d.getVaultMountPath()
+
 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+		return buildMountedPath(mountPath, customPath)
 	}
 
-	// Default path structure for KV v2
 	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+		return buildMountedPath(mountPath, fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName))
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+	return buildMountedPath(mountPath, req.SecretName)
 }
 
 func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
+	mountPath := d.getOpenBaoMountPath()
+
 	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+		return buildMountedPath(mountPath, customPath)
 	}
 
-	// Default path structure for KV v2
 	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+		return buildMountedPath(mountPath, fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName))
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+	return buildMountedPath(mountPath, req.SecretName)
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
