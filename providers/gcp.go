@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -18,7 +19,6 @@ import (
 type GCPProvider struct {
 	client *secretmanager.Client
 	config *GCPConfig
-	ctx    context.Context
 }
 
 // GCPConfig holds the configuration for the GCP Secret Manager client
@@ -30,43 +30,58 @@ type GCPConfig struct {
 
 // Initialize sets up the GCP provider with the given configuration
 func (g *GCPProvider) Initialize(config map[string]string) error {
-	g.ctx = context.Background()
 	g.config = &GCPConfig{
 		ProjectID:       getConfigOrDefault(config, "GCP_PROJECT_ID", ""),
 		CredentialsPath: getConfigOrDefault(config, "GOOGLE_APPLICATION_CREDENTIALS", ""),
 		CredentialsJSON: config["GCP_CREDENTIALS_JSON"],
 	}
 
+	ctx := context.Background()
 	var client *secretmanager.Client
 	var err error
 
+	// Support multiple authentication strategies
 	if g.config.CredentialsJSON != "" {
-		client, err = secretmanager.NewClient(g.ctx, option.WithCredentialsJSON([]byte(g.config.CredentialsJSON)))
+		client, err = secretmanager.NewClient(ctx, option.WithCredentialsJSON([]byte(g.config.CredentialsJSON)))
 	} else if g.config.CredentialsPath != "" {
-		client, err = secretmanager.NewClient(g.ctx, option.WithCredentialsFile(g.config.CredentialsPath))
+		client, err = secretmanager.NewClient(ctx, option.WithCredentialsFile(g.config.CredentialsPath))
 	} else {
-		// Try using Application Default Credentials
-		client, err = secretmanager.NewClient(g.ctx)
+		// Fallback to Application Default Credentials (ADC)
+		client, err = secretmanager.NewClient(ctx)
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to create secretmanager client: %w", err)
+		return fmt.Errorf("failed to create GCP secretmanager client: %w", err)
 	}
 	g.client = client
 
-	log.Printf("Successfully initialized GCP Secret Manager provider for project: %s", g.config.ProjectID)
+	log.Infof("Successfully initialized GCP Secret Manager provider for project: %s", g.config.ProjectID)
 	return nil
 }
 
 // GetSecret retrieves a secret value from GCP Secret Manager
 func (g *GCPProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
 	// Build the full secret name for GCP Secret Manager
-	secretName := g.buildSecretName(req)
-	log.Printf("Reading secret from GCP Secret Manager: %s", secretName)
+	secretName, err := g.buildSecretName(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build secret path: %w", err)
+	}
 
-	// Create the request to access the latest version of the secret
+	log.Infof("Reading secret from GCP Secret Manager: %s", secretName)
+
+	// Check if the secret name already contains a version path
+	var secretPath string
+	if strings.Contains(secretName, "/versions/") {
+		// Use the provided version path directly
+		secretPath = secretName
+	} else {
+		// Append /versions/latest to access the latest version
+		secretPath = secretName + "/versions/latest"
+	}
+
+	// Create the request to access the secret version
 	secretRequest := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: secretName + "/versions/latest",
+		Name: secretPath,
 	}
 
 	// Call the API to get the secret
@@ -90,25 +105,29 @@ func (g *GCPProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 	return extractedValue, nil
 }
 
-// buildSecretName constructs the GCP secret name based on request labels and service information
-func (g *GCPProvider) buildSecretName(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["gcp_secret_name"]; exists {
-		return customPath
-	}
-
-	// Default naming convention: projects/{project}/secrets/{secret-name}
+// buildSecretName constructs the GCP secret name, handling partial or complete paths securely
+func (g *GCPProvider) buildSecretName(req secrets.Request) (string, error) {
 	projectID := g.config.ProjectID
+	var secretName string
+
+	if customPath, exists := req.SecretLabels["gcp_secret_name"]; exists {
+		secretName = customPath
+	} else {
+		secretName = req.SecretName
+		if req.ServiceName != "" {
+			secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
+		}
+	}
+
+	if strings.HasPrefix(secretName, "projects/") && strings.Contains(secretName, "/secrets/") {
+		return secretName, nil
+	}
+
 	if projectID == "" {
-		log.Fatal("GCP_PROJECT_ID is required but not configured. Please set the GCP_PROJECT_ID environment variable.")
+		return "", fmt.Errorf("GCP_PROJECT_ID is required but not configured. Cannot resolve short name: %s", secretName)
 	}
 
-	secretName := req.SecretName
-	if req.ServiceName != "" {
-		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
-	}
-
-	return fmt.Sprintf("projects/%s/secrets/%s", projectID, secretName)
+	return fmt.Sprintf("projects/%s/secrets/%s", projectID, secretName), nil
 }
 
 // extractSecretValue extracts the appropriate value from the GCP secret string
@@ -178,7 +197,15 @@ func (g *GCPProvider) SupportsRotation() bool {
 func (g *GCPProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
 	secretName := secretInfo.SecretPath
 
-	// Get the current secret value and compute its hash
+	// Safety check: ensure driver.go passed us a fully formatted path
+	if !strings.HasPrefix(secretName, "projects/") {
+		// Validate that a project ID is configured before constructing the resource name
+		if strings.TrimSpace(g.config.ProjectID) == "" {
+			return false, fmt.Errorf("GCP project ID is not configured; cannot resolve secret path %q", secretName)
+		}
+		secretName = fmt.Sprintf("projects/%s/secrets/%s", g.config.ProjectID, secretName)
+	}
+
 	secretRequest := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: secretName + "/versions/latest",
 	}

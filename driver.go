@@ -166,9 +166,9 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 
 // shouldNotReuse determines if the secret should not be reused
 func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
-	// Check for explicit label
-	if reuse, exists := req.SecretLabels["vault_reuse"]; exists {
-		return strings.ToLower(reuse) == "false"
+	// Check for provider-agnostic reuse label
+	if reuse, exists := req.SecretLabels["secret_reuse"]; exists {
+		return strings.ToLower(reuse) == "true"
 	}
 
 	// Don't reuse dynamic secrets or certificates
