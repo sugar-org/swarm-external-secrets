@@ -4,7 +4,6 @@ set -ex  # Exit on any error
 cd -- "$(dirname -- "$0")" || exit 1
 
 RED='\033[0;31m'
-BLU='\e[34m'
 GRN='\e[32m'
 DEF='\e[0m'
 
@@ -15,8 +14,8 @@ if [ -n "$DOCKER_USERNAME" ]; then
 fi
 
 echo -e "${DEF}Remove existing plugin if it exists${DEF}"
-docker plugin disable ${DOCKER_USERNAME}swarm-external-secrets:latest --force 2>/dev/null || true
-docker plugin rm ${DOCKER_USERNAME}swarm-external-secrets:latest --force 2>/dev/null || true
+docker plugin disable "${DOCKER_USERNAME}swarm-external-secrets:latest" --force 2>/dev/null || true
+docker plugin rm "${DOCKER_USERNAME}swarm-external-secrets:latest" --force 2>/dev/null || true
 echo -e "${DEF}Build the plugin${DEF}"
 docker build -t swarm-external-secrets:temp ../
 
@@ -40,7 +39,7 @@ echo -e "${DEF}Copy config to plugin directory${DEF}"
 cp ../config.json ./plugin/
 
 echo -e "${DEF}Create the plugin${DEF}"
-docker plugin create ${DOCKER_USERNAME}swarm-external-secrets:latest ./plugin
+docker plugin create "${DOCKER_USERNAME}swarm-external-secrets:latest" ./plugin
 
 echo -e "${DEF}Clean up plugin directory${DEF}"
 rm -rf ./plugin
@@ -54,7 +53,7 @@ if [ -z "$DOCKER_USERNAME" ]; then
 else
     # Use docker plugin push, not docker push
     echo -e "${DEF}Pushing plugin to registry${DEF}"
-    if docker plugin push ${DOCKER_USERNAME}swarm-external-secrets:latest; then
+    if docker plugin push "${DOCKER_USERNAME}swarm-external-secrets:latest"; then
         echo -e "${GRN}Successfully pushed plugin to Docker Hub${DEF}"
         echo -e "${GRN}Plugin build, enable, and push completed successfully${DEF}"
         echo -e "You can now use this plugin with: docker plugin install ${DOCKER_USERNAME}swarm-external-secrets:latest"
