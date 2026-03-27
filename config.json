@@ -183,6 +183,21 @@
       "settable": ["value"]
     },
     {
+      "name": "USE_WEBHOOK",
+      "description": "Enable webhook-based secret sync for Vault provider (true/false, default false). When true, the plugin listens for HCP Vault Secrets push events instead of polling. Only effective with SECRETS_PROVIDER=vault.",
+      "settable": ["value"]
+    },
+    {
+      "name": "WEBHOOK_PORT",
+      "description": "Port for the webhook HTTP listener (default 9095). Only used when USE_WEBHOOK=true.",
+      "settable": ["value"]
+    },
+    {
+      "name": "WEBHOOK_SECRET",
+      "description": "HMAC shared secret for validating HCP Vault Secrets webhook signatures (X-HCP-Webhook-Signature). Optional but recommended. Only used when USE_WEBHOOK=true.",
+      "settable": ["value"]
+    },
+    {
       "name": "uid",
       "description": "User ID to run the plugin as",
       "settable": ["value"]
