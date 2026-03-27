@@ -22,7 +22,7 @@ COMPOSE_FILE="${SCRIPT_DIR}/smoke-awssm-compose.yml"
 
 # Helper to run awslocal either on host or inside container
 awslocal_cmd() {
-    if [ -n "${LOCALSTACK_CONTAINER}" ]; then
+    if [[ -n "${LOCALSTACK_CONTAINER}" ]]; then
         docker exec "${LOCALSTACK_CONTAINER}" awslocal "$@"
     else
         AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
@@ -30,6 +30,7 @@ awslocal_cmd() {
         AWS_DEFAULT_REGION="${AWS_REGION}" \
         awslocal "$@"
     fi
+    return 0
 }
 
 # Cleanup trap
@@ -37,11 +38,12 @@ cleanup() {
     echo -e "${RED}Running AWS Secrets Manager smoke test cleanup...${DEF}"
     remove_stack "${STACK_NAME}"
     docker secret rm "${SECRET_NAME}" 2>/dev/null || true
-    if [ -n "${LOCALSTACK_CONTAINER}" ]; then
+    if [[ -n "${LOCALSTACK_CONTAINER}" ]]; then
         docker stop "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
         docker rm   "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
     fi
     remove_plugin
+    return 0
 }
 trap cleanup EXIT
 
@@ -64,7 +66,7 @@ elapsed=0
 until curl -s "${LOCALSTACK_ENDPOINT}/_localstack/health" | grep -q "available" 2>/dev/null; do
     sleep 2
     elapsed=$((elapsed + 2))
-    [ "${elapsed}" -lt 60 ] || die "LocalStack did not become ready within 60s."
+    [[ "${elapsed}" -lt 60 ]] || die "LocalStack did not become ready within 60s."
 done
 success "LocalStack is ready."
 
