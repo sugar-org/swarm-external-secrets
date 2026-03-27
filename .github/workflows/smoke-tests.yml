@@ -26,6 +26,8 @@ jobs:
 
   smoke-test-awssm:
     runs-on: ubuntu-latest
+    env:
+      LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
