@@ -469,8 +469,14 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	var updatedServices []string
 
 	for _, service := range services {
+		containerSpec := service.Spec.TaskTemplate.ContainerSpec
+		if containerSpec == nil {
+			log.Warnf("Skipping secret update for service %s: TaskTemplate.ContainerSpec is nil", service.Spec.Name)
+			continue
+		}
+
 		updatedSecrets, needsUpdate := buildUpdatedSecretReferences(
-			service.Spec.TaskTemplate.ContainerSpec.Secrets,
+			containerSpec.Secrets,
 			oldSecretName,
 			newSecretName,
 			newSecretID,
@@ -524,6 +530,11 @@ func (d *SecretsDriver) applyServiceSecretUpdate(
 	updatedSecrets []*swarm.SecretReference,
 ) error {
 	serviceSpec := service.Spec
+	if serviceSpec.TaskTemplate.ContainerSpec == nil {
+		log.Warnf("Skipping secret update for service %s: TaskTemplate.ContainerSpec is nil", service.Spec.Name)
+		return nil
+	}
+
 	serviceSpec.TaskTemplate.ContainerSpec.Secrets = updatedSecrets
 
 	if serviceSpec.Labels == nil {
