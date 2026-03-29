@@ -27,6 +27,7 @@ cleanup() {
     docker stop "${OPENBAO_CONTAINER}" 2>/dev/null || true
     docker rm   "${OPENBAO_CONTAINER}" 2>/dev/null || true
     remove_plugin
+    return 0
 }
 trap cleanup EXIT
 
@@ -41,10 +42,10 @@ docker run -d \
 # Wait for OpenBao to be ready
 info "Waiting for OpenBao to be ready..."
 elapsed=0
-until docker exec "${OPENBAO_CONTAINER}" bao status -address="http://127.0.0.1:8200" >/dev/null 2>&1; do
+until docker exec "${OPENBAO_CONTAINER}" bao status -address="${OPENBAO_ADDR}" >/dev/null 2>&1; do
     sleep 2
     elapsed=$((elapsed + 2))
-    [ "${elapsed}" -lt 30 ] || die "OpenBao did not become ready within 30s."
+    [[ "${elapsed}" -lt 30 ]] || die "OpenBao did not become ready within 30s."
 done
 success "OpenBao is ready."
 
@@ -52,14 +53,14 @@ success "OpenBao is ready."
 info "Applying policy to OpenBao..."
 docker cp "${POLICY_FILE}" "${OPENBAO_CONTAINER}:/tmp/admin.hcl"
 docker exec "${OPENBAO_CONTAINER}" \
-    env BAO_ADDR="http://127.0.0.1:8200" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao policy write smoke-policy /tmp/admin.hcl
 success "Policy applied."
 
 # Add passwords (write test secret)
 info "Writing test secret to OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
-    env BAO_ADDR="http://127.0.0.1:8200" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao kv put \
     "secret/${SECRET_PATH}" \
     "${SECRET_FIELD}=${SECRET_VALUE}"
@@ -68,7 +69,7 @@ success "Secret written: secret/${SECRET_PATH} ${SECRET_FIELD}=${SECRET_VALUE}"
 # Get the tmp auth token from openbao
 info "Getting auth token from OpenBao..."
 OPENBAO_TOKEN=$(docker exec "${OPENBAO_CONTAINER}" \
-    env BAO_ADDR="http://127.0.0.1:8200" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao token create \
     -policy="smoke-policy" \
     -field=token)
@@ -114,7 +115,7 @@ success "Container to watch: ${APP_CONTAINER_ID:0:12}"
 # Rotate the password and verify
 info "Rotating secret in OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
-    env BAO_ADDR="http://127.0.0.1:8200" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao kv put \
     "secret/${SECRET_PATH}" \
     "${SECRET_FIELD}=${SECRET_VALUE_ROTATED}"
