@@ -30,9 +30,7 @@ awslocal_cmd() {
         AWS_DEFAULT_REGION="${AWS_REGION}" \
         awslocal "$@"
     fi
-    return 0
 }
-
 # Cleanup trap
 cleanup() {
     echo -e "${RED}Running AWS Secrets Manager smoke test cleanup...${DEF}"
