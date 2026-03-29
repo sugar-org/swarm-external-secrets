@@ -18,7 +18,7 @@ SECRET_VALUE="openbao-smoke-pass-v1"
 SECRET_VALUE_ROTATED="openbao-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-openbao-compose.yml"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
-
+EXIT_CODE=0
 # Cleanup trap
 cleanup() {
     echo -e "${RED}Running OpenBao smoke test cleanup...${DEF}"
@@ -27,7 +27,7 @@ cleanup() {
     docker stop "${OPENBAO_CONTAINER}" 2>/dev/null || true
     docker rm   "${OPENBAO_CONTAINER}" 2>/dev/null || true
     remove_plugin
-    return 0
+    exit "${EXIT_CODE}"
 }
 trap cleanup EXIT
 

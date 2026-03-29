@@ -19,7 +19,7 @@ SECRET_VALUE="vault-smoke-pass-v1"
 SECRET_VALUE_ROTATED="vault-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-vault-compose.yml"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
-
+EXIT_CODE=0
 # Cleanup trap
 cleanup() {
     echo -e "${RED}Running Vault smoke test cleanup...${DEF}"
@@ -28,7 +28,7 @@ cleanup() {
     docker stop "${VAULT_CONTAINER}" 2>/dev/null || true
     docker rm   "${VAULT_CONTAINER}" 2>/dev/null || true
     remove_plugin
-    return 0
+    exit "${EXIT_CODE}"
 }
 trap cleanup EXIT
 
