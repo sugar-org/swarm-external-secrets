@@ -264,3 +264,17 @@ func computeHash(data []byte) string {
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
 }
+
+func (g *GCPProvider) GetSecretField(req secrets.Request) string {
+	return req.SecretLabels["gcp_field"]
+}
+
+func (g *GCPProvider) BuildSecretPath(req secrets.Request) string {
+	path, _ := g.buildSecretName(req)
+	return path
+}
+
+func (g *GCPProvider) SetRotationLabels(labels map[string]string, secretInfo *SecretInfo) {
+	labels["gcp_field"] = secretInfo.SecretField
+	labels["gcp_secret_name"] = secretInfo.SecretPath
+}

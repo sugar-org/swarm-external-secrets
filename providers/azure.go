@@ -205,3 +205,16 @@ func (az *AzureProvider) extractSecretValueByField(secretValue, field string) ([
 
 	return nil, fmt.Errorf("field '%s' not found in the JSON secret", field)
 }
+
+func (az *AzureProvider) GetSecretField(req secrets.Request) string {
+	return req.SecretLabels["azure_field"]
+}
+
+func (az *AzureProvider) BuildSecretPath(req secrets.Request) string {
+	return az.buildSecretName(req)
+}
+
+func (az *AzureProvider) SetRotationLabels(labels map[string]string, secretInfo *SecretInfo) {
+	labels["azure_field"] = secretInfo.SecretField
+	labels["azure_secret_name"] = secretInfo.SecretPath
+}

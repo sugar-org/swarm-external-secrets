@@ -228,3 +228,16 @@ func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]b
 	// If field is "value" and not JSON, return the raw string
 	return []byte(secretString), nil
 }
+
+func (a *AWSProvider) GetSecretField(req secrets.Request) string {
+	return req.SecretLabels["aws_field"]
+}
+
+func (a *AWSProvider) BuildSecretPath(req secrets.Request) string {
+	return a.buildSecretName(req)
+}
+
+func (a *AWSProvider) SetRotationLabels(labels map[string]string, secretInfo *SecretInfo) {
+	labels["aws_field"] = secretInfo.SecretField
+	labels["aws_secret_name"] = secretInfo.SecretPath
+}

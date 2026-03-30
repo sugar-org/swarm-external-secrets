@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/openbao/openbao/api/v2"
@@ -252,4 +253,17 @@ func (o *OpenBaoProvider) extractSecretValue(secret *api.Secret, req secrets.Req
 	}
 
 	return nil, fmt.Errorf("no suitable secret value found")
+}
+
+func (o *OpenBaoProvider) GetSecretField(req secrets.Request) string {
+	return req.SecretLabels["openbao_field"]
+}
+
+func (o *OpenBaoProvider) BuildSecretPath(req secrets.Request) string {
+	return o.buildSecretPath(req)
+}
+
+func (o *OpenBaoProvider) SetRotationLabels(labels map[string]string, secretInfo *SecretInfo) {
+	labels["openbao_field"] = secretInfo.SecretField
+	labels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
 }

@@ -190,40 +190,13 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 	hash := fmt.Sprintf("%x", sha256.Sum256(value))
 
 	// Extract secret field from labels based on provider
-	var secretField string
-	switch d.provider.GetProviderName() {
-	case "vault":
-		secretField = req.SecretLabels["vault_field"]
-	case "aws":
-		secretField = req.SecretLabels["aws_field"]
-	case "gcp":
-		secretField = req.SecretLabels["gcp_field"]
-	case "azure":
-		secretField = req.SecretLabels["azure_field"]
-	case "openbao":
-		secretField = req.SecretLabels["openbao_field"]
-	}
-
+	secretField := d.provider.GetSecretField(req)
 	if secretField == "" {
 		secretField = "value" // default field
 	}
 
 	// Build secret path using provider-specific logic
-	var secretPath string
-	switch d.provider.GetProviderName() {
-	case "vault":
-		secretPath = d.buildVaultSecretPath(req)
-	case "aws":
-		secretPath = d.buildAWSSecretName(req)
-	case "gcp":
-		secretPath = d.buildGCPSecretName(req)
-	case "azure":
-		secretPath = d.buildAzureSecretName(req)
-	case "openbao":
-		secretPath = d.buildOpenBaoSecretPath(req)
-	default:
-		secretPath = req.SecretName
-	}
+	secretPath := d.provider.BuildSecretPath(req)
 
 	log.Printf("Current provider %s tracking secret: %s at path: %s with field: %s",
 		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
@@ -341,24 +314,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	}
 
 	// Set appropriate field and path labels based on provider
-	switch secretInfo.Provider {
-	case "vault":
-		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		// Extract the specific path part from the full path
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
-	case "aws":
-		req.SecretLabels["aws_field"] = secretInfo.SecretField
-		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
-	case "gcp":
-		req.SecretLabels["gcp_field"] = secretInfo.SecretField
-		req.SecretLabels["gcp_secret_name"] = secretInfo.SecretPath
-	case "azure":
-		req.SecretLabels["azure_field"] = secretInfo.SecretField
-		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
-	case "openbao":
-		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
-	}
+	d.provider.SetRotationLabels(req.SecretLabels, secretInfo)
 
 	// Get the new secret value from the provider
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -567,126 +523,3 @@ func (d *SecretsDriver) Stop() error {
 	}
 	return nil
 }
-
-// Helper methods for building provider-specific secret paths/names
-
-func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
-	}
-
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
-}
-
-func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
-	}
-
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
-}
-
-func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
-	if customName, exists := req.SecretLabels["aws_secret_name"]; exists {
-		return customName
-	}
-
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
-	}
-	return req.SecretName
-}
-
-func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
-	if customName, exists := req.SecretLabels["gcp_secret_name"]; exists {
-		return customName
-	}
-
-	secretName := req.SecretName
-	if req.ServiceName != "" {
-		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
-	}
-
-	return normalizeGCPSecretName(secretName)
-}
-
-// normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
-func normalizeGCPSecretName(secretName string) string {
-	if len(secretName) == 0 {
-		return "s"
-	}
-	result := ""
-	for i, char := range secretName {
-		if i == 0 {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
-				result += string(char)
-			} else {
-				result += "s"
-			}
-		} else {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-				(char >= '0' && char <= '9') || char == '_' || char == '-' {
-				result += string(char)
-			} else {
-				result += "_"
-			}
-		}
-	}
-	return result
-}
-
-func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
-	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
-		return customName
-	}
-
-	secretName := req.SecretName
-	if req.ServiceName != "" {
-		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
-	}
-
-	// Azure Key Vault secret names must match regex: ^[0-9a-zA-Z-]+$
-	result := ""
-	for _, char := range secretName {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == '-' {
-			result += string(char)
-		} else {
-			result += "-"
-		}
-	}
-
-	// Remove consecutive hyphens and leading/trailing hyphens
-	for strings.Contains(result, "--") {
-		result = strings.ReplaceAll(result, "--", "-")
-	}
-	result = strings.Trim(result, "-")
-
-	if result == "" || (result[0] >= '0' && result[0] <= '9') {
-		result = "secret-" + result
-	}
-	return result
-}
-
-// func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-// 	// Use custom path from labels if provided
-// 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-// 		return fmt.Sprintf("secret/data/%s", customPath)
-// 	}
-
-// 	// Default path structure for KV v2
-// 	if req.ServiceName != "" {
-// 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-// 	}
-// 	return fmt.Sprintf("secret/data/%s", req.SecretName)
-// }

@@ -37,6 +37,15 @@ type SecretsProvider interface {
 
 	// Close performs any cleanup needed by the provider
 	Close() error
+
+	// GetSecretField extracts the provider-specific field label from the request
+	GetSecretField(req secrets.Request) string
+
+	// BuildSecretPath constructs the provider-specific secret path from the request
+	BuildSecretPath(req secrets.Request) string
+
+	// SetRotationLabels sets provider-specific labels needed during secret rotation
+	SetRotationLabels(labels map[string]string, secretInfo *SecretInfo)
 }
 
 // ProviderConfig holds common configuration for all providers

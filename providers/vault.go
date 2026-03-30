@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/hashicorp/vault/api"
@@ -263,4 +264,17 @@ func getConfigOrDefault(config map[string]string, key, defaultValue string) stri
 		return value
 	}
 	return defaultValue
+}
+
+func (v *VaultProvider) GetSecretField(req secrets.Request) string {
+	return req.SecretLabels["vault_field"]
+}
+
+func (v *VaultProvider) BuildSecretPath(req secrets.Request) string {
+	return v.buildSecretPath(req)
+}
+
+func (v *VaultProvider) SetRotationLabels(labels map[string]string, secretInfo *SecretInfo) {
+	labels["vault_field"] = secretInfo.SecretField
+	labels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
 }
