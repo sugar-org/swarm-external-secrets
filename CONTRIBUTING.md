@@ -10,7 +10,7 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Fork & Clone](#fork--clone)
+  - [Fork & Clone](#fork-clone)
   - [Set Up the Development Environment](#set-up-the-development-environment)
 - [Project Structure](#project-structure)
 - [Development Workflow](#development-workflow)
@@ -76,19 +76,21 @@ git remote add upstream https://github.com/sugar-org/swarm-external-secrets.git
 
 ### Set Up the Development Environment
 
-Install Git hooks via the setup script (this configures Lefthook):
+Set up the conda environment with all required dependencies (including Makim, MkDocs, and Go tools):
+```bash
+conda env create --file conda/dev.yaml
+conda activate vault-swarm-plugin
+```
 
+Install Git hooks via the setup script (this configures Lefthook):
 ```bash
 ./setup-hooks.sh
 ```
 
 Install Go module dependencies:
-
 ```bash
 go mod download
 ```
-
----
 
 ## Project Structure
 
@@ -116,7 +118,7 @@ swarm-external-secrets/
 
 ### Available Tasks (Makim)
 
-This project uses [Makim](https://makim.readthedocs.io/) as a task runner. Common tasks are defined in [`.makim.yaml`](.makim.yaml):
+This project uses [Makim](https://makim.readthedocs.io/) as a task runner. Common tasks are defined in `.makim.yaml`:
 
 | Task | Command | Description |
 |------|---------|-------------|
@@ -218,9 +220,9 @@ To add support for a new secret backend:
 1. Create a new package under `providers/<provider-name>/`.
 2. Implement the provider interface expected by `driver.go`.
 3. Register the provider in `driver.go` with the appropriate `SECRETS_PROVIDER` value.
-4. Add configuration documentation to [`docs/MULTI_PROVIDER.md`](docs/MULTI_PROVIDER.md).
+4. Add configuration documentation to `docs/MULTI_PROVIDER.md`.
 5. Add integration tests in `scripts/test.sh` or a dedicated test script.
-6. Update the provider table in [`readme.md`](readme.md).
+6. Update the provider table in `README.md`.
 
 ---
 
@@ -228,10 +230,9 @@ To add support for a new secret backend:
 
 Documentation lives in the [`docs/`](docs/) directory and is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
 
-To preview the docs locally:
-
+To preview the docs locally, activate the conda environment first, then serve the docs:
 ```bash
-pip install mkdocs-material
+conda activate vault-swarm-plugin
 mkdocs serve
 ```
 
