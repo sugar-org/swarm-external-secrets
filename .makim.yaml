@@ -37,7 +37,12 @@ groups:
       
       docs:
         help: Build documentation
-        run:  python3 -m mkdocs build
+        run: |
+          if [ -x ./.venv/bin/python ]; then
+            ./.venv/bin/python -m mkdocs build
+          else
+            python3 -m mkdocs build
+          fi
 
       linter:
         help: Run linting tools

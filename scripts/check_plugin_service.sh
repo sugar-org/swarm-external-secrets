@@ -3,11 +3,23 @@
 set -ex  # Exit on any error
 cd -- "$(dirname -- "$0")" || exit 1
 
-# Check if service ID is provided
 if [ $# -eq 0 ]; then
-  echo "Please provide the service ID as argument"
-  echo "Usage: $0 <service-id>"
-  exit 1
+  echo "No service ID provided; running local plugin health check mode."
+  echo "=== Local Plugin Status ==="
+  docker plugin ls
+
+  if docker plugin inspect swarm-external-secrets:temp &>/dev/null; then
+    echo -e "\n=== swarm-external-secrets:temp Details ==="
+    docker plugin inspect swarm-external-secrets:temp | grep -E 'Name|Enabled|Config'
+  elif docker plugin inspect swarm-external-secrets:latest &>/dev/null; then
+    echo -e "\n=== swarm-external-secrets:latest Details ==="
+    docker plugin inspect swarm-external-secrets:latest | grep -E 'Name|Enabled|Config'
+  else
+    echo "No local swarm-external-secrets plugin found"
+    exit 1
+  fi
+
+  exit 0
 fi
 
 SERVICE_ID=$1

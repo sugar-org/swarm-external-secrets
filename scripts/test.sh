@@ -32,25 +32,20 @@ docker plugin create swarm-external-secrets:temp ./plugin
 echo -e "${RED}Clean up plugin directory${DEF}"
 rm -rf ./plugin
 
+echo -e "${RED}Set plugin configuration${DEF}"
+docker plugin set swarm-external-secrets:temp \
+    SECRETS_PROVIDER="aws" \
+    AWS_REGION="us-east-1" \
+    ENABLE_ROTATION="false" \
+    ENABLE_MONITORING="false" \
+    gid=0 \
+    uid=0
+
 echo -e "${RED}Enable the plugin${DEF}"
 docker plugin enable swarm-external-secrets:temp
 
 echo -e "${RED}Check plugin status${DEF}"
 docker plugin ls
-
-# Add debugging and set proper permissions
-echo -e "${RED}Set plugin permissions${DEF}"
-docker plugin set swarm-external-secrets:temp gid=0 uid=0
-
-echo -e "${RED}Set plugin configuration${DEF}"
-docker plugin set swarm-external-secrets:temp \
-    VAULT_ADDR="https://152.53.244.80:8200" \
-    VAULT_AUTH_METHOD="approle" \
-    VAULT_ROLE_ID="8ff294a6-9d5c-c5bb-b494-bc0bfe02a97e" \
-    VAULT_SECRET_ID="aedde801-0616-18a5-a62d-c6d7eb483cff" \
-    VAULT_MOUNT_PATH="secret" \
-    VAULT_ENABLE_ROTATION="true" \
-    VAULT_ROTATION_INTERVAL="1m"
 
 echo -e "${GRN}Plugin setup complete. Check plugin logs with:${DEF}"
 echo "docker plugin inspect swarm-external-secrets:temp"
