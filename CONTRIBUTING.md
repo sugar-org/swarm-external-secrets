@@ -228,7 +228,7 @@ To add support for a new secret backend:
 
 ## Documentation
 
-Documentation lives in the [`docs/`](docs/) directory and is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
+Documentation source files live in the [docs directory](https://github.com/sugar-org/swarm-external-secrets/tree/main/docs) and are built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
 
 To preview the docs locally, activate the conda environment first, then serve the docs:
 ```bash
