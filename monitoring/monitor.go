@@ -1,6 +1,7 @@
 package monitoring
 
 import (
+	"context"
 	"runtime"
 	"sync"
 	"time"
@@ -28,7 +29,8 @@ type Metrics struct {
 // Monitor handles system monitoring and metrics collection
 type Monitor struct {
 	metrics     *Metrics
-	done        chan struct{}
+	ctx         context.Context
+	cancel      context.CancelFunc
 	stopOnce    sync.Once
 	interval    time.Duration
 	listeners   []chan *Metrics
@@ -38,11 +40,15 @@ type Monitor struct {
 
 // NewMonitor creates a new monitoring instance
 func NewMonitor(interval time.Duration) *Monitor {
+	// #nosec G118 -- this context is intentionally retained on the Monitor and canceled in Stop.
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Monitor{
 		metrics: &Metrics{
 			MonitoringStartTime: time.Now(),
 		},
-		done:        make(chan struct{}),
+		ctx:         ctx,
+		cancel:      cancel,
 		interval:    interval,
 		lastLogTime: time.Now(),
 	}
@@ -58,8 +64,8 @@ func (m *Monitor) Start() {
 func (m *Monitor) Stop() {
 	// Stop is idempotent
 	m.stopOnce.Do(func() {
-		if m.done != nil {
-			close(m.done)
+		if m.cancel != nil {
+			m.cancel()
 		}
 
 		// close all listener chan
@@ -154,7 +160,7 @@ func (m *Monitor) monitorLoop() {
 
 	for {
 		select {
-		case <-m.done:
+		case <-m.ctx.Done():
 			return
 
 		case <-ticker.C:
