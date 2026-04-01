@@ -192,28 +192,12 @@ func (v *VaultProvider) authenticate() error {
 
 // buildSecretPath constructs the Vault secret path based on request labels and service information
 func (v *VaultProvider) buildSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		// For KV v2, ensure we have the /data/ prefix
-		if v.config.MountPath == "secret" {
-			return fmt.Sprintf("%s/data/%s", v.config.MountPath, customPath)
-		}
-		return fmt.Sprintf("%s/%s", v.config.MountPath, customPath)
-	}
-
-	// Default path structure for KV v2
-	if v.config.MountPath == "secret" {
-		if req.ServiceName != "" {
-			return fmt.Sprintf("%s/data/%s/%s", v.config.MountPath, req.ServiceName, req.SecretName)
-		}
-		return fmt.Sprintf("%s/data/%s", v.config.MountPath, req.SecretName)
-	}
-
-	// For other mount paths
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s/%s", v.config.MountPath, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("%s/%s", v.config.MountPath, req.SecretName)
+	return buildMountedKVv2SecretPath(
+		v.config.MountPath,
+		req.SecretLabels["vault_path"],
+		req.ServiceName,
+		req.SecretName,
+	)
 }
 
 // extractSecretValue extracts the appropriate value from the Vault response

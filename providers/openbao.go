@@ -192,28 +192,12 @@ func (o *OpenBaoProvider) authenticate() error {
 
 // buildSecretPath constructs the OpenBao secret path based on request labels and service information
 func (o *OpenBaoProvider) buildSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		// For KV v2, ensure we have the /data/ prefix
-		if o.config.MountPath == "secret" {
-			return fmt.Sprintf("%s/data/%s", o.config.MountPath, customPath)
-		}
-		return fmt.Sprintf("%s/%s", o.config.MountPath, customPath)
-	}
-
-	// Default path structure for KV v2
-	if o.config.MountPath == "secret" {
-		if req.ServiceName != "" {
-			return fmt.Sprintf("%s/data/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
-		}
-		return fmt.Sprintf("%s/data/%s", o.config.MountPath, req.SecretName)
-	}
-
-	// For other mount paths
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("%s/%s", o.config.MountPath, req.SecretName)
+	return buildMountedKVv2SecretPath(
+		o.config.MountPath,
+		req.SecretLabels["openbao_path"],
+		req.ServiceName,
+		req.SecretName,
+	)
 }
 
 // extractSecretValue extracts the appropriate value from the OpenBao response

@@ -10,6 +10,7 @@ source "${SCRIPT_DIR}/smoke-test-helper.sh"
 OPENBAO_CONTAINER="smoke-openbao"
 OPENBAO_ROOT_TOKEN="smoke-root-token"
 OPENBAO_ADDR="http://127.0.0.1:8200"
+OPENBAO_MOUNT_PATH="kv"
 STACK_NAME="smoke-openbao"
 SECRET_NAME="smoke_secret"
 SECRET_PATH="database/mysql"
@@ -49,6 +50,12 @@ until docker exec "${OPENBAO_CONTAINER}" bao status -address="${OPENBAO_ADDR}" >
 done
 success "OpenBao is ready."
 
+info "Enabling KV v2 engine at custom mount path '${OPENBAO_MOUNT_PATH}'..."
+docker exec "${OPENBAO_CONTAINER}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    bao secrets enable -version=2 -path="${OPENBAO_MOUNT_PATH}" kv
+success "Enabled KV v2 engine at ${OPENBAO_MOUNT_PATH}/."
+
 # Apply policy from vault_conf/admin.hcl
 info "Applying policy to OpenBao..."
 docker cp "${POLICY_FILE}" "${OPENBAO_CONTAINER}:/tmp/admin.hcl"
@@ -62,9 +69,9 @@ info "Writing test secret to OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao kv put \
-    "secret/${SECRET_PATH}" \
+    "${OPENBAO_MOUNT_PATH}/${SECRET_PATH}" \
     "${SECRET_FIELD}=${SECRET_VALUE}"
-success "Secret written: secret/${SECRET_PATH} ${SECRET_FIELD}=${SECRET_VALUE}"
+success "Secret written: ${OPENBAO_MOUNT_PATH}/${SECRET_PATH} ${SECRET_FIELD}=${SECRET_VALUE}"
 
 # Get the tmp auth token from openbao
 info "Getting auth token from OpenBao..."
@@ -83,7 +90,7 @@ docker plugin set "${PLUGIN_NAME}" \
     OPENBAO_ADDR="${OPENBAO_ADDR}" \
     OPENBAO_AUTH_METHOD="token" \
     OPENBAO_TOKEN="${OPENBAO_TOKEN}" \
-    OPENBAO_MOUNT_PATH="secret" \
+    OPENBAO_MOUNT_PATH="${OPENBAO_MOUNT_PATH}" \
     ENABLE_ROTATION="true" \
     ROTATION_INTERVAL="10s" \
     OPENBAO_SKIP_VERIFY="false" \
@@ -117,7 +124,7 @@ info "Rotating secret in OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao kv put \
-    "secret/${SECRET_PATH}" \
+    "${OPENBAO_MOUNT_PATH}/${SECRET_PATH}" \
     "${SECRET_FIELD}=${SECRET_VALUE_ROTATED}"
 success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 
@@ -134,4 +141,4 @@ info "Verifying rotated secret value (must update in-place, same container)..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 
-success "OpenBao smoke test PASSED (incl. rotation)"
+success "OpenBao smoke test PASSED with custom mount path '${OPENBAO_MOUNT_PATH}' (incl. rotation)"

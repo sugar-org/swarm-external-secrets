@@ -658,30 +658,17 @@ func (d *SecretsDriver) getProviderMountPath(providerName string) string {
 
 func buildMountedKVSecretPath(mountPath, customPath, serviceName, secretName string) string {
 	if customPath != "" {
-		if mountPath == "secret" {
-			return fmt.Sprintf("%s/data/%s", mountPath, customPath)
-		}
-		return fmt.Sprintf("%s/%s", mountPath, customPath)
-	}
-
-	if mountPath == "secret" {
-		if serviceName != "" {
-			return fmt.Sprintf("%s/data/%s/%s", mountPath, serviceName, secretName)
-		}
-		return fmt.Sprintf("%s/data/%s", mountPath, secretName)
+		return fmt.Sprintf("%s/data/%s", mountPath, customPath)
 	}
 
 	if serviceName != "" {
-		return fmt.Sprintf("%s/%s/%s", mountPath, serviceName, secretName)
+		return fmt.Sprintf("%s/data/%s/%s", mountPath, serviceName, secretName)
 	}
-	return fmt.Sprintf("%s/%s", mountPath, secretName)
+	return fmt.Sprintf("%s/data/%s", mountPath, secretName)
 }
 
 func trimMountedKVSecretPath(secretPath, mountPath string) string {
-	if mountPath == "secret" {
-		return strings.TrimPrefix(secretPath, mountPath+"/data/")
-	}
-	return strings.TrimPrefix(secretPath, mountPath+"/")
+	return strings.TrimPrefix(secretPath, mountPath+"/data/")
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {

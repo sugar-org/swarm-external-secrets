@@ -30,8 +30,8 @@ docker plugin set swarm-external-secrets:latest \
 
 **Mount Path Behavior:**
 
-- By default, Vault KV secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` KV v2 form.
-- If you set `VAULT_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking.
+- By default, Vault KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
+- If you set `VAULT_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
 
 **Example with Custom Mount Path:**
 ```bash
@@ -130,8 +130,8 @@ docker plugin set swarm-external-secrets:latest \
 
 **Mount Path Behavior:**
 
-- By default, OpenBao KV secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` KV v2 form.
-- If you set `OPENBAO_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking.
+- By default, OpenBao KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
+- If you set `OPENBAO_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
 
 **Example with Custom Mount Path:**
 ```bash
