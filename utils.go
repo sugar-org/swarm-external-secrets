@@ -15,6 +15,15 @@ func getEnvOrDefault(key, defaultValue string) string {
 	return defaultValue
 }
 
+func getEnvOrDefaultFromSettings(settings map[string]string, key, defaultValue string) string {
+	if settings != nil {
+		if value, exists := settings[key]; exists && value != "" {
+			return value
+		}
+	}
+	return defaultValue
+}
+
 // parseDurationOrDefault parses duration string or returns default
 func parseDurationOrDefault(durationStr string) time.Duration {
 	if duration, err := time.ParseDuration(durationStr); err == nil {

@@ -26,6 +26,14 @@ The following environment variables control the rotation behavior:
 | `ENABLE_ROTATION` | Enable/disable automatic rotation | `true` |
 | `ROTATION_INTERVAL` | How often to check for changes | `10s` |
 
+For Vault and OpenBao, rotation tracking uses the same configured mount path as normal secret reads:
+
+- Default KV mount: `secret`
+- Custom mounts are supported via `VAULT_MOUNT_PATH` and `OPENBAO_MOUNT_PATH`
+- Example custom mounts: `kv`, `prod`, `dev`
+
+If a custom mount path is configured, rotation monitoring checks that mount instead of assuming `secret/data/...`.
+
 ### Example Configuration
 
 ```bash
@@ -55,6 +63,20 @@ docker plugin set swarm-external-secrets:latest \
    ```bash
    vault kv put secret/database/mysql password=new_secure_password
    ```
+
+### Custom Mount Path Example
+
+If Vault or OpenBao is mounted somewhere other than `secret`, configure the plugin with the matching mount path so rotation tracking monitors the correct backend:
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="http://127.0.0.1:8200" \
+    VAULT_TOKEN="root" \
+    VAULT_MOUNT_PATH="kv"
+```
+
+Then a secret such as `kv/data/database/mysql` is tracked and rotated against the configured `kv` mount instead of the default `secret` mount.
 
 3. **Automatic rotation**: Within the next rotation interval (default 5 minutes), the plugin will:
    - Detect the change in Vault
