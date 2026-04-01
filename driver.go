@@ -476,20 +476,20 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 			continue
 		}
 
-		updatedSecrets, needsUpdate := buildUpdatedSecretReferences(
+		updatedSecrets := make([]*swarm.SecretReference, len(containerSpec.Secrets))
+		needsUpdate := buildUpdatedSecretReferences(
 			containerSpec.Secrets,
 			oldSecretName,
 			newSecretName,
 			newSecretID,
+			updatedSecrets,
 		)
-		if !needsUpdate {
-			continue
+		if needsUpdate {
+			if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
+				return err
+			}
+			updatedServices = append(updatedServices, service.Spec.Name)
 		}
-
-		if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
-			return err
-		}
-		updatedServices = append(updatedServices, service.Spec.Name)
 	}
 
 	if len(updatedServices) > 0 {
@@ -504,10 +504,9 @@ func buildUpdatedSecretReferences(
 	oldSecretName string,
 	newSecretName string,
 	newSecretID string,
-) ([]*swarm.SecretReference, bool) {
-	updatedSecrets := make([]*swarm.SecretReference, len(secretRefs))
+	updatedSecrets []*swarm.SecretReference,
+) bool {
 	needsUpdate := false
-
 	for i, secretRef := range secretRefs {
 		if secretRef.SecretName == oldSecretName || strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
 			// Update to use the new secret name and ID.
@@ -523,7 +522,7 @@ func buildUpdatedSecretReferences(
 		updatedSecrets[i] = secretRef
 	}
 
-	return updatedSecrets, needsUpdate
+	return needsUpdate
 }
 
 func (d *SecretsDriver) applyServiceSecretUpdate(
