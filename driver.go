@@ -469,6 +469,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	var updatedServices []string
 
 	for _, service := range services {
+		// Check if service uses this secret and update the reference.
 		containerSpec := service.Spec.TaskTemplate.ContainerSpec
 		if containerSpec == nil {
 			log.Warnf("Skipping secret update for service %s: TaskTemplate.ContainerSpec is nil", service.Spec.Name)
@@ -509,6 +510,7 @@ func buildUpdatedSecretReferences(
 
 	for i, secretRef := range secretRefs {
 		if secretRef.SecretName == oldSecretName || strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
+			// Update to use the new secret name and ID.
 			updatedSecrets[i] = &swarm.SecretReference{
 				File:       secretRef.File,
 				SecretID:   newSecretID, // Use actual Docker secret ID
@@ -535,11 +537,14 @@ func (d *SecretsDriver) applyServiceSecretUpdate(
 		return nil
 	}
 
+	// Update service with new secret references.
 	serviceSpec.TaskTemplate.ContainerSpec.Secrets = updatedSecrets
 
 	if serviceSpec.Labels == nil {
 		serviceSpec.Labels = make(map[string]string)
 	}
+
+	// Add/update a label to force the update.
 	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
 
 	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, swarm.ServiceUpdateOptions{})
@@ -662,47 +667,6 @@ func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 	}
 
 	return normalizeGCPSecretName(secretName)
-}
-
-// normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
-func normalizeGCPSecretName(secretName string) string {
-	if len(secretName) == 0 {
-		return "s"
-	}
-
-	var result strings.Builder
-	result.Grow(len(secretName))
-
-	for i, char := range secretName {
-		if i == 0 {
-			result.WriteRune(normalizedGCPFirstChar(char))
-			continue
-		}
-		result.WriteRune(normalizedGCPChar(char))
-	}
-	return result.String()
-}
-
-func normalizedGCPFirstChar(char rune) rune {
-	if isASCIIAlpha(char) {
-		return char
-	}
-	return 's'
-}
-
-func normalizedGCPChar(char rune) rune {
-	if isASCIIAlphaNumeric(char) || char == '_' || char == '-' {
-		return char
-	}
-	return '_'
-}
-
-func isASCIIAlpha(char rune) bool {
-	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')
-}
-
-func isASCIIAlphaNumeric(char rune) bool {
-	return isASCIIAlpha(char) || (char >= '0' && char <= '9')
 }
 
 func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
