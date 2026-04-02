@@ -9,6 +9,8 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/sugar-org/vault-swarm-plugin/internal/kvpath"
 )
 
 // VaultProvider implements the SecretsProvider interface for HashiCorp Vault
@@ -192,7 +194,7 @@ func (v *VaultProvider) authenticate() error {
 
 // buildSecretPath constructs the Vault secret path based on request labels and service information
 func (v *VaultProvider) buildSecretPath(req secrets.Request) string {
-	return buildMountedKVv2SecretPath(
+	return kvpath.BuildMountedKVv2SecretPath(
 		v.config.MountPath,
 		req.SecretLabels["vault_path"],
 		req.ServiceName,

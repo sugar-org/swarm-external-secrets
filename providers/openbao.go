@@ -8,6 +8,8 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/openbao/openbao/api/v2"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/sugar-org/vault-swarm-plugin/internal/kvpath"
 )
 
 // OpenBaoProvider implements the SecretsProvider interface for OpenBao
@@ -192,7 +194,7 @@ func (o *OpenBaoProvider) authenticate() error {
 
 // buildSecretPath constructs the OpenBao secret path based on request labels and service information
 func (o *OpenBaoProvider) buildSecretPath(req secrets.Request) string {
-	return buildMountedKVv2SecretPath(
+	return kvpath.BuildMountedKVv2SecretPath(
 		o.config.MountPath,
 		req.SecretLabels["openbao_path"],
 		req.ServiceName,

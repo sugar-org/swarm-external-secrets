@@ -14,6 +14,7 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/sugar-org/vault-swarm-plugin/internal/kvpath"
 	"github.com/sugar-org/vault-swarm-plugin/monitoring"
 	"github.com/sugar-org/vault-swarm-plugin/providers"
 )
@@ -354,7 +355,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	switch secretInfo.Provider {
 	case "vault":
 		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		req.SecretLabels["vault_path"] = trimMountedKVSecretPath(
+		req.SecretLabels["vault_path"] = kvpath.TrimMountedKVSecretPath(
 			secretInfo.SecretPath,
 			d.getProviderMountPath("vault"),
 		)
@@ -369,7 +370,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
 	case "openbao":
 		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = trimMountedKVSecretPath(
+		req.SecretLabels["openbao_path"] = kvpath.TrimMountedKVSecretPath(
 			secretInfo.SecretPath,
 			d.getProviderMountPath("openbao"),
 		)
@@ -624,7 +625,7 @@ func (d *SecretsDriver) Stop() error {
 // Helper methods for building provider-specific secret paths/names
 
 func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-	return buildMountedKVSecretPath(
+	return kvpath.BuildMountedKVv2SecretPath(
 		d.getProviderMountPath("vault"),
 		req.SecretLabels["vault_path"],
 		req.ServiceName,
@@ -633,7 +634,7 @@ func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
 }
 
 func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	return buildMountedKVSecretPath(
+	return kvpath.BuildMountedKVv2SecretPath(
 		d.getProviderMountPath("openbao"),
 		req.SecretLabels["openbao_path"],
 		req.ServiceName,
@@ -648,27 +649,12 @@ func (d *SecretsDriver) getProviderMountPath(providerName string) string {
 
 	switch providerName {
 	case "vault":
-		return getEnvOrDefaultFromSettings(d.config.Settings, "VAULT_MOUNT_PATH", "secret")
+		return getSettingOrDefault(d.config.Settings, "VAULT_MOUNT_PATH", "secret")
 	case "openbao":
-		return getEnvOrDefaultFromSettings(d.config.Settings, "OPENBAO_MOUNT_PATH", "secret")
+		return getSettingOrDefault(d.config.Settings, "OPENBAO_MOUNT_PATH", "secret")
 	default:
 		return "secret"
 	}
-}
-
-func buildMountedKVSecretPath(mountPath, customPath, serviceName, secretName string) string {
-	if customPath != "" {
-		return fmt.Sprintf("%s/data/%s", mountPath, customPath)
-	}
-
-	if serviceName != "" {
-		return fmt.Sprintf("%s/data/%s/%s", mountPath, serviceName, secretName)
-	}
-	return fmt.Sprintf("%s/data/%s", mountPath, secretName)
-}
-
-func trimMountedKVSecretPath(secretPath, mountPath string) string {
-	return strings.TrimPrefix(secretPath, mountPath+"/data/")
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {

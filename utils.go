@@ -15,7 +15,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 	return defaultValue
 }
 
-func getEnvOrDefaultFromSettings(settings map[string]string, key, defaultValue string) string {
+func getSettingOrDefault(settings map[string]string, key, defaultValue string) string {
 	if settings != nil {
 		if value, exists := settings[key]; exists && value != "" {
 			return value
