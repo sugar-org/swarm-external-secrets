@@ -19,7 +19,7 @@ SECRET_FIELD="password"
 SECRET_VALUE="awssm-smoke-pass-v1"
 SECRET_VALUE_ROTATED="awssm-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-awssm-compose.yml"
-
+EXIT_CODE=0
 # Helper to run awslocal either on host or inside container
 awslocal_cmd() {
     if [[ -n "${LOCALSTACK_CONTAINER}" ]]; then
