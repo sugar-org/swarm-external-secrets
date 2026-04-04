@@ -41,7 +41,7 @@ cleanup() {
         docker rm   "${LOCALSTACK_CONTAINER}" 2>/dev/null || true
     fi
     remove_plugin
-    return 0
+    exit "${EXIT_CODE}"
 }
 trap cleanup EXIT
 
