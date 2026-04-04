@@ -76,6 +76,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        
+      - name: Download artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: dist-artifacts
+          path: dist/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
@@ -100,9 +106,7 @@ jobs:
           GHCR: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          chmod +x ./scripts/build-plugin.sh
-          ./scripts/build-plugin.sh "swarm-external-secrets:test" "${GHCR}:${VERSION}"
-
+          docker load < dist/*.tar.gz
           # Always publish to GHCR
           docker plugin push "${GHCR}:${VERSION}"
           docker plugin create "${GHCR}:latest" ./plugin
