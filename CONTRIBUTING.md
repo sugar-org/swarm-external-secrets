@@ -222,8 +222,7 @@ To add support for a new secret backend:
 3. Register the provider in `driver.go` with the appropriate `SECRETS_PROVIDER` value.
 4. Add configuration documentation to `docs/MULTI_PROVIDER.md`.
 5. Add integration tests in `scripts/test.sh` or a dedicated test script.
-6. Update the provider table in `README.md`.
-
+6. Update the provider table in [`readme.md`](readme.md).
 ---
 
 ## Documentation
@@ -232,7 +231,7 @@ Documentation source files live in the [docs directory](https://github.com/sugar
 
 To preview the docs locally, activate the conda environment first, then serve the docs:
 ```bash
-conda activate vault-swarm-plugin
+conda activate swarm-external-secrets
 mkdocs serve
 ```
 
