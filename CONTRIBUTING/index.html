@@ -1062,7 +1062,7 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <li><a href="#code-of-conduct">Code of Conduct</a></li>
 <li><a href="#getting-started">Getting Started</a></li>
 <li><a href="#prerequisites">Prerequisites</a></li>
-<li><a href="#fork--clone">Fork &amp; Clone</a></li>
+<li><a href="#fork-clone">Fork &amp; Clone</a></li>
 <li><a href="#set-up-the-development-environment">Set Up the Development Environment</a></li>
 <li><a href="#project-structure">Project Structure</a></li>
 <li><a href="#development-workflow">Development Workflow</a></li>
@@ -1154,34 +1154,37 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>upstream<span class="w"> </span>https://github.com/sugar-org/swarm-external-secrets.git
 </code></pre></div>
 <h3 id="set-up-the-development-environment">Set Up the Development Environment<a class="headerlink" href="#set-up-the-development-environment" title="Permanent link">&para;</a></h3>
-<p>Install Git hooks via the setup script (this configures Lefthook):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./setup-hooks.sh
-</code></pre></div>
-<p>Install Go module dependencies:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>go<span class="w"> </span>mod<span class="w"> </span>download
-</code></pre></div>
-<hr />
+<p>Set up the conda environment with all required dependencies (including Makim, MkDocs, and Go tools):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>--file<span class="w"> </span>conda/dev.yaml
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>conda<span class="w"> </span>activate<span class="w"> </span>vault-swarm-plugin
+</code></pre></div></p>
+<p>Install Git hooks via the setup script (this configures Lefthook):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./setup-hooks.sh
+</code></pre></div></p>
+<p>Install Go module dependencies:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>go<span class="w"> </span>mod<span class="w"> </span>download
+</code></pre></div></p>
 <h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>swarm-external-secrets/
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├── main.go            # Plugin entry point
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├── driver.go          # Core Docker secrets driver logic
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>├── utils.go           # Shared utility functions
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├── providers/         # Secret provider implementations
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>│   ├── vault/         # HashiCorp Vault / OpenBao
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>│   ├── aws/           # AWS Secrets Manager
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>│   └── azure/         # Azure Key Vault
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>├── monitoring/        # Health &amp; metrics dashboard
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>├── scripts/           # Shell scripts for build, test, deploy
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>├── docs/              # Documentation sources
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>├── .makim.yaml        # Makim task definitions
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>├── lefthook.yml       # Git hook definitions
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>├── Dockerfile         # Plugin Docker image
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>└── docker-compose.yml # Local development stack
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>swarm-external-secrets/
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── main.go            # Plugin entry point
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── driver.go          # Core Docker secrets driver logic
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├── utils.go           # Shared utility functions
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├── providers/         # Secret provider implementations
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>│   ├── vault/         # HashiCorp Vault / OpenBao
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>│   ├── aws/           # AWS Secrets Manager
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>│   └── azure/         # Azure Key Vault
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>├── monitoring/        # Health &amp; metrics dashboard
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>├── scripts/           # Shell scripts for build, test, deploy
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>├── docs/              # Documentation sources
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>├── .makim.yaml        # Makim task definitions
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>├── lefthook.yml       # Git hook definitions
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>├── Dockerfile         # Plugin Docker image
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>└── docker-compose.yml # Local development stack
 </code></pre></div>
 <hr />
 <h2 id="development-workflow">Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h2>
 <h3 id="available-tasks-makim">Available Tasks (Makim)<a class="headerlink" href="#available-tasks-makim" title="Permanent link">&para;</a></h3>
-<p>This project uses <a href="https://makim.readthedocs.io/">Makim</a> as a task runner. Common tasks are defined in <a href=".makim.yaml"><code>.makim.yaml</code></a>:</p>
+<p>This project uses <a href="https://makim.readthedocs.io/">Makim</a> as a task runner. Common tasks are defined in <code>.makim.yaml</code>:</p>
 <table>
 <thead>
 <tr>
@@ -1286,34 +1289,34 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <p><strong>Tip:</strong> To skip hooks in an emergency, use <code>git commit --no-verify</code>. Please do not make this a habit.</p>
 </blockquote>
 <h3 id="building-the-plugin">Building the Plugin<a class="headerlink" href="#building-the-plugin" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>makim<span class="w"> </span>scripts.build
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># or directly:</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>./scripts/build.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>makim<span class="w"> </span>scripts.build
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># or directly:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>./scripts/build.sh
 </code></pre></div>
 <h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>makim<span class="w"> </span>scripts.test
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># or directly:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>./scripts/test.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>makim<span class="w"> </span>scripts.test
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># or directly:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>./scripts/test.sh
 </code></pre></div>
 <h3 id="linting">Linting<a class="headerlink" href="#linting" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>makim<span class="w"> </span>scripts.linter
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># or run golangci-lint directly:</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>golangci-lint<span class="w"> </span>run<span class="w"> </span>./...<span class="w"> </span>--timeout<span class="w"> </span>10m
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>makim<span class="w"> </span>scripts.linter
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># or run golangci-lint directly:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>golangci-lint<span class="w"> </span>run<span class="w"> </span>./...<span class="w"> </span>--timeout<span class="w"> </span>10m
 </code></pre></div>
 <hr />
 <h2 id="submitting-a-pull-request">Submitting a Pull Request<a class="headerlink" href="#submitting-a-pull-request" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Keep <code>main</code> up to date:</strong></li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>fetch<span class="w"> </span>upstream
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>rebase<span class="w"> </span>upstream/main
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>git<span class="w"> </span>fetch<span class="w"> </span>upstream
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>git<span class="w"> </span>rebase<span class="w"> </span>upstream/main
 </code></pre></div>
 <ol>
 <li><strong>Create a feature branch</strong> with a descriptive name:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/add-gcp-provider
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># or</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/vault-rotation-timeout
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/add-gcp-provider
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># or</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/vault-rotation-timeout
 </code></pre></div>
 <ol>
 <li>
@@ -1323,7 +1326,7 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <p><strong>Ensure all checks pass locally:</strong></p>
 </li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>makim<span class="w"> </span>ci.all
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>makim<span class="w"> </span>ci.all
 </code></pre></div>
 <ol>
 <li><strong>Commit your changes.</strong> Write clear, concise commit messages in the imperative mood:</li>
@@ -1349,17 +1352,17 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <li>Create a new package under <code>providers/&lt;provider-name&gt;/</code>.</li>
 <li>Implement the provider interface expected by <code>driver.go</code>.</li>
 <li>Register the provider in <code>driver.go</code> with the appropriate <code>SECRETS_PROVIDER</code> value.</li>
-<li>Add configuration documentation to <a href="docs/MULTI_PROVIDER.md"><code>docs/MULTI_PROVIDER.md</code></a>.</li>
+<li>Add configuration documentation to <code>docs/MULTI_PROVIDER.md</code>.</li>
 <li>Add integration tests in <code>scripts/test.sh</code> or a dedicated test script.</li>
 <li>Update the provider table in <a href="readme.md"><code>readme.md</code></a>.</li>
 </ol>
 <hr />
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<p>Documentation lives in the <a href="docs/"><code>docs/</code></a> directory and is built with <a href="https://squidfunk.github.io/mkdocs-material/">MkDocs Material</a>.</p>
-<p>To preview the docs locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs-material
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>mkdocs<span class="w"> </span>serve
-</code></pre></div>
+<p>Documentation source files live in the <a href="https://github.com/sugar-org/swarm-external-secrets/tree/main/docs">docs directory</a> and are built with <a href="https://squidfunk.github.io/mkdocs-material/">MkDocs Material</a>.</p>
+<p>To preview the docs locally, activate the conda environment first, then serve the docs:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>conda<span class="w"> </span>activate<span class="w"> </span>swarm-external-secrets
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>mkdocs<span class="w"> </span>serve
+</code></pre></div></p>
 <p>When contributing documentation:
 - Keep language clear and concise.
 - Include working code snippets where possible.
