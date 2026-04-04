@@ -1,4 +1,4 @@
-name: vault-swarm-plugin
+name: swarm-external-secrets
 channels:
   - nodefaults
   - conda-forge
