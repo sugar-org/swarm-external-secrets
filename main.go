@@ -18,7 +18,7 @@ var (
 )
 
 func main() {
-	log.Println("Starting swarm-external-secrets...")
+	log.Print("Starting Vault Secrets Provider...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
 		flDebug   = flag.Bool("debug", false, "Enable debug logging")
@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *flVersion {
-		log.Printf("swarm-external-secrets %s (commit=%s, built=%s)", version, commit, date)
+		log.Println("Vault Secrets Provider v1.0.0")
 		return
 	}
 	if *flDebug {

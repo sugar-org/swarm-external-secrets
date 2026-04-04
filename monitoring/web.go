@@ -11,6 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const contentTypeHeader = "Content-Type"
+
 // WebInterface provides a simple web interface for monitoring
 type WebInterface struct {
 	monitor *Monitor
@@ -73,7 +75,7 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 		Health:  health,
 	}
 
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set(contentTypeHeader, "text/html")
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -83,7 +85,7 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 func (wi *WebInterface) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := wi.monitor.GetMetrics()
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentTypeHeader, "application/json")
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -93,7 +95,7 @@ func (wi *WebInterface) handleMetrics(w http.ResponseWriter, r *http.Request) {
 func (wi *WebInterface) handleHealth(w http.ResponseWriter, r *http.Request) {
 	health := wi.monitor.GetHealthStatus()
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentTypeHeader, "application/json")
 	if err := json.NewEncoder(w).Encode(health); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -103,7 +105,7 @@ func (wi *WebInterface) handleHealth(w http.ResponseWriter, r *http.Request) {
 func (wi *WebInterface) handleAPIMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := wi.monitor.GetMetrics()
 
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set(contentTypeHeader, "text/plain")
 
 	// Basic Prometheus-style metrics
 	_, _ = fmt.Fprintf(w, "# HELP vault_swarm_plugin_goroutines Current number of goroutines\n")
