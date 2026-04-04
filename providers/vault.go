@@ -27,7 +27,7 @@ type SecretsConfig struct {
 	AuthMethod string
 	CACert     string
 	ClientCert string
-	ClientKey  string
+	ClientKey  string // #nosec G117
 	SkipVerify bool
 }
 
