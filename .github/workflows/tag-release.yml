@@ -45,12 +45,6 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --name plugin-image \
             --dir ./ci-artifacts
-
-      - name: Load plugin image artifact
-        run: |
-          docker load --input ./ci-artifacts/swarm-external-secrets-plugin.tar
-          docker image inspect swarm-external-secrets:test >/dev/null
-
       - uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 # 1.75.0
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
