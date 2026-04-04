@@ -18,6 +18,11 @@ import (
 	"github.com/sugar-org/vault-swarm-plugin/providers"
 )
 
+const (
+	kvV2PathFormat        = "secret/data/%s"
+	kvV2ServicePathFormat = "secret/data/%s/%s"
+)
+
 // SecretsDriver implements the secrets.Driver interface with multi-provider support
 type SecretsDriver struct {
 	provider      providers.SecretsProvider
@@ -302,17 +307,22 @@ func (d *SecretsDriver) checkForSecretChanges() {
 	for secretName, secretInfo := range secrets {
 		if d.hasSecretChanged(secretInfo) {
 			log.Printf("Detected change in secret: %s", secretName)
-			if err := d.rotateSecret(secretInfo); err != nil {
-				log.Errorf("Failed to rotate secret %s: %v", secretName, err)
-				if d.monitor != nil {
-					d.monitor.IncrementRotationErrors()
-				}
-			} else {
-				if d.monitor != nil {
-					d.monitor.IncrementSecretRotations()
-				}
-			}
+			d.handleSecretRotationResult(secretName, secretInfo)
 		}
+	}
+}
+
+func (d *SecretsDriver) handleSecretRotationResult(secretName string, secretInfo *providers.SecretInfo) {
+	if err := d.rotateSecret(secretInfo); err != nil {
+		log.Errorf("Failed to rotate secret %s: %v", secretName, err)
+		if d.monitor != nil {
+			d.monitor.IncrementRotationErrors()
+		}
+		return
+	}
+
+	if d.monitor != nil {
+		d.monitor.IncrementSecretRotations()
 	}
 }
 
@@ -459,52 +469,90 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 	var updatedServices []string
 
 	for _, service := range services {
-		// Check if service uses this secret and update the reference
-		needsUpdate := false
-		updatedSecrets := make([]*swarm.SecretReference, len(service.Spec.TaskTemplate.ContainerSpec.Secrets))
-
-		for i, secretRef := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if secretRef.SecretName == oldSecretName ||
-				strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
-				// Update to use the new secret name and ID
-				updatedSecrets[i] = &swarm.SecretReference{
-					File:       secretRef.File,
-					SecretID:   newSecretID, // Use actual Docker secret ID
-					SecretName: newSecretName,
-				}
-				needsUpdate = true
-			} else {
-				updatedSecrets[i] = secretRef
-			}
+		// Check if service uses this secret and update the reference.
+		containerSpec := service.Spec.TaskTemplate.ContainerSpec
+		if containerSpec == nil {
+			log.Warnf("Skipping secret update for service %s: TaskTemplate.ContainerSpec is nil", service.Spec.Name)
+			continue
 		}
 
+		updatedSecrets := make([]*swarm.SecretReference, len(containerSpec.Secrets))
+		needsUpdate := buildUpdatedSecretReferences(
+			containerSpec.Secrets,
+			oldSecretName,
+			newSecretName,
+			newSecretID,
+			updatedSecrets,
+		)
 		if needsUpdate {
-			// Update service with new secret references
-			serviceSpec := service.Spec
-			serviceSpec.TaskTemplate.ContainerSpec.Secrets = updatedSecrets
-
-			// Add/update a label to force the update
-			if serviceSpec.Labels == nil {
-				serviceSpec.Labels = make(map[string]string)
+			if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
+				return err
 			}
-			serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
-
-			updateOptions := swarm.ServiceUpdateOptions{}
-			updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
-			if err != nil {
-				return fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
-			}
-
-			if len(updateResponse.Warnings) > 0 {
-				log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
-			}
-
 			updatedServices = append(updatedServices, service.Spec.Name)
 		}
 	}
 
 	if len(updatedServices) > 0 {
 		log.Printf("Updated services to use new secret %s: %v", newSecretName, updatedServices)
+	}
+
+	return nil
+}
+
+func buildUpdatedSecretReferences(
+	secretRefs []*swarm.SecretReference,
+	oldSecretName string,
+	newSecretName string,
+	newSecretID string,
+	updatedSecrets []*swarm.SecretReference,
+) bool {
+	needsUpdate := false
+	for i, secretRef := range secretRefs {
+		if secretRef.SecretName == oldSecretName || strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
+			// Update to use the new secret name and ID.
+			updatedSecrets[i] = &swarm.SecretReference{
+				File:       secretRef.File,
+				SecretID:   newSecretID, // Use actual Docker secret ID
+				SecretName: newSecretName,
+			}
+			needsUpdate = true
+			continue
+		}
+
+		updatedSecrets[i] = secretRef
+	}
+
+	return needsUpdate
+}
+
+func (d *SecretsDriver) applyServiceSecretUpdate(
+	ctx context.Context,
+	service swarm.Service,
+	updatedSecrets []*swarm.SecretReference,
+) error {
+	serviceSpec := service.Spec
+	if serviceSpec.TaskTemplate.ContainerSpec == nil {
+		log.Warnf("Skipping secret update for service %s: TaskTemplate.ContainerSpec is nil", service.Spec.Name)
+		return nil
+	}
+
+	// Update service with new secret references.
+	serviceSpec.TaskTemplate.ContainerSpec.Secrets = updatedSecrets
+
+	if serviceSpec.Labels == nil {
+		serviceSpec.Labels = make(map[string]string)
+	}
+
+	// Add/update a label to force the update.
+	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
+
+	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, swarm.ServiceUpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
+	}
+
+	if len(updateResponse.Warnings) > 0 {
+		log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
 	}
 
 	return nil
@@ -573,27 +621,27 @@ func (d *SecretsDriver) Stop() error {
 func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
 	// Use custom path from labels if provided
 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+		return fmt.Sprintf(kvV2PathFormat, customPath)
 	}
 
 	// Default path structure for KV v2
 	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+		return fmt.Sprintf(kvV2ServicePathFormat, req.ServiceName, req.SecretName)
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+	return fmt.Sprintf(kvV2PathFormat, req.SecretName)
 }
 
 func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
 	// Use custom path from labels if provided
 	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf("secret/data/%s", customPath)
+		return fmt.Sprintf(kvV2PathFormat, customPath)
 	}
 
 	// Default path structure for KV v2
 	if req.ServiceName != "" {
-		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
+		return fmt.Sprintf(kvV2ServicePathFormat, req.ServiceName, req.SecretName)
 	}
-	return fmt.Sprintf("secret/data/%s", req.SecretName)
+	return fmt.Sprintf(kvV2PathFormat, req.SecretName)
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
@@ -618,31 +666,6 @@ func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
 	}
 
 	return normalizeGCPSecretName(secretName)
-}
-
-// normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
-func normalizeGCPSecretName(secretName string) string {
-	if len(secretName) == 0 {
-		return "s"
-	}
-	result := ""
-	for i, char := range secretName {
-		if i == 0 {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
-				result += string(char)
-			} else {
-				result += "s"
-			}
-		} else {
-			if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-				(char >= '0' && char <= '9') || char == '_' || char == '-' {
-				result += string(char)
-			} else {
-				result += "_"
-			}
-		}
-	}
-	return result
 }
 
 func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {

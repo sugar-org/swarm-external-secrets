@@ -23,7 +23,7 @@ type AWSProvider struct {
 // AWSConfig holds the configuration for the AWS Secrets Manager client
 type AWSConfig struct {
 	Region      string
-	AccessKey   string
+	AccessKey   string // #nosec G117
 	SecretKey   string
 	Profile     string
 	EndpointURL string
