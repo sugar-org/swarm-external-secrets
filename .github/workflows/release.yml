@@ -20,11 +20,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions:
-  contents: read
-
 jobs:
   goreleaser-snapshot:
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     timeout-minutes: 15
     runs-on: ubuntu-latest
@@ -39,6 +38,8 @@ jobs:
           args: build --clean --snapshot
 
   build-plugin-test:
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     timeout-minutes: 15
     runs-on: ubuntu-latest
