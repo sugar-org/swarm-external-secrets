@@ -1,17 +1,142 @@
 name: Build and Release Workflow
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   push:
+    branches:
+      - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
 
-concurrency: ci-release-automation
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
+  goreleaser-snapshot:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6
+        with:
+          version: "~> v2"
+          args: build --clean --snapshot
+
+  build-plugin-test:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+      - name: Build plugin image
+        run: |
+          chmod +x ./scripts/build-plugin.sh
+          ./scripts/build-plugin.sh "swarm-external-secrets:test" "test-org/swarm-external-secrets:test"
+      - name: Save plugin image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p ./artifacts
+          docker save --output ./artifacts/swarm-external-secrets-plugin.tar swarm-external-secrets:test
+      - name: Upload plugin image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@7d27270e0cfd253e666c44abac0711308d2d042f # v6.0.0
+        with:
+          name: plugin-image
+          path: ./artifacts/swarm-external-secrets-plugin.tar
+
+  smoke-test:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        provider:
+          - vault
+          - openbao
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Init Docker Swarm
+        run: docker swarm init
+
+      - name: Run smoke test for ${{ matrix.provider }}
+        run: bash scripts/tests/smoke-test-${{ matrix.provider }}.sh
+
+  smoke-test-awssm:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Start LocalStack
+        uses: LocalStack/setup-localstack@v0.2.2
+        with:
+          image-tag: "latest"
+          install-awslocal: "true"
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+
+      - name: Init Docker Swarm
+        run: docker swarm init
+
+      - name: Run smoke test for awssm
+        run: bash scripts/tests/smoke-test-awssm.sh
+
+  tag:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - goreleaser-snapshot
+      - build-plugin-test
+      - smoke-test
+      - smoke-test-awssm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Download plugin image artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: plugin-image
+          path: ./ci-artifacts
+
+      - uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 # 1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: main
+          TAG_PREFIX: v
+
   goreleaser:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     timeout-minutes: 30
     permissions:
       contents: write
@@ -29,7 +154,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Install syft
-        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610	
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610
 
       - name: Run GoReleaser
         id: run-goreleaser
@@ -41,14 +166,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload dist Folder
+      - name: Upload dist folder
         uses: actions/upload-artifact@7d27270e0cfd253e666c44abac0711308d2d042f # v6.0.0
         with:
           name: dist-artifacts
           path: dist/
 
   provenance:
-    needs: [goreleaser]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - goreleaser
     permissions:
       actions: read
       id-token: write
@@ -66,9 +193,12 @@ jobs:
         uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
         with:
           subject-checksums: dist/checksums.txt
+
   docker-plugin:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     name: Publish Docker Plugin
-    needs: [goreleaser]
+    needs:
+      - goreleaser
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -76,7 +206,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        
+
       - name: Download artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
@@ -94,7 +224,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: steps.dockerhub.outputs.enabled == 'true'
+        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -107,12 +237,10 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           docker load < dist/*.tar.gz
-          # Always publish to GHCR
           docker plugin push "${GHCR}:${VERSION}"
           docker plugin create "${GHCR}:latest" ./plugin
           docker plugin push "${GHCR}:latest"
 
-          # Publish to Docker Hub only if credentials are configured
           if [ -n "${DOCKERHUB_USERNAME}" ]; then
             DHR="${DOCKERHUB_USERNAME}/swarm-external-secrets"
             docker plugin create "${DHR}:${VERSION}" ./plugin
