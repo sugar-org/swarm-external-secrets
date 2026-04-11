@@ -75,11 +75,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Artifact is produced by build-plugin-test (docker save of swarm-external-secrets:test).
+      # Load + inspect so tagging is gated on a reproducible, non-corrupt image tarball.
       - name: Download plugin image artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: plugin-image
           path: ./ci-artifacts
+
+      - name: Verify plugin image artifact
+        run: |
+          set -euo pipefail
+          tar="$(find ./ci-artifacts -name 'swarm-external-secrets-plugin.tar' -type f -print -quit)"
+          test -n "$tar"
+          docker load -i "$tar"
+          docker image inspect swarm-external-secrets:test --format 'verified image {{.Id}}'
 
       - uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 # 1.75.0
         env:
@@ -161,12 +171,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: dist-artifacts
-          path: dist/
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
 
@@ -178,20 +182,37 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push plugin
+      # Managed plugin: build OCI image → export rootfs → docker plugin create <name> ./plugin → then push.
+      # Do not use GoReleaser dist/*.tar.gz here; those archives are not docker-save image tarballs.
+      - name: Build managed plugin (rootfs + plugin create for version)
         env:
           VERSION: ${{ github.ref_name }}
-          GHCR: ghcr.io/${{ github.repository_owner }}/swarm-external-secrets
+        run: |
+          set -euo pipefail
+          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "GHCR_BASE=ghcr.io/${OWNER_LC}/swarm-external-secrets" >> "$GITHUB_ENV"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+          chmod +x ./scripts/build-plugin.sh
+          # Populates ./plugin/rootfs, copies config.json, runs: docker plugin create "${GHCR}:${VERSION}" ./plugin
+          ./scripts/build-plugin.sh "swarm-external-secrets:ci" "ghcr.io/${OWNER_LC}/swarm-external-secrets:${VERSION}"
+
+      - name: Push plugin to registries
+        env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          docker load < dist/*.tar.gz
+          set -euo pipefail
+          GHCR="${GHCR_BASE}"
+
+          # Version tag was created by build-plugin.sh; push it before any further create.
           docker plugin push "${GHCR}:${VERSION}"
+
           docker plugin create "${GHCR}:latest" ./plugin
           docker plugin push "${GHCR}:latest"
 
