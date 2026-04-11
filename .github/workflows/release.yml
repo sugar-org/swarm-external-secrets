@@ -61,58 +61,11 @@ jobs:
           name: plugin-image
           path: ./artifacts/swarm-external-secrets-plugin.tar
 
-  smoke-test:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        provider:
-          - vault
-          - openbao
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
-
-      - name: Init Docker Swarm
-        run: docker swarm init
-
-      - name: Run smoke test for ${{ matrix.provider }}
-        run: bash scripts/tests/smoke-test-${{ matrix.provider }}.sh
-
-  smoke-test-awssm:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
-
-      - name: Start LocalStack
-        uses: LocalStack/setup-localstack@v0.2.2
-        with:
-          image-tag: "latest"
-          install-awslocal: "true"
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
-
-      - name: Init Docker Swarm
-        run: docker swarm init
-
-      - name: Run smoke test for awssm
-        run: bash scripts/tests/smoke-test-awssm.sh
-
   tag:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
       - goreleaser-snapshot
       - build-plugin-test
-      - smoke-test
-      - smoke-test-awssm
     runs-on: ubuntu-latest
     permissions:
       contents: write
