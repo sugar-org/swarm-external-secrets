@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -35,4 +36,45 @@ func parseIntOrDefault(intStr string) int {
 		}
 	}
 	return 8080 // Default port
+}
+
+// normalizeGCPSecretName ensures the name matches GCP's requirements: [a-zA-Z][a-zA-Z0-9_-]*
+func normalizeGCPSecretName(secretName string) string {
+	if len(secretName) == 0 {
+		return "s"
+	}
+
+	var result strings.Builder
+	result.Grow(len(secretName))
+
+	for i, char := range secretName {
+		if i == 0 {
+			result.WriteRune(normalizedGCPFirstChar(char))
+			continue
+		}
+		result.WriteRune(normalizedGCPChar(char))
+	}
+	return result.String()
+}
+
+func normalizedGCPFirstChar(char rune) rune {
+	if isASCIIAlpha(char) {
+		return char
+	}
+	return 's'
+}
+
+func normalizedGCPChar(char rune) rune {
+	if isASCIIAlphaNumeric(char) || char == '_' || char == '-' {
+		return char
+	}
+	return '_'
+}
+
+func isASCIIAlpha(char rune) bool {
+	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')
+}
+
+func isASCIIAlphaNumeric(char rune) bool {
+	return isASCIIAlpha(char) || (char >= '0' && char <= '9')
 }
