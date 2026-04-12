@@ -65,7 +65,7 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 	metrics := wi.monitor.GetMetrics()
 	health := wi.monitor.GetHealthStatus()
 
-	tmpl := template.Must(template.New("dashboard").Parse(dashboardTemplate))
+	tmpl := template.Must(template.New("dashboard").Funcs(dashboardFuncMap()).Parse(dashboardTemplate))
 
 	data := struct {
 		Metrics *Metrics
@@ -78,6 +78,42 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set(contentTypeHeader, "text/html")
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func dashboardFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"div": func(a interface{}, b interface{}) float64 {
+			af := toFloat64(a)
+			bf := toFloat64(b)
+			if bf == 0 {
+				return 0
+			}
+			return af / bf
+		},
+	}
+}
+
+func toFloat64(v interface{}) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case float32:
+		return float64(n)
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	case int32:
+		return float64(n)
+	case uint:
+		return float64(n)
+	case uint64:
+		return float64(n)
+	case uint32:
+		return float64(n)
+	default:
+		return 0
 	}
 }
 
