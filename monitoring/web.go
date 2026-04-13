@@ -65,7 +65,7 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 	metrics := wi.monitor.GetMetrics()
 	health := wi.monitor.GetHealthStatus()
 
-	tmpl := template.Must(template.New("dashboard").Parse(dashboardTemplate))
+	tmpl := template.Must(template.New("dashboard").Funcs(dashboardFuncMap()).Parse(dashboardTemplate))
 
 	data := struct {
 		Metrics *Metrics
@@ -78,6 +78,42 @@ func (wi *WebInterface) handleDashboard(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set(contentTypeHeader, "text/html")
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func dashboardFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"div": func(a interface{}, b interface{}) float64 {
+			af := toFloat64(a)
+			bf := toFloat64(b)
+			if bf == 0 {
+				return 0
+			}
+			return af / bf
+		},
+	}
+}
+
+func toFloat64(v interface{}) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case float32:
+		return float64(n)
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	case int32:
+		return float64(n)
+	case uint:
+		return float64(n)
+	case uint64:
+		return float64(n)
+	case uint32:
+		return float64(n)
+	default:
+		return 0
 	}
 }
 
@@ -211,7 +247,7 @@ const dashboardTemplate = `
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Vault Swarm Plugin Monitor</h1>
+            <h1>Vault Swarm Plugin Monitor</h1>
             <p>Real-time monitoring of secret provider plugin</p>
             <span class="status {{if .Health.healthy}}healthy{{else}}unhealthy{{end}}">
                 {{if .Health.healthy}}HEALTHY{{else}}UNHEALTHY{{end}}
@@ -220,7 +256,7 @@ const dashboardTemplate = `
 
         <div class="grid">
             <div class="card">
-                <h3>📊 System Metrics</h3>
+                <h3>System Metrics</h3>
                 <div class="metric">
                     <span class="metric-label">Goroutines:</span>
                     <span class="metric-value">{{.Metrics.NumGoroutines}}</span>
@@ -244,7 +280,7 @@ const dashboardTemplate = `
             </div>
 
             <div class="card">
-                <h3>🔄 Secret Rotation</h3>
+                <h3>Secret Rotation</h3>
                 <div class="metric">
                     <span class="metric-label">Total Rotations:</span>
                     <span class="metric-value">{{.Metrics.SecretRotations}}</span>
@@ -268,7 +304,7 @@ const dashboardTemplate = `
             </div>
 
             <div class="card">
-                <h3>⏱️ Uptime & Status</h3>
+                <h3>Uptime & Status</h3>
                 <div class="metric">
                     <span class="metric-label">Uptime:</span>
                     <span class="metric-value">{{printf "%.2f" .Health.uptime_seconds}} seconds</span>
@@ -279,7 +315,7 @@ const dashboardTemplate = `
                 </div>
                 <div class="metric">
                     <span class="metric-label">Ticker Health:</span>
-                    <span class="metric-value">{{if .Health.ticker_healthy}}✅ Healthy{{else}}❌ Unhealthy{{end}}</span>
+                    <span class="metric-value">{{if .Health.ticker_healthy}}Healthy{{else}}Unhealthy{{end}}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">Last GC:</span>
