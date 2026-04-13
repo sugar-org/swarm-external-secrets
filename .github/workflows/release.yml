@@ -40,7 +40,7 @@ jobs:
   build-plugin-test:
     permissions:
       contents: read
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
@@ -51,11 +51,11 @@ jobs:
           chmod +x ./scripts/build-plugin.sh
           ./scripts/build-plugin.sh "swarm-external-secrets:test" "test-org/swarm-external-secrets:test"
       - name: Save plugin image artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         run: |
           docker save --output /tmp/swarm-external-secrets-plugin.tar swarm-external-secrets:test
       - name: Upload plugin image artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@7d27270e0cfd253e666c44abac0711308d2d042f # v6.0.0
         with:
           name: plugin-image
@@ -161,6 +161,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     name: Publish Docker Plugin
     needs:
+      - build-plugin-test
       - goreleaser
     runs-on: ubuntu-latest
     permissions:
@@ -187,9 +188,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Managed plugin: build OCI image → export rootfs → docker plugin create <name> ./plugin → then push.
-      # Do not use GoReleaser dist/*.tar.gz here; those archives are not docker-save image tarballs.
-      - name: Build managed plugin (rootfs + plugin create for version)
+      - name: Download plugin image artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: plugin-image
+          path: /tmp
+
+      - name: Load plugin image artifact and create versioned plugin
         env:
           VERSION: ${{ github.ref_name }}
         run: |
@@ -197,10 +202,15 @@ jobs:
           OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           echo "GHCR_BASE=ghcr.io/${OWNER_LC}/swarm-external-secrets" >> "$GITHUB_ENV"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          docker load -i /tmp/swarm-external-secrets-plugin.tar
 
-          chmod +x ./scripts/build-plugin.sh
-          # Populates ./plugin/rootfs, copies config.json, runs: docker plugin create "${GHCR}:${VERSION}" ./plugin
-          ./scripts/build-plugin.sh "swarm-external-secrets:ci" "ghcr.io/${OWNER_LC}/swarm-external-secrets:${VERSION}"
+          rm -rf ./plugin/rootfs
+          mkdir -p ./plugin/rootfs
+          docker create --name plugin-rootfs swarm-external-secrets:test
+          docker export plugin-rootfs | tar -x -C ./plugin/rootfs
+          docker rm plugin-rootfs
+          cp config.json ./plugin/
+          docker plugin create "ghcr.io/${OWNER_LC}/swarm-external-secrets:${VERSION}" ./plugin
 
       - name: Push plugin to registries
         env:
