@@ -247,7 +247,7 @@ const dashboardTemplate = `
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Vault Swarm Plugin Monitor</h1>
+            <h1>Vault Swarm Plugin Monitor</h1>
             <p>Real-time monitoring of secret provider plugin</p>
             <span class="status {{if .Health.healthy}}healthy{{else}}unhealthy{{end}}">
                 {{if .Health.healthy}}HEALTHY{{else}}UNHEALTHY{{end}}
@@ -256,7 +256,7 @@ const dashboardTemplate = `
 
         <div class="grid">
             <div class="card">
-                <h3>📊 System Metrics</h3>
+                <h3>System Metrics</h3>
                 <div class="metric">
                     <span class="metric-label">Goroutines:</span>
                     <span class="metric-value">{{.Metrics.NumGoroutines}}</span>
@@ -280,7 +280,7 @@ const dashboardTemplate = `
             </div>
 
             <div class="card">
-                <h3>🔄 Secret Rotation</h3>
+                <h3>Secret Rotation</h3>
                 <div class="metric">
                     <span class="metric-label">Total Rotations:</span>
                     <span class="metric-value">{{.Metrics.SecretRotations}}</span>
@@ -304,7 +304,7 @@ const dashboardTemplate = `
             </div>
 
             <div class="card">
-                <h3>⏱️ Uptime & Status</h3>
+                <h3>Uptime & Status</h3>
                 <div class="metric">
                     <span class="metric-label">Uptime:</span>
                     <span class="metric-value">{{printf "%.2f" .Health.uptime_seconds}} seconds</span>
@@ -315,7 +315,7 @@ const dashboardTemplate = `
                 </div>
                 <div class="metric">
                     <span class="metric-label">Ticker Health:</span>
-                    <span class="metric-value">{{if .Health.ticker_healthy}}✅ Healthy{{else}}❌ Unhealthy{{end}}</span>
+                    <span class="metric-value">{{if .Health.ticker_healthy}}Healthy{{else}}Unhealthy{{end}}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">Last GC:</span>
