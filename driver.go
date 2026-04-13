@@ -160,8 +160,9 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		d.trackSecret(req, value)
 	}
 
-	// Determine if secret should be reusable
+	// Determine if secret should be reusable (Docker DoNotReuse=true means do not cache/reuse)
 	doNotReuse := d.shouldNotReuse(req)
+	log.Printf("Get secret %q: DoNotReuse=%v (Swarm may reuse cached value when false)", req.SecretName, doNotReuse)
 
 	log.Printf("Successfully returning secret value")
 	return secrets.Response{
@@ -170,11 +171,19 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	}
 }
 
-// shouldNotReuse determines if the secret should not be reused
+// shouldNotReuse returns the value for secrets.Response.DoNotReuse.
+// When true, Docker should not reuse a cached value (fetch from provider again).
+// Label secret_reuse: "true" means allow reuse → DoNotReuse must be false (see docs/multi-provider.md).
 func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
-	// Check for provider-agnostic reuse label
 	if reuse, exists := req.SecretLabels["secret_reuse"]; exists {
-		return strings.ToLower(reuse) == "true"
+		v := strings.ToLower(strings.TrimSpace(reuse))
+		allowReuse := v == "true"
+		if allowReuse {
+			log.Printf("secret_reuse=%q for %q: allowing Swarm reuse (DoNotReuse=false)", reuse, req.SecretName)
+			return false
+		}
+		log.Printf("secret_reuse=%q for %q: disallowing Swarm reuse (DoNotReuse=true)", reuse, req.SecretName)
+		return true
 	}
 
 	// Don't reuse dynamic secrets or certificates
