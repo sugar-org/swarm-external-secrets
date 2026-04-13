@@ -170,6 +170,9 @@ jobs:
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+      QUAY_ORG: ${{ secrets.QUAY_ORG }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -190,6 +193,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to Quay.io
+        if: ${{ env.QUAY_USERNAME != '' && env.QUAY_TOKEN != '' }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
 
       - name: Download plugin image artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -218,20 +229,36 @@ jobs:
       - name: Push plugin to registries
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          QUAY_ORG: ${{ secrets.QUAY_ORG }}
         run: |
           set -euo pipefail
           GHCR="${GHCR_BASE}"
 
-          # Version tag was created by build-plugin.sh; push it before any further create.
           docker plugin push "${GHCR}:${VERSION}"
+          docker plugin rm "${GHCR}:${VERSION}"
 
           docker plugin create "${GHCR}:latest" ./plugin
           docker plugin push "${GHCR}:latest"
+          docker plugin rm "${GHCR}:latest"
 
           if [ -n "${DOCKERHUB_USERNAME}" ]; then
             DHR="${DOCKERHUB_USERNAME}/swarm-external-secrets"
             docker plugin create "${DHR}:${VERSION}" ./plugin
             docker plugin push "${DHR}:${VERSION}"
+            docker plugin rm "${DHR}:${VERSION}"
+
             docker plugin create "${DHR}:latest" ./plugin
             docker plugin push "${DHR}:latest"
+            docker plugin rm "${DHR}:latest"
+          fi
+
+          if [ -n "${QUAY_ORG}" ]; then
+            QUAYR="quay.io/${QUAY_ORG}/swarm-external-secrets"
+            docker plugin create "${QUAYR}:${VERSION}" ./plugin
+            docker plugin push "${QUAYR}:${VERSION}"
+            docker plugin rm "${QUAYR}:${VERSION}"
+
+            docker plugin create "${QUAYR}:latest" ./plugin
+            docker plugin push "${QUAYR}:latest"
+            docker plugin rm "${QUAYR}:latest"
           fi
