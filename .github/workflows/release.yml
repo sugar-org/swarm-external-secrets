@@ -54,7 +54,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p ./artifacts
-          docker save --output ./artifacts/swarm-external-secrets-plugin.tar swarm-external-secrets:test
+          docker save --output /tmp/swarm-external-secrets-plugin.tar swarm-external-secrets:test
       - name: Upload plugin image artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@7d27270e0cfd253e666c44abac0711308d2d042f # v6.0.0
