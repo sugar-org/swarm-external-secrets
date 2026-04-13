@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@7d27270e0cfd253e666c44abac0711308d2d042f # v6.0.0
         with:
           name: plugin-image
-          path: ./artifacts/swarm-external-secrets-plugin.tar
+          path: /tmp/swarm-external-secrets-plugin.tar
 
   tag:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
