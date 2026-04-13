@@ -84,7 +84,7 @@ changelog:
 
 release:
   github:
-    owner: OpenScienceLabs
+    owner: sugar-org
     name: swarm-external-secrets
   draft: false
   prerelease: auto
