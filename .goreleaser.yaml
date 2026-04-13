@@ -50,37 +50,7 @@ sboms:
       - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.cdx.json"
     
 changelog:
-  use: github
-  sort: asc
-  abbrev: 0
-  groups:
-    - title: "Features"
-      regexp: '^.*?feat(\([[:word:]]+\))?!?:.+$'
-      order: 0
-    - title: "Bug Fixes"
-      regexp: '^.*?fix(\([[:word:]]+\))?!?:.+$'
-      order: 1
-    - title: "Documentation"
-      regexp: '^.*?docs(\([[:word:]]+\))?!?:.+$'
-      order: 2
-    - title: "Performance"
-      regexp: '^.*?perf(\([[:word:]]+\))?!?:.+$'
-      order: 3
-    - title: "Refactor"
-      regexp: '^.*?refactor(\([[:word:]]+\))?!?:.+$'
-      order: 4
-    - title: "CI/Build"
-      regexp: '^.*?(ci|build)(\([[:word:]]+\))?!?:.+$'
-      order: 5
-    - title: "Other Changes"
-      order: 999
-  filters:
-    exclude:
-      - "^chore"
-      - "^test"
-      - "merge conflict"
-      - "Merge pull request"
-      - "Merge branch"
+  use: github-native
 
 release:
   github:
@@ -89,11 +59,3 @@ release:
   draft: false
   prerelease: auto
   make_latest: true
-  header: |
-    ## What's Changed
-  footer: |
-    ## New Contributors
-
-    See the full contributor list at https://github.com/OpenScienceLabs/swarm-external-secrets/graphs/contributors
-
-    **Full Changelog**: https://github.com/OpenScienceLabs/swarm-external-secrets/compare/{{ .PreviousTag }}...{{ .Tag }}
