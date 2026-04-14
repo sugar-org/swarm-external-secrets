@@ -315,7 +315,7 @@ func (d *SecretsDriver) checkForSecretChanges() {
 
 	const maxConcurrentSecretChecks = 5
 	// TODO: Revisit this limit if secret-label fanout or provider latency changes.
-	concurrentSecretChecks := min(len(secrets), maxConcurrentSecretChecks)
+	concurrentSecretChecks := len(secrets) + 1
 
 	sem := make(chan struct{}, concurrentSecretChecks)
 	var wg sync.WaitGroup
