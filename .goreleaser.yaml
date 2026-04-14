@@ -1,0 +1,61 @@
+version: 2
+
+project_name: swarm-external-secrets
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: swarm-external-secrets
+    binary: swarm-external-secrets
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - config.json
+      - readme.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - id: spdx
+    artifacts: archive
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.spdx.json"
+  - id: cyclonedx
+    artifacts: archive
+    args:
+      - "$artifact"
+      - "--file"
+      - "$document"
+      - "--output"
+      - "cyclonedx-json"
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.cdx.json"
+    
+changelog:
+  use: github-native
+
+release:
+  github:
+    owner: sugar-org
+    name: swarm-external-secrets
+  draft: false
+  prerelease: auto
+  make_latest: true
