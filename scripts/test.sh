@@ -49,8 +49,8 @@ docker plugin set swarm-external-secrets:temp \
     VAULT_ROLE_ID="8ff294a6-9d5c-c5bb-b494-bc0bfe02a97e" \
     VAULT_SECRET_ID="aedde801-0616-18a5-a62d-c6d7eb483cff" \
     VAULT_MOUNT_PATH="secret" \
-    VAULT_ENABLE_ROTATION="true" \
-    VAULT_ROTATION_INTERVAL="1m"
+    ENABLE_ROTATION="true" \
+    ROTATION_INTERVAL="1m"
 
 echo -e "${GRN}Plugin setup complete. Check plugin logs with:${DEF}"
 echo "docker plugin inspect swarm-external-secrets:temp"
