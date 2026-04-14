@@ -333,7 +333,7 @@ func (d *SecretsDriver) checkForSecretChanges() {
 
 			log.Printf("Detected change in secret: %s", secretName)
 			d.handleSecretRotationResult(secretName, secretInfo)
-		}
+		}(secretName, secretInfo)
 	}
 
 	wg.Wait()
