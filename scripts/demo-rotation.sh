@@ -34,8 +34,8 @@ docker plugin set swarm-external-secrets:latest \
     VAULT_AUTH_METHOD="token" \
     VAULT_TOKEN="your-vault-token" \
     VAULT_MOUNT_PATH="secret" \
-    VAULT_ENABLE_ROTATION="true" \
-    VAULT_ROTATION_INTERVAL="30s" || echo "Plugin configuration may already be set"
+    ENABLE_ROTATION="true" \
+    ROTATION_INTERVAL="30s" || echo "Plugin configuration may already be set"
 echo -e "${GRN}Plugin configured with 30-second rotation interval${DEF}"
 echo
 # Create a simple demo stack
