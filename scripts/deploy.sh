@@ -49,8 +49,8 @@ rm -rf ./plugin
 #     VAULT_AUTH_METHOD="token" \
 #     VAULT_TOKEN="" \
 #     VAULT_MOUNT_PATH="secret" \
-#     VAULT_ENABLE_ROTATION="true" \
-#     VAULT_ROTATION_INTERVAL="5s" \
+#     ENABLE_ROTATION="true" \
+#     ROTATION_INTERVAL="5s" \
 #     ENABLE_MONITORING="true" \
 #     MONITORING_PORT="8080"
 
@@ -60,7 +60,7 @@ rm -rf ./plugin
 #     OPENBAO_ADDR="" \
 #     OPENBAO_TOKEN="" \
 #     OPENBAO_MOUNT_PATH="secret" \
-#     VAULT_ENABLE_ROTATION="true"
+#     ENABLE_ROTATION="true"
 
 export GOOGLE_CREDENTIALS=$(jq -c . ../graphic-transit-458312-f7-44c20b0e486c.json)
 docker plugin set swarm-external-secrets:latest \
