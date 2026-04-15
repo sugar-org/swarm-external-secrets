@@ -43,6 +43,8 @@ assert_no_sensitive_rotation_metadata_logs() {
     if echo "${logs}" | grep -Fq "Detected change in secret:"; then
         die "Sensitive rotation metadata leaked into logs (found: 'Detected change in secret:')"
     fi
+
+    return 0
 }
 
 # Build plugin (mirrors build.sh / test.sh pattern exactly)
