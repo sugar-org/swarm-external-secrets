@@ -239,7 +239,7 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		secretPath = req.SecretName
 	}
 
-	log.Printf("Current provider %s tracking secret: %s at path: %s with field: %s",
+	log.Tracef("Current provider %s tracking secret: %s at path: %s with field: %s",
 		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
 
 	secretInfo := &providers.SecretInfo{
@@ -271,7 +271,7 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		d.secretTracker[req.SecretName] = secretInfo
 	}
 
-	log.Printf("Tracking secret: %s -> %s (provider: %s, services: %v)",
+	log.Tracef("Tracking secret: %s -> %s (provider: %s, services: %v)",
 		req.SecretName, secretPath, d.provider.GetProviderName(), secretInfo.ServiceNames)
 }
 
@@ -329,7 +329,7 @@ func (d *SecretsDriver) checkForSecretChanges() {
 				return
 			}
 
-			log.Printf("Detected change in secret: %s", secretName)
+			log.Tracef("Detected change in secret: %s", secretName)
 			d.handleSecretRotationResult(secretName, secretInfo)
 		}(secretName, secretInfo)
 	}

@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/docker/go-plugins-helpers/secrets"
@@ -22,7 +24,25 @@ func main() {
 		log.Println("Vault Secrets Provider v1.0.0")
 		return
 	}
-	if *flDebug {
+
+	// Default to InfoLevel; allow override via LOG_LEVEL (0-7) or --debug.
+	log.SetLevel(log.InfoLevel)
+	if lvlStr, ok := os.LookupEnv("LOG_LEVEL"); ok {
+		lvlStr = strings.TrimSpace(lvlStr)
+		if lvlStr != "" {
+			n, err := strconv.Atoi(lvlStr)
+			if err != nil || n < 0 || n > 7 {
+				log.Warnf("Invalid LOG_LEVEL=%q; expected integer 0-7. Using default level %s.", lvlStr, log.GetLevel())
+			} else {
+				// logrus supports 0-6 (panic..trace); accept 7 as trace for compatibility.
+				if n == 7 {
+					n = int(log.TraceLevel)
+				}
+				log.SetLevel(log.Level(n))
+				log.Debugf("Log level set from LOG_LEVEL=%s (%s)", lvlStr, log.GetLevel())
+			}
+		}
+	} else if *flDebug {
 		log.SetLevel(log.DebugLevel)
 	}
 
