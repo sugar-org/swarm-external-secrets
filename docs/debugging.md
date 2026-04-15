@@ -71,6 +71,19 @@ vault kv get secret/database/mysql
 
 ## Debug the Plugin
 
+## Configure Logging
+
+By default, the plugin logs at **info** level. You can increase verbosity using either:
+
+- `--debug` (sets log level to `debug`)
+- `LOG_LEVEL` (optional integer `0-6`; `6` enables `trace`)
+
+Example:
+
+```bash
+docker plugin set swarm-external-secrets:latest LOG_LEVEL="6"
+```
+
 ```bash
 sudo journalctl -u docker.service -f \
   | grep plugin_id

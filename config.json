@@ -194,7 +194,7 @@
     },
     {
       "name": "LOG_LEVEL",
-      "description": "Optional log level integer (0-7). 0=panic,1=fatal,2=error,3=warn,4=info,5=debug,6=trace; 7 is also treated as trace. Defaults to info.",
+      "description": "Optional log level integer (0-6). 0=panic,1=fatal,2=error,3=warn,4=info,5=debug,6=trace. Defaults to info.",
       "settable": ["value"]
     }
   ]
