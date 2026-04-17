@@ -312,8 +312,6 @@ func (d *SecretsDriver) checkForSecretChanges() {
 	}
 
 	log.Printf("Checking %d tracked secrets for changes", len(secrets))
-
-	const maxConcurrentSecretChecks = 5
 	// TODO: Revisit this limit if secret-label fanout or provider latency changes.
 	concurrentSecretChecks := len(secrets) + 1
 
