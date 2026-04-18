@@ -13,6 +13,7 @@ import (
 
 const (
 	defaultPluginLogPath = "/run/swarm-external-secrets/plugin.log"
+	defaultPluginLogDir  = "/run/swarm-external-secrets"
 	defaultMaxLogSize    = int64(10 * 1024 * 1024) // 10MB
 )
 
@@ -29,16 +30,22 @@ func newCappedFileWriter(path string, maxBytes int64) (*cappedFileWriter, error)
 		maxBytes = defaultMaxLogSize
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	resolvedPath, err := validateLogPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(resolvedPath), 0o750); err != nil {
 		return nil, fmt.Errorf("create log directory: %w", err)
 	}
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	// #nosec G304 -- path is constrained to /run/swarm-external-secrets by validateLogPath.
+	f, err := os.OpenFile(resolvedPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open log file: %w", err)
 	}
 
-	return &cappedFileWriter{path: path, maxBytes: maxBytes, file: f}, nil
+	return &cappedFileWriter{path: resolvedPath, maxBytes: maxBytes, file: f}, nil
 }
 
 func (w *cappedFileWriter) Write(p []byte) (int, error) {
@@ -84,7 +91,8 @@ func (w *cappedFileWriter) rotateIfNeeded(incoming int64) error {
 		return fmt.Errorf("rotate log file: %w", err)
 	}
 
-	f, err := os.OpenFile(w.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	// #nosec G304 -- writer path is validated during construction in newCappedFileWriter.
+	f, err := os.OpenFile(w.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("reopen log file after rotation: %w", err)
 	}
@@ -121,4 +129,18 @@ func parseLogLevel(raw string, debugFlag bool) log.Level {
 		return log.InfoLevel
 	}
 	return parsed
+}
+
+func validateLogPath(path string) (string, error) {
+	cleanPath := filepath.Clean(strings.TrimSpace(path))
+	if cleanPath == "." || cleanPath == string(filepath.Separator) {
+		return "", fmt.Errorf("invalid log path: %q", path)
+	}
+
+	defaultDir := filepath.Clean(defaultPluginLogDir) + string(filepath.Separator)
+	if !strings.HasPrefix(cleanPath, defaultDir) {
+		return "", fmt.Errorf("log path %q must be under %s", cleanPath, defaultPluginLogDir)
+	}
+
+	return cleanPath, nil
 }
