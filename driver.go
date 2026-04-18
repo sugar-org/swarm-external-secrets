@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
@@ -462,8 +463,9 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 
 	log.Printf("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
 
-	// Update all services that use this secret to point to the new version
-	if err := d.updateServicesSecretReference(secretName, newSecretName, createResponse.ID); err != nil {
+	// Update all services that use this secret to point to the new version.
+	updatedServiceIDs, err := d.updateServicesSecretReference(secretName, newSecretName, createResponse.ID)
+	if err != nil {
 		// try to remove the new secret since service update failed
 		if cleanupErr := d.dockerClient.SecretRemove(ctx, createResponse.ID); cleanupErr != nil {
 			log.Warnf("failed to remove new secret %s after service update error: %v", createResponse.ID, cleanupErr)
@@ -471,8 +473,19 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 		return fmt.Errorf("failed to update services to use new secret: %v", err)
 	}
 
-	// Remove the old secret only after services are updated
-	if err := d.dockerClient.SecretRemove(ctx, existingSecret.ID); err != nil {
+	// Wait until running tasks stop using the old secret before cleanup.
+	if err := d.waitForServicesToStopUsingSecret(updatedServiceIDs, secretName, existingSecret.ID, 2*time.Minute); err != nil {
+		log.Warnf("Delaying old secret cleanup for %s: %v", secretName, err)
+		return nil
+	}
+
+	// The initial request context may already be expired after a rolling update completes,
+	// so use a fresh timeout for final secret cleanup.
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cleanupCancel()
+
+	// Remove the old secret only after services are updated and no running task uses it.
+	if err := d.dockerClient.SecretRemove(cleanupCtx, existingSecret.ID); err != nil {
 		log.Warnf("Failed to remove old secret version %s: %v", existingSecret.ID, err)
 		// Don't return error as the new secret was created and services updated successfully
 	}
@@ -480,18 +493,20 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	return nil
 }
 
-// updateServicesSecretReference updates all services to use the new secret version
-func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretName, newSecretID string) error {
+// updateServicesSecretReference updates all services to use the new secret version.
+// It returns IDs of services that were updated.
+func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretName, newSecretID string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	// List all services
 	services, err := d.dockerClient.ServiceList(ctx, swarm.ServiceListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list services: %v", err)
+		return nil, fmt.Errorf("failed to list services: %v", err)
 	}
 
 	var updatedServices []string
+	var updatedServiceIDs []string
 
 	for _, service := range services {
 		// Check if service uses this secret and update the reference.
@@ -511,9 +526,10 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 		)
 		if needsUpdate {
 			if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
-				return err
+				return nil, err
 			}
 			updatedServices = append(updatedServices, service.Spec.Name)
+			updatedServiceIDs = append(updatedServiceIDs, service.ID)
 		}
 	}
 
@@ -521,7 +537,103 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 		log.Printf("Updated services to use new secret %s: %v", newSecretName, updatedServices)
 	}
 
-	return nil
+	return updatedServiceIDs, nil
+}
+
+// waitForServicesToStopUsingSecret waits until no running task of the updated services uses the old secret.
+func (d *SecretsDriver) waitForServicesToStopUsingSecret(serviceIDs []string, oldSecretName, oldSecretID string, timeout time.Duration) error {
+	if len(serviceIDs) == 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		stillInUse, err := d.isOldSecretUsedByRunningTasks(ctx, serviceIDs, oldSecretName, oldSecretID)
+		if err != nil {
+			return err
+		}
+		if !stillInUse {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for services to stop using old secret")
+		case <-ticker.C:
+		}
+	}
+}
+
+func (d *SecretsDriver) isOldSecretUsedByRunningTasks(ctx context.Context, serviceIDs []string, oldSecretName, oldSecretID string) (bool, error) {
+	if oldSecretID == "" {
+		return false, fmt.Errorf("old secret ID is required for usage detection")
+	}
+
+	for _, serviceID := range serviceIDs {
+		taskList, err := d.listServiceTasks(ctx, serviceID)
+		if err != nil {
+			return false, err
+		}
+
+		if serviceTasksUseSecretID(taskList, oldSecretID) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (d *SecretsDriver) listServiceTasks(ctx context.Context, serviceID string) ([]swarm.Task, error) {
+	taskList, err := d.dockerClient.TaskList(ctx, swarm.TaskListOptions{
+		Filters: filtersForService(serviceID),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list tasks for service %s: %v", serviceID, err)
+	}
+
+	return taskList, nil
+}
+
+func serviceTasksUseSecretID(tasks []swarm.Task, secretID string) bool {
+	for _, task := range tasks {
+		if !isRunningTask(task) {
+			continue
+		}
+		if taskUsesSecretID(task, secretID) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isRunningTask(task swarm.Task) bool {
+	return task.DesiredState == swarm.TaskStateRunning && task.Status.State == swarm.TaskStateRunning
+}
+
+func taskUsesSecretID(task swarm.Task, secretID string) bool {
+	if task.Spec.ContainerSpec == nil {
+		return false
+	}
+
+	for _, secretRef := range task.Spec.ContainerSpec.Secrets {
+		if secretRef != nil && secretRef.SecretID == secretID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func filtersForService(serviceID string) filters.Args {
+	args := filters.NewArgs()
+	args.Add("service", serviceID)
+	return args
 }
 
 func buildUpdatedSecretReferences(
