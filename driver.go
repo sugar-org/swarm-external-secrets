@@ -479,8 +479,13 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 		return nil
 	}
 
+	// The initial request context may already be expired after a rolling update completes,
+	// so use a fresh timeout for final secret cleanup.
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cleanupCancel()
+
 	// Remove the old secret only after services are updated and no running task uses it.
-	if err := d.dockerClient.SecretRemove(ctx, existingSecret.ID); err != nil {
+	if err := d.dockerClient.SecretRemove(cleanupCtx, existingSecret.ID); err != nil {
 		log.Warnf("Failed to remove old secret version %s: %v", existingSecret.ID, err)
 		// Don't return error as the new secret was created and services updated successfully
 	}
@@ -518,14 +523,14 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 			newSecretName,
 			newSecretID,
 			updatedSecrets,
-			)
-			if needsUpdate {
-				if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
-					return nil, err
-				}
-				updatedServices = append(updatedServices, service.Spec.Name)
-				updatedServiceIDs = append(updatedServiceIDs, service.ID)
+		)
+		if needsUpdate {
+			if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
+				return nil, err
 			}
+			updatedServices = append(updatedServices, service.Spec.Name)
+			updatedServiceIDs = append(updatedServiceIDs, service.ID)
+		}
 	}
 
 	if len(updatedServices) > 0 {
