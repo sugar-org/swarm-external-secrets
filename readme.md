@@ -130,6 +130,13 @@ docker plugin set swarm-external-secrets:latest \
          openbao_field: "secret_key"
    ```
 
+4. Optional: enable plugin log sidecar (for `docker compose logs` visibility):
+   ```bash
+   sudo mkdir -p /run/swarm-external-secrets
+   docker compose -f docker-compose.yml -f docker-compose.logs.yml up -d
+   docker compose -f docker-compose.yml -f docker-compose.logs.yml logs -f secrets-logger
+   ```
+
 | Provider | Status | Authentication | Rotation |
 |----------|--------|---------------|----------|
 | HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
