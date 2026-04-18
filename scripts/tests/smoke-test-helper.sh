@@ -15,6 +15,38 @@ success() { echo -e "${GRN}[PASS]${DEF} $*"; }
 error()   { echo -e "${RED}[FAIL]${DEF} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
+docker_daemon_logs() {
+    # Best-effort: plugin logs are routed through Docker daemon logs.
+    # In CI, journald is usually available; fall back gracefully if not.
+    if command -v journalctl >/dev/null 2>&1; then
+        if command -v sudo >/dev/null 2>&1; then
+            sudo journalctl -u docker.service --no-pager -n 2000 2>/dev/null || true
+        else
+            journalctl -u docker.service --no-pager -n 2000 2>/dev/null || true
+        fi
+        return 0
+    fi
+    return 0
+}
+
+assert_no_sensitive_rotation_metadata_logs() {
+    # Ensure trace-only rotation metadata isn't emitted at default log levels.
+    # We look for the exact strings used by the driver.
+    local logs
+    logs="$(docker_daemon_logs)"
+    if echo "${logs}" | grep -Fq "tracking secret:"; then
+        die "Sensitive rotation metadata leaked into logs (found: 'tracking secret:')"
+    fi
+    if echo "${logs}" | grep -Fq "Tracking secret:"; then
+        die "Sensitive rotation metadata leaked into logs (found: 'Tracking secret:')"
+    fi
+    if echo "${logs}" | grep -Fq "Detected change in secret:"; then
+        die "Sensitive rotation metadata leaked into logs (found: 'Detected change in secret:')"
+    fi
+
+    return 0
+}
+
 # Build plugin (mirrors build.sh / test.sh pattern exactly)
 build_plugin() {
     echo -e "${RED}Remove existing plugin if it exists${DEF}"

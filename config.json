@@ -191,6 +191,11 @@
       "name": "OPENBAO_SKIP_VERIFY",
       "description": "Skip TLS certificate verification for OpenBao (true/false)",
       "settable": ["value"]
+    },
+    {
+      "name": "LOG_LEVEL",
+      "description": "Optional log level integer (0-6). 0=panic,1=fatal,2=error,3=warn,4=info,5=debug,6=trace. Defaults to info.",
+      "settable": ["value"]
     }
   ]
 }
