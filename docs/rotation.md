@@ -25,6 +25,7 @@ The following environment variables control the rotation behavior:
 |---|---|---|
 | `ENABLE_ROTATION` | Enable/disable automatic rotation | `true` |
 | `ROTATION_INTERVAL` | How often to check for changes | `10s` |
+| `LOG_LEVEL` | Optional log level integer `0-6` (use `6` for trace) | `4` (info) |
 
 ### Example Configuration
 
@@ -118,5 +119,6 @@ If rotation is not working:
 
 - The plugin requires Docker socket access to manage secrets and services
 - Ensure proper Vault authentication and minimal required permissions
+- Secret rotation tracking can include sensitive metadata (paths/fields/service mappings) at `trace` level. Keep production log level at `info`/`warn` unless actively debugging.
 - Monitor logs for unauthorized rotation attempts
 - Consider using shorter rotation intervals for highly sensitive secrets

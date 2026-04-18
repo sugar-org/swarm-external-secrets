@@ -103,6 +103,7 @@ deploy_stack "${COMPOSE_FILE}" "${STACK_NAME}" 60
 info "Logging service output..."
 sleep 10
 log_stack "${STACK_NAME}" "app"
+assert_no_sensitive_rotation_metadata_logs
 
 # Compare password == logged secret
 info "Verifying secret value matches expected password..."
@@ -118,6 +119,7 @@ success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 
 info "Waiting for plugin rotation interval (15s)..."
 sleep 30
+assert_no_sensitive_rotation_metadata_logs
 
 info "Logging service output after rotation..."
 log_stack "${STACK_NAME}" "app"

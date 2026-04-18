@@ -301,7 +301,7 @@ func (d *SecretsDriver) startMonitoring() {
 // checkForSecretChanges monitors tracked secrets for changes
 func (d *SecretsDriver) checkForSecretChanges() {
 	d.trackerMutex.RLock()
-	secrets := make(map[string]*providers.SecretInfo)
+	secrets := make(map[string]*providers.SecretInfo, len(d.secretTracker))
 	for k, v := range d.secretTracker {
 		secrets[k] = v
 	}
@@ -318,8 +318,10 @@ func (d *SecretsDriver) checkForSecretChanges() {
 		if d.hasSecretChanged(secretInfo) {
 			log.Infof("Detected change in secret: %s", secretName)
 			d.handleSecretRotationResult(secretName, secretInfo)
-		}
+		}(secretName, secretInfo)
 	}
+
+	wg.Wait()
 }
 
 func (d *SecretsDriver) handleSecretRotationResult(secretName string, secretInfo *providers.SecretInfo) {

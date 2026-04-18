@@ -86,6 +86,7 @@ docker plugin set swarm-external-secrets:latest \
        VAULT_ADDR="https://your-vault-server:8200" \
        VAULT_AUTH_METHOD="token" \
        VAULT_TOKEN="your-vault-token" \
+       LOG_LEVEL="4" \
        ENABLE_ROTATION="true"
    ```
 
