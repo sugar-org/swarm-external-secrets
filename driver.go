@@ -575,34 +575,59 @@ func (d *SecretsDriver) isOldSecretUsedByRunningTasks(ctx context.Context, servi
 	}
 
 	for _, serviceID := range serviceIDs {
-		taskList, err := d.dockerClient.TaskList(ctx, swarm.TaskListOptions{
-			Filters: filtersForService(serviceID),
-		})
+		taskList, err := d.listServiceTasks(ctx, serviceID)
 		if err != nil {
-			return false, fmt.Errorf("failed to list tasks for service %s: %v", serviceID, err)
+			return false, err
 		}
 
-		for _, task := range taskList {
-			if task.DesiredState != swarm.TaskStateRunning || task.Status.State != swarm.TaskStateRunning {
-				continue
-			}
-			if task.Spec.ContainerSpec == nil {
-				continue
-			}
-
-			for _, secretRef := range task.Spec.ContainerSpec.Secrets {
-				if secretRef == nil {
-					continue
-				}
-
-				if secretRef.SecretID == oldSecretID {
-					return true, nil
-				}
-			}
+		if serviceTasksUseSecretID(taskList, oldSecretID) {
+			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+func (d *SecretsDriver) listServiceTasks(ctx context.Context, serviceID string) ([]swarm.Task, error) {
+	taskList, err := d.dockerClient.TaskList(ctx, swarm.TaskListOptions{
+		Filters: filtersForService(serviceID),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list tasks for service %s: %v", serviceID, err)
+	}
+
+	return taskList, nil
+}
+
+func serviceTasksUseSecretID(tasks []swarm.Task, secretID string) bool {
+	for _, task := range tasks {
+		if !isRunningTask(task) {
+			continue
+		}
+		if taskUsesSecretID(task, secretID) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isRunningTask(task swarm.Task) bool {
+	return task.DesiredState == swarm.TaskStateRunning && task.Status.State == swarm.TaskStateRunning
+}
+
+func taskUsesSecretID(task swarm.Task, secretID string) bool {
+	if task.Spec.ContainerSpec == nil {
+		return false
+	}
+
+	for _, secretRef := range task.Spec.ContainerSpec.Secrets {
+		if secretRef != nil && secretRef.SecretID == secretID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func filtersForService(serviceID string) filters.Args {
