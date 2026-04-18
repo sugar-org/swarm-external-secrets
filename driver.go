@@ -313,9 +313,23 @@ func (d *SecretsDriver) checkForSecretChanges() {
 	}
 
 	log.Debugf("Checking %d tracked secrets for changes", len(secrets))
+	// TODO: Revisit this limit if secret-label fanout or provider latency changes.
+	concurrentSecretChecks := len(secrets) + 1
+
+	sem := make(chan struct{}, concurrentSecretChecks)
+	var wg sync.WaitGroup
 
 	for secretName, secretInfo := range secrets {
-		if d.hasSecretChanged(secretInfo) {
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(secretName string, secretInfo *providers.SecretInfo) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if !d.hasSecretChanged(secretInfo) {
+				return
+			}
+
 			log.Infof("Detected change in secret: %s", secretName)
 			d.handleSecretRotationResult(secretName, secretInfo)
 		}(secretName, secretInfo)
