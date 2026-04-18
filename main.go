@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,7 +12,6 @@ import (
 )
 
 func main() {
-	log.Print("Starting Vault Secrets Provider...")
 	var (
 		flVersion = flag.Bool("version", false, "Print version")
 		flDebug   = flag.Bool("debug", false, "Enable debug logging")
@@ -22,9 +22,16 @@ func main() {
 		log.Println("Vault Secrets Provider v1.0.0")
 		return
 	}
-	if *flDebug {
-		log.SetLevel(log.DebugLevel)
+	logCloser := configureLogger(*flDebug)
+	if logCloser != nil {
+		defer func(c io.Closer) {
+			if err := c.Close(); err != nil {
+				log.Warnf("Failed to close log file: %v", err)
+			}
+		}(logCloser)
 	}
+
+	log.Print("Starting Vault Secrets Provider...")
 
 	// Initialize the Vault driver
 	driver, err := NewDriver()
