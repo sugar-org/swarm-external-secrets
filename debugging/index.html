@@ -608,6 +608,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#configure-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Logging
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -757,6 +768,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#configure-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Logging
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -819,11 +841,20 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>vault<span class="w"> </span>kv<span class="w"> </span>get<span class="w"> </span>secret/database/mysql
 </code></pre></div>
 <h2 id="debug-the-plugin">Debug the Plugin<a class="headerlink" href="#debug-the-plugin" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker.service<span class="w"> </span>-f<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>plugin_id
+<h2 id="configure-logging">Configure Logging<a class="headerlink" href="#configure-logging" title="Permanent link">&para;</a></h2>
+<p>By default, the plugin logs at <strong>info</strong> level. You can increase verbosity using either:</p>
+<ul>
+<li><code>--debug</code> (sets log level to <code>debug</code>)</li>
+<li><code>LOG_LEVEL</code> (optional integer <code>0-6</code>; <code>6</code> enables <code>trace</code>)</li>
+</ul>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">LOG_LEVEL</span><span class="o">=</span><span class="s2">&quot;6&quot;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker.service<span class="w"> </span>-f<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>plugin_id
 </code></pre></div>
 <p>or</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker.service<span class="w"> </span>-f<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>docker<span class="w"> </span>plugin<span class="w"> </span>ls<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.ID}}&#39;</span><span class="k">)</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker.service<span class="w"> </span>-f<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>docker<span class="w"> </span>plugin<span class="w"> </span>ls<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.ID}}&#39;</span><span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div>
 
 

@@ -873,6 +873,11 @@
 <td>How often to check for changes</td>
 <td><code>10s</code></td>
 </tr>
+<tr>
+<td><code>LOG_LEVEL</code></td>
+<td>Optional log level integer <code>0-6</code> (use <code>6</code> for trace)</td>
+<td><code>4</code> (info)</td>
+</tr>
 </tbody>
 </table>
 <h3 id="example-configuration">Example Configuration<a class="headerlink" href="#example-configuration" title="Permanent link">&para;</a></h3>
@@ -943,6 +948,7 @@
 <ul>
 <li>The plugin requires Docker socket access to manage secrets and services</li>
 <li>Ensure proper Vault authentication and minimal required permissions</li>
+<li>Secret rotation tracking can include sensitive metadata (paths/fields/service mappings) at <code>trace</code> level. Keep production log level at <code>info</code>/<code>warn</code> unless actively debugging.</li>
 <li>Monitor logs for unauthorized rotation attempts</li>
 <li>Consider using shorter rotation intervals for highly sensitive secrets</li>
 </ul>
