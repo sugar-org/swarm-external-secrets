@@ -2,8 +2,6 @@ package providers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -57,13 +55,12 @@ func (a *AWSProvider) Initialize(config map[string]string) error {
 }
 
 // GetSecret retrieves a secret value from AWS Secrets Manager
-func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
-	secretName := a.buildSecretName(req)
-	log.Printf("Reading secret from AWS Secrets Manager: %s", secretName)
+func (a *AWSProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
+	log.Printf("Reading secret from AWS Secrets Manager: %s", secretInfo.SecretPath)
 
 	// Get secret value from AWS Secrets Manager
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretName),
+		SecretId: aws.String(secretInfo.SecretPath),
 	}
 
 	result, err := a.client.GetSecretValue(ctx, input)
@@ -72,11 +69,11 @@ func (a *AWSProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byt
 	}
 
 	if result.SecretString == nil {
-		return nil, fmt.Errorf("secret %s has no string value", secretName)
+		return nil, fmt.Errorf("secret %s has no string value", secretInfo.SecretPath)
 	}
 
 	// Extract the secret value
-	value, err := a.extractSecretValue(*result.SecretString, req)
+	value, err := ExtractSecretValue(*result.SecretString, secretInfo.SecretField)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}
@@ -90,31 +87,22 @@ func (a *AWSProvider) SupportsRotation() bool {
 	return true
 }
 
-// CheckSecretChanged checks if a secret has changed in AWS Secrets Manager
-func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
-	// Get secret value from AWS Secrets Manager
-	input := &secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretInfo.SecretPath),
-	}
+// GetSecretFieldLabel returns the label key used by AWS for the secret field
+func (a *AWSProvider) GetSecretFieldLabel() string {
+	return "aws_field"
+}
 
-	result, err := a.client.GetSecretValue(ctx, input)
-	if err != nil {
-		return false, fmt.Errorf("error reading secret from AWS Secrets Manager: %v", err)
+// BuildSecretPath constructs the AWS secret name based on request labels and service information
+func (a *AWSProvider) BuildSecretPath(req secrets.Request) string {
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["aws_secret_name"]; exists {
+		return customPath
 	}
-
-	if result.SecretString == nil {
-		return false, fmt.Errorf("secret %s has no string value", secretInfo.SecretPath)
+	// Default naming convention
+	if req.ServiceName != "" {
+		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
 	}
-
-	// Extract current value
-	currentValue, err := a.extractSecretValueByField(*result.SecretString, secretInfo.SecretField)
-	if err != nil {
-		return false, fmt.Errorf("failed to extract secret field %s: %v", secretInfo.SecretField, err)
-	}
-
-	// Calculate current hash
-	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
-	return currentHash != secretInfo.LastHash, nil
+	return req.SecretName
 }
 
 // GetProviderName returns the name of this provider
@@ -159,72 +147,4 @@ func (a *AWSProvider) loadAWSConfig() (aws.Config, error) {
 	}
 
 	return cfg, nil
-}
-
-// buildSecretName constructs the AWS secret name based on request labels and service information
-func (a *AWSProvider) buildSecretName(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["aws_secret_name"]; exists {
-		return customPath
-	}
-	// Default naming convention
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
-	}
-	return req.SecretName
-}
-
-// extractSecretValue extracts the appropriate value from the AWS secret string
-func (a *AWSProvider) extractSecretValue(secretString string, req secrets.Request) ([]byte, error) {
-	// Check for specific field in labels
-	if field, exists := req.SecretLabels["aws_field"]; exists {
-		return a.extractSecretValueByField(secretString, field)
-	}
-
-	// Try to parse as JSON first
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
-		// Default field names to try
-		for _, field := range []string{"value", "password", "secret", "data"} {
-			// Try to find a value using default field names
-			if value, ok := data[field]; ok {
-				return []byte(fmt.Sprintf("%v", value)), nil
-			}
-		}
-		// If no specific field found, return the first string value
-		for _, value := range data {
-			if strValue, ok := value.(string); ok {
-				return []byte(strValue), nil
-			}
-		}
-		return nil, fmt.Errorf("no suitable secret value found in JSON")
-	}
-
-	// If not JSON, return the raw string
-	return []byte(secretString), nil
-}
-
-// extractSecretValueByField extracts a specific field from the secret string
-func (a *AWSProvider) extractSecretValueByField(secretString, field string) ([]byte, error) {
-	// Try to parse as JSON first
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(secretString), &data); err == nil {
-		if value, ok := data[field]; ok {
-			return []byte(fmt.Sprintf("%v", value)), nil
-		}
-		// Improved error message: show available keys
-		keys := make([]string, 0, len(data))
-		for k := range data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("field %s not found in secret; available fields: %v", field, keys)
-	}
-
-	// If not JSON and field is requested, return error
-	if field != "value" {
-		return nil, fmt.Errorf("field %s not found in non-JSON secret", field)
-	}
-
-	// If field is "value" and not JSON, return the raw string
-	return []byte(secretString), nil
 }

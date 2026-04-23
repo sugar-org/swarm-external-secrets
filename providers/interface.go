@@ -11,11 +11,12 @@ import (
 type SecretInfo struct {
 	DockerSecretName string
 	SecretPath       string
-	SecretField      string
+	SecretField		 string
 	ServiceNames     []string
 	LastHash         string // Hash of the secret value for change detection
 	LastUpdated      time.Time
-	Provider         string // Which provider manages this secret
+	Provider         string            // Which provider manages this secret
+	Labels           map[string]string // Original request labels, used to reconstruct requests for rotation
 }
 
 // SecretsProvider defines the interface that all secret providers must implement
@@ -24,13 +25,16 @@ type SecretsProvider interface {
 	Initialize(config map[string]string) error
 
 	// GetSecret retrieves a secret value from the provider
-	GetSecret(ctx context.Context, req secrets.Request) ([]byte, error)
+	GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error)
 
 	// SupportsRotation indicates if this provider supports secret rotation monitoring
 	SupportsRotation() bool
 
-	// CheckSecretChanged checks if a secret has changed since last retrieval
-	CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error)
+	// GetSecretFieldLabel returns the label key used by this provider for the secret field
+	GetSecretFieldLabel() string
+
+	// BuildSecretPath constructs the provider-specific secret path from a request
+	BuildSecretPath(req secrets.Request) string
 
 	// GetProviderName returns the name of this provider
 	GetProviderName() string
