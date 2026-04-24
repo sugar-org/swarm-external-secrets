@@ -536,7 +536,6 @@ func buildUpdatedSecretReferences(
 	needsUpdate := false
 	for i, secretRef := range secretRefs {
 		if secretRef == nil {
-			updatedSecrets[i] = nil
 			continue
 		}
 
