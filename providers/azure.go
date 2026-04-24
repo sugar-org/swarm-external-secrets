@@ -2,8 +2,6 @@ package providers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"os" // Imported to read environment variables
 	"strings"
@@ -75,25 +73,24 @@ func (az *AzureProvider) Initialize(config map[string]string) error {
 }
 
 // GetSecret retrieves a secret value from Azure Key Vault based on the request.
-func (az *AzureProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
-	secretName := az.buildSecretName(req)
-	log.Infof("Reading secret '%s' from Azure Key Vault", secretName)
+func (az *AzureProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
+	log.Infof("Reading secret '%s' from Azure Key Vault", secretInfo.SecretPath)
 
-	resp, err := az.client.GetSecret(ctx, secretName, "", nil)
+	resp, err := az.client.GetSecret(ctx, secretInfo.SecretPath, "", nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get secret '%s' from Azure Key Vault: %w", secretName, err)
+		return nil, fmt.Errorf("failed to get secret '%s' from Azure Key Vault: %w", secretInfo.SecretPath, err)
 	}
 
 	if resp.Value == nil {
-		return nil, fmt.Errorf("secret '%s' was found but has no value", secretName)
+		return nil, fmt.Errorf("secret '%s' was found but has no value", secretInfo.SecretPath)
 	}
 
-	value, err := az.extractSecretValue(*resp.Value, req)
+	value, err := ExtractSecretValue(*resp.Value, secretInfo.SecretField)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract value from secret '%s': %w", secretName, err)
+		return nil, fmt.Errorf("failed to extract value from secret '%s': %w", secretInfo.SecretPath, err)
 	}
 
-	log.Infof("Successfully retrieved secret '%s' from Azure Key Vault", secretName)
+	log.Infof("Successfully retrieved secret '%s' from Azure Key Vault", secretInfo.SecretPath)
 	return value, nil
 }
 
@@ -107,34 +104,13 @@ func (az *AzureProvider) GetProviderName() string {
 	return "azure"
 }
 
-// CheckSecretChanged checks if a secret's value has changed in Azure Key Vault.
-func (az *AzureProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
-	resp, err := az.client.GetSecret(ctx, secretInfo.SecretPath, "", nil)
-	if err != nil {
-		return false, fmt.Errorf("error reading secret '%s' for rotation check: %w", secretInfo.SecretPath, err)
-	}
-
-	if resp.Value == nil {
-		return false, fmt.Errorf("secret '%s' has no value for rotation check", secretInfo.SecretPath)
-	}
-
-	currentValue, err := az.extractSecretValueByField(*resp.Value, secretInfo.SecretField)
-	if err != nil {
-		return false, fmt.Errorf("failed to extract field '%s' for rotation check: %w", secretInfo.SecretField, err)
-	}
-
-	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
-	return currentHash != secretInfo.LastHash, nil
+// GetSecretFieldLabel returns the label key used by Azure for the secret field
+func (az *AzureProvider) GetSecretFieldLabel() string {
+	return "azure_field"
 }
 
-// Close performs cleanup for the Azure provider.
-func (az *AzureProvider) Close() error {
-	// The Azure SDK client does not require an explicit close operation.
-	return nil
-}
-
-// buildSecretName constructs the Azure secret name based on request labels and service information.
-func (az *AzureProvider) buildSecretName(req secrets.Request) string {
+// BuildSecretPath constructs the Azure secret name based on request labels and service information.
+func (az *AzureProvider) BuildSecretPath(req secrets.Request) string {
 	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
 		return customName
 	}
@@ -166,42 +142,8 @@ func (az *AzureProvider) buildSecretName(req secrets.Request) string {
 	return result
 }
 
-// extractSecretValue extracts the appropriate value from the Azure secret string.
-func (az *AzureProvider) extractSecretValue(secretValue string, req secrets.Request) ([]byte, error) {
-	if field, exists := req.SecretLabels["azure_field"]; exists {
-		return az.extractSecretValueByField(secretValue, field)
-	}
-
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(secretValue), &data); err == nil {
-		defaultFields := []string{"value", "password", "secret", "data"}
-		for _, field := range defaultFields {
-			if value, ok := data[field]; ok {
-				return []byte(fmt.Sprintf("%v", value)), nil
-			}
-		}
-
-		for _, value := range data {
-			if strValue, ok := value.(string); ok {
-				return []byte(strValue), nil
-			}
-		}
-		return nil, fmt.Errorf("secret is a JSON object but no suitable value could be extracted")
-	}
-
-	return []byte(secretValue), nil
-}
-
-// extractSecretValueByField extracts a specific field from a JSON secret string.
-func (az *AzureProvider) extractSecretValueByField(secretValue, field string) ([]byte, error) {
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(secretValue), &data); err != nil {
-		return nil, fmt.Errorf("cannot extract field '%s' because the secret is not a valid JSON object", field)
-	}
-
-	if value, ok := data[field]; ok {
-		return []byte(fmt.Sprintf("%v", value)), nil
-	}
-
-	return nil, fmt.Errorf("field '%s' not found in the JSON secret", field)
+// Close performs cleanup for the Azure provider.
+func (az *AzureProvider) Close() error {
+	// The Azure SDK client does not require an explicit close operation.
+	return nil
 }

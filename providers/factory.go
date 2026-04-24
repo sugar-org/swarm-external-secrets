@@ -18,6 +18,8 @@ func CreateProvider(providerType string) (SecretsProvider, error) {
 		return &AzureProvider{}, nil
 	case "openbao":
 		return &OpenBaoProvider{}, nil
+	case "oci", "oracle", "oci-vault":
+		return &OCIProvider{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
 	}
@@ -31,6 +33,7 @@ func GetSupportedProviders() []string {
 		"gcp",
 		"azure",
 		"openbao",
+		"oci",
 	}
 }
 
@@ -68,6 +71,12 @@ func GetProviderInfo(providerType string) (map[string]string, error) {
 		info["description"] = "OpenBao secrets engine (Vault-compatible)"
 		info["auth_methods"] = "token, approle"
 		info["env_vars"] = "OPENBAO_ADDR, OPENBAO_TOKEN, OPENBAO_MOUNT_PATH, OPENBAO_AUTH_METHOD, OPENBAO_ROLE_ID, OPENBAO_SECRET_ID"
+
+	case "oci", "oracle", "oci-vault":
+		info["name"] = "OCI Vault"
+		info["description"] = "Oracle Cloud Infrastructure Vault"
+		info["auth_methods"] = "api_key, instance_principal"
+		info["env_vars"] = "OCI_REGION, OCI_TENANCY_OCID, OCI_USER_OCID, OCI_FINGERPRINT, OCI_PRIVATE_KEY, OCI_PRIVATE_KEY_PASSPHRASE, OCI_VAULT_OCID, OCI_AUTH_METHOD"
 
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
