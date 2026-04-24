@@ -463,7 +463,7 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	log.Printf("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
 
 	// Update all services that use this secret to point to the new version
-	if err := d.updateServicesSecretReference(secretName, newSecretName, createResponse.ID); err != nil {
+	if err := d.updateServicesSecretReference(secretName, existingSecret.ID, newSecretName, createResponse.ID); err != nil {
 		// try to remove the new secret since service update failed
 		if cleanupErr := d.dockerClient.SecretRemove(ctx, createResponse.ID); cleanupErr != nil {
 			log.Warnf("failed to remove new secret %s after service update error: %v", createResponse.ID, cleanupErr)
@@ -481,7 +481,7 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 }
 
 // updateServicesSecretReference updates all services to use the new secret version
-func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretName, newSecretID string) error {
+func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID, newSecretName, newSecretID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -505,6 +505,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 		needsUpdate := buildUpdatedSecretReferences(
 			containerSpec.Secrets,
 			oldSecretName,
+			oldSecretID,
 			newSecretName,
 			newSecretID,
 			updatedSecrets,
@@ -527,13 +528,18 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, newSecretNa
 func buildUpdatedSecretReferences(
 	secretRefs []*swarm.SecretReference,
 	oldSecretName string,
+	oldSecretID string,
 	newSecretName string,
 	newSecretID string,
 	updatedSecrets []*swarm.SecretReference,
 ) bool {
 	needsUpdate := false
 	for i, secretRef := range secretRefs {
-		if secretRef.SecretName == oldSecretName || strings.HasPrefix(secretRef.SecretName, oldSecretName+"-") {
+		if secretRef == nil {
+			continue
+		}
+
+		if (oldSecretID != "" && secretRef.SecretID == oldSecretID) || secretRef.SecretName == oldSecretName {
 			// Update to use the new secret name and ID.
 			updatedSecrets[i] = &swarm.SecretReference{
 				File:       secretRef.File,
