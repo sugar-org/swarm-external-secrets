@@ -67,11 +67,29 @@ docker plugin set swarm-external-secrets:latest \
 Check plugin logs to monitor rotation activity:
 
 ```bash
-# View plugin logs
-sudo journalctl -u docker.service -f | grep vault
+# View plugin logs from the shared host file
+tail -F /run/swarm-external-secrets/plugin.log
 
-# Check for rotation events
-docker service logs <service-name>
+# Filter rotation events
+tail -F /run/swarm-external-secrets/plugin.log | grep -E "rotation|Failed to rotate|Detected change"
+```
+
+You can also expose these logs through the bundled compose override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.logs.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.logs.yml logs -f secrets-logger
+```
+
+The sidecar service in `docker-compose.logs.yml` is:
+
+```yaml
+services:
+  secrets-logger:
+    image: alpine:3.20
+    command: sh -c "touch /run/swarm-external-secrets/plugin.log && tail -F /run/swarm-external-secrets/plugin.log"
+    volumes:
+      - /run/swarm-external-secrets:/run/swarm-external-secrets:ro
 ```
 
 ## Benefits
