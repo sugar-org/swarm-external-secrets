@@ -93,7 +93,7 @@ func (o *OpenBaoProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo)
 	}
 
 	// Extract the secret value (unwraps KV v2 nested data if present)
-	value, err := ExtractSecretValueFromKV(secret.Data, secretInfo.SecretField)
+	value, err := ExtractSecretValueFromVaultKVv2(secret.Data, secretInfo.SecretField)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}

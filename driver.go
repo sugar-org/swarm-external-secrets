@@ -128,15 +128,10 @@ func NewDriver() (*SecretsDriver, error) {
 // provider to resolve the secret path. This is the single point where we
 // translate a Docker secrets.Request into our internal representation.
 func (d *SecretsDriver) buildSecretInfo(req secrets.Request) *providers.SecretInfo {
-	secretField := req.SecretLabels[d.provider.GetSecretFieldLabel()]
-	if secretField == "" {
-		secretField = "value"
-	}
-
 	return &providers.SecretInfo{
 		DockerSecretName: req.SecretName,
 		SecretPath:       d.provider.BuildSecretPath(req),
-		SecretField:	  secretField,
+		SecretField:	  req.SecretLabels[d.provider.GetSecretFieldLabel()],
 		ServiceNames:     []string{req.ServiceName},
 		Provider:         d.provider.GetProviderName(),
 		Labels:           req.SecretLabels,
