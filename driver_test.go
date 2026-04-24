@@ -6,83 +6,87 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 )
 
-func TestBuildUpdatedSecretReferencesUpdatesExactName(t *testing.T) {
-	secretRefs := []*swarm.SecretReference{
+func TestBuildUpdatedSecretReferences(t *testing.T) {
+	tests := []struct {
+		name           string
+		ref            *swarm.SecretReference
+		oldSecretID    string
+		newSecretName  string
+		wantUpdate     bool
+		wantSecretID   string
+		wantSecretName string
+	}{
 		{
-			SecretID:   "old-id",
-			SecretName: "api",
+			name: "updates exact name",
+			ref: &swarm.SecretReference{
+				SecretID:   "old-id",
+				SecretName: "api",
+			},
+			oldSecretID:    "old-id",
+			newSecretName:  "api-123",
+			wantUpdate:     true,
+			wantSecretID:   "new-id",
+			wantSecretName: "api-123",
+		},
+		{
+			name: "updates rotated name with matching ID",
+			ref: &swarm.SecretReference{
+				SecretID:   "old-id",
+				SecretName: "api-1111111111111111111",
+			},
+			oldSecretID:    "old-id",
+			newSecretName:  "api-2222222222222222222",
+			wantUpdate:     true,
+			wantSecretID:   "new-id",
+			wantSecretName: "api-2222222222222222222",
+		},
+		{
+			name: "preserves prefix collision",
+			ref: &swarm.SecretReference{
+				SecretID:   "prod-id",
+				SecretName: "api-prod",
+			},
+			oldSecretID: "old-id",
+		},
+		{
+			name: "does not match empty old ID",
+			ref: &swarm.SecretReference{
+				SecretName: "api-prod",
+			},
 		},
 	}
-	updatedSecrets := make([]*swarm.SecretReference, len(secretRefs))
 
-	needsUpdate := buildUpdatedSecretReferences(secretRefs, "api", "old-id", "api-123", "new-id", updatedSecrets)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			secretRefs := []*swarm.SecretReference{tt.ref}
+			updatedSecrets := make([]*swarm.SecretReference, len(secretRefs))
 
-	if !needsUpdate {
-		t.Fatal("expected exact secret reference to be updated")
-	}
-	if updatedSecrets[0].SecretID != "new-id" {
-		t.Fatalf("expected updated secret ID new-id, got %q", updatedSecrets[0].SecretID)
-	}
-	if updatedSecrets[0].SecretName != "api-123" {
-		t.Fatalf("expected updated secret name api-123, got %q", updatedSecrets[0].SecretName)
-	}
-}
+			needsUpdate := buildUpdatedSecretReferences(
+				secretRefs,
+				"api",
+				tt.oldSecretID,
+				tt.newSecretName,
+				"new-id",
+				updatedSecrets,
+			)
 
-func TestBuildUpdatedSecretReferencesUpdatesMatchingIDForRotatedName(t *testing.T) {
-	secretRefs := []*swarm.SecretReference{
-		{
-			SecretID:   "old-id",
-			SecretName: "api-1111111111111111111",
-		},
-	}
-	updatedSecrets := make([]*swarm.SecretReference, len(secretRefs))
+			if needsUpdate != tt.wantUpdate {
+				t.Fatalf("needsUpdate = %v, want %v", needsUpdate, tt.wantUpdate)
+			}
 
-	needsUpdate := buildUpdatedSecretReferences(secretRefs, "api", "old-id", "api-2222222222222222222", "new-id", updatedSecrets)
+			if !tt.wantUpdate {
+				if updatedSecrets[0] != tt.ref {
+					t.Fatal("expected unrelated secret reference to be preserved")
+				}
+				return
+			}
 
-	if !needsUpdate {
-		t.Fatal("expected rotated secret reference with matching ID to be updated")
-	}
-	if updatedSecrets[0].SecretID != "new-id" {
-		t.Fatalf("expected updated secret ID new-id, got %q", updatedSecrets[0].SecretID)
-	}
-	if updatedSecrets[0].SecretName != "api-2222222222222222222" {
-		t.Fatalf("expected updated secret name api-2222222222222222222, got %q", updatedSecrets[0].SecretName)
-	}
-}
-
-func TestBuildUpdatedSecretReferencesDoesNotUpdatePrefixCollision(t *testing.T) {
-	secretRefs := []*swarm.SecretReference{
-		{
-			SecretID:   "prod-id",
-			SecretName: "api-prod",
-		},
-	}
-	updatedSecrets := make([]*swarm.SecretReference, len(secretRefs))
-
-	needsUpdate := buildUpdatedSecretReferences(secretRefs, "api", "old-id", "api-123", "new-id", updatedSecrets)
-
-	if needsUpdate {
-		t.Fatal("expected unrelated prefix-matching secret reference to be left unchanged")
-	}
-	if updatedSecrets[0] != secretRefs[0] {
-		t.Fatal("expected unrelated secret reference to be preserved")
-	}
-}
-
-func TestBuildUpdatedSecretReferencesDoesNotMatchEmptyOldID(t *testing.T) {
-	secretRefs := []*swarm.SecretReference{
-		{
-			SecretName: "api-prod",
-		},
-	}
-	updatedSecrets := make([]*swarm.SecretReference, len(secretRefs))
-
-	needsUpdate := buildUpdatedSecretReferences(secretRefs, "api", "", "api-123", "new-id", updatedSecrets)
-
-	if needsUpdate {
-		t.Fatal("expected empty old secret ID not to match references with empty IDs")
-	}
-	if updatedSecrets[0] != secretRefs[0] {
-		t.Fatal("expected secret reference to be preserved")
+			if updatedSecrets[0].SecretID != tt.wantSecretID {
+				t.Fatalf("SecretID = %q, want %q", updatedSecrets[0].SecretID, tt.wantSecretID)
+			}
+			if updatedSecrets[0].SecretName != tt.wantSecretName {
+				t.Fatalf("SecretName = %q, want %q", updatedSecrets[0].SecretName, tt.wantSecretName)
+			}
+		})
 	}
 }
