@@ -116,7 +116,71 @@ docker plugin set swarm-external-secrets:latest \
 
 ---
 
-### 5. GCP Secret Manager (Placeholder)
+### 5. OCI Vault
+
+**Provider Type:** `oci`
+
+OCI Vault supports two authentication methods: API key (default) and instance principal. With API key auth, you provide credentials directly. With instance principal, the plugin authenticates using the compute instance's identity — no credentials needed, but the instance must have an appropriate IAM policy granting access to the vault.
+
+**Environment Variables:**
+
+| Variable | Description | Default |
+|---|---|---|
+| `OCI_AUTH_METHOD` | Authentication method (`api_key`, `instance_principal`) | `api_key` |
+| `OCI_REGION` | OCI region (required for `api_key`) | — |
+| `OCI_TENANCY_OCID` | Tenancy OCID (required for `api_key`) | — |
+| `OCI_USER_OCID` | User OCID (required for `api_key`) | — |
+| `OCI_FINGERPRINT` | API key fingerprint (required for `api_key`) | — |
+| `OCI_PRIVATE_KEY` | Base64-encoded PEM private key (required for `api_key`) | — |
+| `OCI_PRIVATE_KEY_PASSPHRASE` | Private key passphrase (only if key is encrypted) | — |
+| `OCI_VAULT_OCID` | Vault OCID (required for name-based lookups) | — |
+
+
+**Private Key Encoding:**
+
+Docker plugin environment variables do not support multiline values, so the PEM private key must be base64-encoded. If your private key is passphrase-protected, also set `OCI_PRIVATE_KEY_PASSPHRASE`.
+
+**Example:**
+
+```bash
+OCI_KEY=$(base64 < ~/.oci/oci_api_key.pem | tr -d '\n')
+
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="oci" \
+    OCI_AUTH_METHOD="api_key" \
+    OCI_REGION="us-ashburn-1" \
+    OCI_TENANCY_OCID="ocid1.tenancy.oc1..example" \
+    OCI_USER_OCID="ocid1.user.oc1..example" \
+    OCI_FINGERPRINT="aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99" \
+    OCI_PRIVATE_KEY="${OCI_KEY}" \
+    OCI_VAULT_OCID="ocid1.vault.oc1..example"
+```
+
+**Secret Labels:**
+
+| Label | Description |
+|---|---|
+| `oci_secret_ocid` | Fetch a secret directly by its OCID. No vault OCID is needed. |
+| `oci_secret_name` | Override the secret name for name-based lookups. |
+| `oci_vault_ocid` | Override the vault OCID for this specific secret. Takes priority over the plugin-level `OCI_VAULT_OCID`. |
+| `oci_stage` | Secret version stage (`current`, `previous`, `latest`, `pending`, `deprecated`) or a numeric version number (e.g. `3`). Defaults to `current`. |
+| `oci_field` | Extract a specific JSON field from the secret value. |
+
+**How secret lookup works:**
+
+The plugin resolves which secret to fetch using the following logic:
+
+1. **By OCID** — If `oci_secret_ocid` is set, the plugin fetches the secret directly by its OCID (e.g. `ocid1.vaultsecret.oc1...`). No vault OCID is needed.
+
+2. **By name** — Otherwise, the plugin performs a name-based lookup. If `oci_secret_name` is set, its value is used as-is. Otherwise the plugin constructs a name from the Docker service and secret names (`<service>-<secret>`, e.g. service `web` with secret `db_pass` becomes `web-db_pass`). Name-based lookups require a vault OCID.
+
+3. **Vault OCID resolution** — For name-based lookups, the `oci_vault_ocid` label takes priority over the plugin-level `OCI_VAULT_OCID` environment variable. This lets you fetch secrets from different vaults without running separate plugin instances. If neither is set, the request fails.
+
+4. **Field extraction** — If `oci_field` is set, the secret value is parsed as JSON and only the named field is returned. For example, if the secret contains `{"username":"admin","password":"s3cret"}`, setting `oci_field: "password"` returns `s3cret`. Non-JSON values are returned as-is.
+
+---
+
+### 6. GCP Secret Manager (Placeholder)
 
 **Provider Type:** `gcp`
 
@@ -173,6 +237,39 @@ secrets:
     labels:
       azure_secret_name: "database-connection-string"
       azure_field: "connection_string"
+```
+
+### OCI Vault
+
+```yaml
+secrets:
+  # Look up by name — uses the plugin-level OCI_VAULT_OCID
+  db_password:
+    driver: swarm-external-secrets:latest
+    labels:
+      oci_secret_name: "my-database-password"
+      oci_field: "password"
+
+  # Look up by name from a different vault using a per-secret override
+  analytics_key:
+    driver: swarm-external-secrets:latest
+    labels:
+      oci_secret_name: "analytics-api-key"
+      oci_vault_ocid: "ocid1.vault.oc1..other-vault"
+
+  # Look up by OCID — no vault OCID needed
+  api_token:
+    driver: swarm-external-secrets:latest
+    labels:
+      oci_secret_ocid: "ocid1.vaultsecret.oc1..example"
+
+  # Fetch the previous version of a secret (useful during rotation)
+  db_password_previous:
+    driver: swarm-external-secrets:latest
+    labels:
+      oci_secret_name: "my-database-password"
+      oci_stage: "previous"
+      oci_field: "password"
 ```
 
 ## Multiple Providers in the Same Swarm Cluster
@@ -269,6 +366,13 @@ secrets:
 - Fully compatible with Vault API
 - Use for Vault migration or open-source requirements
 - Supports all Vault authentication methods
+
+### OCI Vault
+- Supports API key and instance principal authentication
+- `OCI_PRIVATE_KEY` must be base64-encoded (see [Private Key Encoding](#5-oci-vault))
+- Secrets can be referenced by name (`oci_secret_name`, requires a vault OCID) or by OCID (`oci_secret_ocid`)
+- The `oci_vault_ocid` label overrides the plugin-level `OCI_VAULT_OCID` per secret, allowing a single plugin instance to pull secrets from multiple vaults
+- Rotation is supported
 
 ### GCP Secret Manager
 - Currently a placeholder — will error on initialization
