@@ -14,6 +14,7 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/sugar-org/vault-swarm-plugin/internal/kvpath"
 	"github.com/sugar-org/vault-swarm-plugin/monitoring"
 	"github.com/sugar-org/vault-swarm-plugin/providers"
 )
@@ -379,8 +380,10 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	switch secretInfo.Provider {
 	case "vault":
 		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		// Extract the specific path part from the full path
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		req.SecretLabels["vault_path"] = kvpath.TrimMountedKVSecretPath(
+			secretInfo.SecretPath,
+			d.getProviderMountPath("vault"),
+		)
 	case "aws":
 		req.SecretLabels["aws_field"] = secretInfo.SecretField
 		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
@@ -392,7 +395,10 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
 	case "openbao":
 		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		req.SecretLabels["openbao_path"] = kvpath.TrimMountedKVSecretPath(
+			secretInfo.SecretPath,
+			d.getProviderMountPath("openbao"),
+		)
 	}
 
 	// Get the new secret value from the provider
@@ -650,29 +656,36 @@ func (d *SecretsDriver) Stop() error {
 // Helper methods for building provider-specific secret paths/names
 
 func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		return fmt.Sprintf(kvV2PathFormat, customPath)
-	}
-
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf(kvV2ServicePathFormat, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf(kvV2PathFormat, req.SecretName)
+	return kvpath.BuildMountedKVv2SecretPath(
+		d.getProviderMountPath("vault"),
+		req.SecretLabels["vault_path"],
+		req.ServiceName,
+		req.SecretName,
+	)
 }
 
 func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf(kvV2PathFormat, customPath)
+	return kvpath.BuildMountedKVv2SecretPath(
+		d.getProviderMountPath("openbao"),
+		req.SecretLabels["openbao_path"],
+		req.ServiceName,
+		req.SecretName,
+	)
+}
+
+func (d *SecretsDriver) getProviderMountPath(providerName string) string {
+	if d.config == nil {
+		return "secret"
 	}
 
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf(kvV2ServicePathFormat, req.ServiceName, req.SecretName)
+	switch providerName {
+	case "vault":
+		return getSettingOrDefault(d.config.Settings, "VAULT_MOUNT_PATH", "secret")
+	case "openbao":
+		return getSettingOrDefault(d.config.Settings, "OPENBAO_MOUNT_PATH", "secret")
+	default:
+		return "secret"
 	}
-	return fmt.Sprintf(kvV2PathFormat, req.SecretName)
 }
 
 func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
@@ -731,16 +744,3 @@ func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
 	}
 	return result
 }
-
-// func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-// 	// Use custom path from labels if provided
-// 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-// 		return fmt.Sprintf("secret/data/%s", customPath)
-// 	}
-
-// 	// Default path structure for KV v2
-// 	if req.ServiceName != "" {
-// 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-// 	}
-// 	return fmt.Sprintf("secret/data/%s", req.SecretName)
-// }
