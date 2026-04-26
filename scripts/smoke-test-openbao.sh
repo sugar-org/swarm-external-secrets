@@ -2,11 +2,11 @@
 
 set -ex
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
-REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
-# shellcheck source=smoke-test-helper.sh
+REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/..")"
+
+# shellcheck source=scripts/smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
-# Configuration
 OPENBAO_CONTAINER="smoke-openbao"
 OPENBAO_ROOT_TOKEN="smoke-root-token"
 OPENBAO_ADDR="http://127.0.0.1:8200"
@@ -19,19 +19,18 @@ SECRET_VALUE_ROTATED="openbao-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-openbao-compose.yml"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
 EXIT_CODE=0
-# Cleanup trap
+
 cleanup() {
     echo -e "${RED}Running OpenBao smoke test cleanup...${DEF}"
     remove_stack "${STACK_NAME}"
     docker secret rm "${SECRET_NAME}" 2>/dev/null || true
     docker stop "${OPENBAO_CONTAINER}" 2>/dev/null || true
-    docker rm   "${OPENBAO_CONTAINER}" 2>/dev/null || true
+    docker rm "${OPENBAO_CONTAINER}" 2>/dev/null || true
     remove_plugin
     exit "${EXIT_CODE}"
 }
 trap cleanup EXIT
 
-# Create openbao container
 info "Starting OpenBao dev container..."
 docker run -d \
     --name "${OPENBAO_CONTAINER}" \
@@ -39,7 +38,6 @@ docker run -d \
     -e "BAO_DEV_ROOT_TOKEN_ID=${OPENBAO_ROOT_TOKEN}" \
     quay.io/openbao/openbao:latest server -dev
 
-# Wait for OpenBao to be ready
 info "Waiting for OpenBao to be ready..."
 elapsed=0
 until docker exec "${OPENBAO_CONTAINER}" bao status -address="${OPENBAO_ADDR}" >/dev/null 2>&1; do
@@ -49,7 +47,6 @@ until docker exec "${OPENBAO_CONTAINER}" bao status -address="${OPENBAO_ADDR}" >
 done
 success "OpenBao is ready."
 
-# Apply policy from vault_conf/admin.hcl
 info "Applying policy to OpenBao..."
 docker cp "${POLICY_FILE}" "${OPENBAO_CONTAINER}:/tmp/admin.hcl"
 docker exec "${OPENBAO_CONTAINER}" \
@@ -57,7 +54,6 @@ docker exec "${OPENBAO_CONTAINER}" \
     bao policy write smoke-policy /tmp/admin.hcl
 success "Policy applied."
 
-# Add passwords (write test secret)
 info "Writing test secret to OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
@@ -66,7 +62,6 @@ docker exec "${OPENBAO_CONTAINER}" \
     "${SECRET_FIELD}=${SECRET_VALUE}"
 success "Secret written: secret/${SECRET_PATH} ${SECRET_FIELD}=${SECRET_VALUE}"
 
-# Get the tmp auth token from openbao
 info "Getting auth token from OpenBao..."
 OPENBAO_TOKEN=$(docker exec "${OPENBAO_CONTAINER}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
@@ -75,7 +70,6 @@ OPENBAO_TOKEN=$(docker exec "${OPENBAO_CONTAINER}" \
     -field=token)
 success "Got auth token: ${OPENBAO_TOKEN}"
 
-# Put the auth token in the plugin
 info "Building plugin and setting OpenBao auth token..."
 build_plugin
 docker plugin set "${PLUGIN_NAME}" \
@@ -90,30 +84,24 @@ docker plugin set "${PLUGIN_NAME}" \
     ENABLE_MONITORING="false"
 success "Plugin configured with OpenBao token."
 
-# Run (enable) the plugin
 info "Enabling plugin..."
 enable_plugin
 
-# Run docker stack deploy
 info "Deploying swarm stack..."
 deploy_stack "${COMPOSE_FILE}" "${STACK_NAME}" 60
 
-# Log docker service output
 info "Logging service output..."
 sleep 10
 log_stack "${STACK_NAME}" "app"
 assert_no_sensitive_rotation_metadata_logs
 
-# Compare password == logged secret
 info "Verifying secret value matches expected password..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
-# Capture container ID now, before rotation, to verify in-place update
 info "Capturing running container ID before rotation..."
 APP_CONTAINER_ID=$(get_running_container_id "${STACK_NAME}" "app")
 success "Container to watch: ${APP_CONTAINER_ID:0:12}"
 
-# Rotate the password and verify
 info "Rotating secret in OpenBao..."
 docker exec "${OPENBAO_CONTAINER}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
@@ -134,6 +122,5 @@ log_stack "${STACK_NAME}" "app"
 
 info "Verifying rotated secret value (must update in-place, same container)..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
-
 
 success "OpenBao smoke test PASSED (incl. rotation)"

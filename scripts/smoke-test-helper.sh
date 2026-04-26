@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# smoke-test-helper.sh
-# Shared helper functions sourced by smoke-test-vault.sh and smoke-test-openbao.sh
+# Shared helper functions sourced by the provider smoke-test scripts.
 
 RED='\033[0;31m'
 GRN='\033[0;32m'
@@ -9,7 +8,6 @@ DEF='\033[0m'
 
 PLUGIN_NAME="swarm-external-secrets:latest"
 
-# Logging
 info()    { echo -e "${BLU}[INFO]${DEF} $*"; }
 success() { echo -e "${GRN}[PASS]${DEF} $*"; }
 error()   { echo -e "${RED}[FAIL]${DEF} $*" >&2; }
@@ -52,8 +50,7 @@ build_plugin() {
     echo -e "${RED}Remove existing plugin if it exists${DEF}"
     if docker plugin inspect "${PLUGIN_NAME}" &>/dev/null; then
         docker plugin disable "${PLUGIN_NAME}" --force 2>/dev/null || true
-        docker plugin rm      "${PLUGIN_NAME}" --force 2>/dev/null || true
-        # Verify removal succeeded
+        docker plugin rm "${PLUGIN_NAME}" --force 2>/dev/null || true
         if docker plugin inspect "${PLUGIN_NAME}" &>/dev/null; then
             die "Failed to remove existing plugin '${PLUGIN_NAME}'. Run: docker plugin rm ${PLUGIN_NAME} --force"
         fi
@@ -71,7 +68,7 @@ build_plugin() {
 
     docker create --name temp-container swarm-external-secrets:temp
     docker export temp-container | tar -x -C "${REPO_ROOT}/plugin/rootfs"
-    docker rm  temp-container
+    docker rm temp-container
     docker rmi swarm-external-secrets:temp
 
     echo -e "${RED}Copy config to plugin directory${DEF}"
@@ -86,7 +83,6 @@ build_plugin() {
     success "Plugin built: ${PLUGIN_NAME}"
 }
 
-# Enable plugin (mirrors test.sh pattern)
 enable_plugin() {
     echo -e "${RED}Set plugin permissions${DEF}"
     docker plugin set "${PLUGIN_NAME}" gid=0 uid=0
@@ -99,14 +95,13 @@ enable_plugin() {
 
     success "Plugin enabled."
 }
-# Remove plugin (mirrors cleanup.sh pattern)
+
 remove_plugin() {
     docker plugin disable "${PLUGIN_NAME}" --force 2>/dev/null || true
-    docker plugin rm      "${PLUGIN_NAME}" --force 2>/dev/null || true
+    docker plugin rm "${PLUGIN_NAME}" --force 2>/dev/null || true
     docker image rm swarm-external-secrets:temp --force 2>/dev/null || true
 }
 
-# Deploy swarm stack (mirrors deploy.sh pattern)
 deploy_stack() {
     local compose_file="$1"
     local stack_name="$2"
@@ -133,7 +128,6 @@ deploy_stack() {
     die "Stack '${stack_name}' did not become ready within ${timeout}s."
 }
 
-# Log stack service output (mirrors deploy.sh: docker service logs)
 log_stack() {
     local stack_name="$1"
     local service_suffix="$2"
@@ -141,7 +135,6 @@ log_stack() {
     docker service logs "${stack_name}_${service_suffix}" 2>&1 || true
 }
 
-# Compare password == logged secret 
 verify_secret() {
     local stack_name="$1"
     local service_suffix="$2"
@@ -185,7 +178,6 @@ verify_secret() {
     die "Secret '${secret_name}' did not match expected value within ${timeout}s."
 }
 
-# Get the currently running container ID for a swarm service
 get_running_container_id() {
     local stack_name="$1"
     local service_suffix="$2"
@@ -199,7 +191,6 @@ get_running_container_id() {
     fi
 }
 
-# Remove stack cleanly
 remove_stack() {
     local stack_name="$1"
     info "Removing stack '${stack_name}'..."
