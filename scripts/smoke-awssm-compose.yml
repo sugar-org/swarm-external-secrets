@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  app:
+    image: alpine:3.20
+    command: ["/bin/sh", "-c", "cat /run/secrets/smoke_secret && sleep 300"]
+    secrets:
+      - smoke_secret
+
+secrets:
+  smoke_secret:
+    driver: swarm-external-secrets:latest
+    driver_opts:
+      secret_path: "database/mysql"
+      secret_key: "password"
