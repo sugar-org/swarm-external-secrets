@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    image: busybox:latest
+    command: >
+      sh -c "
+        while true; do
+          echo 'Current aggregated secret:' && cat /run/secrets/app_credentials
+          sleep 5
+        done
+      "
+    secrets:
+      - app_credentials
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    networks:
+      - smoke-network
+
+secrets:
+  app_credentials:
+    driver: swarm-external-secrets:latest
+    labels:
+      swarm-external-secrets.sources: >-
+        [
+          {"path":"database/mysql","field":"password","key":"MYSQL_PASSWORD"},
+          {"path":"database/postgres","field":"password","key":"POSTGRES_PASSWORD"},
+          {"path":"database/redis","field":"password","key":"REDIS_PASSWORD"}
+        ]
+
+networks:
+  smoke-network:
+    driver: overlay

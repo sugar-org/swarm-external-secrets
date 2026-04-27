@@ -131,6 +131,23 @@ docker plugin set swarm-external-secrets:latest \
          openbao_field: "secret_key"
    ```
 
+   **Multiple external secrets into one Docker secret:**
+   ```yaml
+   secrets:
+     app_credentials:
+       driver: swarm-external-secrets:latest
+       labels:
+         swarm-external-secrets.sources: >-
+           [
+             {"path":"database/mysql","field":"password","key":"MYSQL_PASSWORD"},
+             {"path":"database/postgres","field":"password","key":"POSTGRES_PASSWORD"},
+             {"path":"database/redis","field":"password","key":"REDIS_PASSWORD"}
+           ]
+   ```
+
+   The driver fetches each source from the currently configured provider and returns one JSON object by default:
+   `{"MYSQL_PASSWORD":"...","POSTGRES_PASSWORD":"...","REDIS_PASSWORD":"..."}`.
+
 | Provider | Status | Authentication | Rotation |
 |----------|--------|---------------|----------|
 | HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
