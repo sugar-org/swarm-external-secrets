@@ -185,6 +185,45 @@ verify_secret() {
     die "Secret '${secret_name}' did not match expected value within ${timeout}s."
 }
 
+verify_secret_contains() {
+    local stack_name="$1"
+    local service_suffix="$2"
+    local secret_name="$3"
+    local expected_substring="$4"
+    local timeout="${5:-60}"
+
+    info "Verifying secret '${secret_name}' contains '${expected_substring}'..."
+
+    local elapsed=0
+    while [ "${elapsed}" -lt "${timeout}" ]; do
+        local task_id
+        task_id=$(docker service ps "${stack_name}_${service_suffix}" \
+            --filter "desired-state=running" \
+            --format '{{.ID}}' 2>/dev/null | head -1)
+
+        if [ -n "${task_id}" ]; then
+            local container_id
+            container_id=$(docker inspect "${task_id}" \
+                --format '{{.Status.ContainerStatus.ContainerID}}' 2>/dev/null || true)
+
+            if [ -n "${container_id}" ]; then
+                local actual
+                actual=$(docker exec "${container_id}" \
+                    cat "/run/secrets/${secret_name}" 2>/dev/null || true)
+
+                if echo "${actual}" | grep -Fq "${expected_substring}"; then
+                    success "Secret '${secret_name}' contains expected value '${expected_substring}'."
+                    return 0
+                fi
+            fi
+        fi
+        sleep 5
+        elapsed=$((elapsed + 5))
+    done
+
+    die "Secret '${secret_name}' did not contain '${expected_substring}' within ${timeout}s."
+}
+
 # Get the currently running container ID for a swarm service
 get_running_container_id() {
     local stack_name="$1"

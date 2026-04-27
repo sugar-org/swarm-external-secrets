@@ -6,12 +6,22 @@ services:
     command: >
       sh -c "
         while true; do
-          echo 'Current secret:' && cat /run/secrets/smoke_secret
+          echo '--- Single secret (smoke_secret) ---'
+          cat /run/secrets/smoke_secret
+          echo ''
+          echo '--- Multi-source JSON (app_credentials) ---'
+          cat /run/secrets/app_credentials
+          echo ''
+          echo '--- Multi-source ENV (app_credentials_env) ---'
+          cat /run/secrets/app_credentials_env
+          echo ''
           sleep 5
         done
       "
     secrets:
       - smoke_secret
+      - app_credentials
+      - app_credentials_env
     deploy:
       replicas: 1
       restart_policy:
@@ -25,6 +35,26 @@ secrets:
     labels:
       vault_path: "database/mysql"
       vault_field: "password"
+
+  app_credentials:
+    driver: swarm-external-secrets:latest
+    labels:
+      swarm-external-secrets.sources: >-
+        [
+          {"path":"database/mysql","field":"root_password","key":"MYSQL_ROOT_PASSWORD"},
+          {"path":"database/mysql","field":"user_password","key":"MYSQL_USER_PASSWORD"},
+          {"path":"database/redis","field":"password","key":"REDIS_PASSWORD"}
+        ]
+
+  app_credentials_env:
+    driver: swarm-external-secrets:latest
+    labels:
+      swarm-external-secrets.sources: >-
+        [
+          {"path":"database/mysql","field":"root_password","key":"MYSQL_ROOT_PASSWORD"},
+          {"path":"database/redis","field":"password","key":"REDIS_PASSWORD"}
+        ]
+      swarm-external-secrets.format: "env"
 
 networks:
   smoke-network:
