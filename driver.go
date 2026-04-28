@@ -215,7 +215,7 @@ func (d *SecretsDriver) getAggregatedSecret(ctx context.Context, req secrets.Req
 
 		value, err := d.provider.GetSecret(ctx, sourceReq)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get source %q: %v", source.Key, err)
+			return nil, fmt.Errorf("failed to get source %q (path %q): %w", source.Key, source.Path, err)
 		}
 		values[source.Key] = string(value)
 	}
@@ -332,13 +332,52 @@ func renderAggregatedSecret(values map[string]string, format string) ([]byte, er
 
 		lines := make([]string, 0, len(values))
 		for _, key := range keys {
+			if !isValidEnvKey(key) {
+				return nil, fmt.Errorf("invalid env key %q: must match [A-Z_][A-Z0-9_]*", key)
+			}
 			value := values[key]
+			value = escapeEnvValue(value)
 			lines = append(lines, fmt.Sprintf("%s=%s", key, value))
 		}
 		return []byte(strings.Join(lines, "\n") + "\n"), nil
 	default:
 		return nil, fmt.Errorf("unsupported aggregated secret format %q", format)
 	}
+}
+
+func isValidEnvKey(key string) bool {
+	if key == "" {
+		return false
+	}
+	first := key[0]
+	if !((first >= 'A' && first <= 'Z') || first == '_') {
+		return false
+	}
+	for _, c := range key {
+		if !((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+func escapeEnvValue(value string) string {
+	result := make([]rune, 0, len(value))
+	for _, c := range value {
+		switch c {
+		case '\\':
+			result = append(result, '\\', '\\')
+		case '\n':
+			result = append(result, '\\', 'n')
+		case '\r':
+			result = append(result, '\\', 'r')
+		case '"':
+			result = append(result, '\\', '"')
+		default:
+			result = append(result, c)
+		}
+	}
+	return string(result)
 }
 
 // shouldNotReuse returns the value for secrets.Response.DoNotReuse.

@@ -172,6 +172,69 @@ func TestGetAggregatedSecretEnvFormat(t *testing.T) {
 	}
 }
 
+func TestGetAggregatedSecretRejectsUnsupportedFormat(t *testing.T) {
+	provider := &fakeProvider{
+		name: "vault",
+		secrets: map[string]map[string]string{
+			"prod/api": {"token": "abc"},
+		},
+	}
+	driver := &SecretsDriver{provider: provider}
+	_, err := driver.getAggregatedSecret(context.Background(), secrets.Request{
+		SecretName: "app_credentials",
+		SecretLabels: map[string]string{
+			secretSourcesLabel: `[{"path":"prod/api","field":"token","key":"API_TOKEN"}]`,
+			secretFormatLabel:  "xml",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected unsupported format error")
+	}
+}
+
+func TestRenderAggregatedSecretEnvRejectsInvalidKey(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+	}{
+		{name: "starts with number", key: "1KEY"},
+		{name: "contains dash", key: "MY-KEY"},
+		{name: "contains dot", key: "MY.KEY"},
+		{name: "lowercase", key: "my_key"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := renderAggregatedSecret(map[string]string{tt.key: "value"}, "env")
+			if err == nil {
+				t.Fatalf("expected error for invalid key %q", tt.key)
+			}
+		})
+	}
+}
+
+func TestRenderAggregatedSecretEnvEscapesValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantEsc string
+	}{
+		{name: "newline", value: "hello\nworld", wantEsc: "hello\\nworld"},
+		{name: "backslash", value: "path\\to\\file", wantEsc: "path\\\\to\\\\file"},
+		{name: "carriage return", value: "hello\rworld", wantEsc: "hello\\rworld"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := renderAggregatedSecret(map[string]string{"KEY": tt.value}, "env")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !strings.Contains(string(out), tt.wantEsc) {
+				t.Fatalf("expected escaped value %q in output %q", tt.wantEsc, string(out))
+			}
+		})
+	}
+}
+
 func TestParseSecretSourcesRejectsDifferentProvider(t *testing.T) {
 	provider := &fakeProvider{name: "vault"}
 	_, err := parseSecretSources(map[string]string{
@@ -179,6 +242,56 @@ func TestParseSecretSourcesRejectsDifferentProvider(t *testing.T) {
 	}, provider)
 	if err == nil {
 		t.Fatal("expected provider mismatch error")
+	}
+}
+
+func TestParseSecretSourcesRejectsInvalidJSON(t *testing.T) {
+	provider := &fakeProvider{name: "vault"}
+	_, err := parseSecretSources(map[string]string{
+		secretSourcesLabel: `[{"path":"prod/db","field":"password","key":"DB_PASSWORD"`,
+	}, provider)
+	if err == nil {
+		t.Fatal("expected invalid JSON error")
+	}
+}
+
+func TestParseSecretSourcesRejectsMissingRequiredFields(t *testing.T) {
+	provider := &fakeProvider{name: "vault"}
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{
+			name:   "missing path",
+			source: `[{"field":"password","key":"DB_PASSWORD"}]`,
+		},
+		{
+			name:   "missing key",
+			source: `[{"path":"prod/db","field":"password"}]`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseSecretSources(map[string]string{
+				secretSourcesLabel: tt.source,
+			}, provider)
+			if err == nil {
+				t.Fatalf("expected error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestParseSecretSourcesRejectsDuplicateKey(t *testing.T) {
+	provider := &fakeProvider{name: "vault"}
+	_, err := parseSecretSources(map[string]string{
+		secretSourcesLabel: `[
+			{"path":"prod/api","field":"token","key":"APP_SECRET"},
+			{"path":"prod/db","field":"password","key":"APP_SECRET"}
+		]`,
+	}, provider)
+	if err == nil {
+		t.Fatal("expected duplicate key error")
 	}
 }
 
