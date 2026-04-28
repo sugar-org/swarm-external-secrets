@@ -71,18 +71,45 @@ vault kv get secret/database/mysql
 
 ## Debug the Plugin
 
-## Configure Logging
-
-By default, the plugin logs at **info** level. You can increase verbosity using either:
-
-- `--debug` (sets log level to `debug`)
-- `LOG_LEVEL` (optional integer `0-6`; `6` enables `trace`)
-
-Example:
+The plugin now writes logs to a host-mounted file by default:
 
 ```bash
-docker plugin set swarm-external-secrets:latest LOG_LEVEL="6"
+tail -F /run/swarm-external-secrets/plugin.log
 ```
+
+You can override path and level:
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+  PLUGIN_LOG_PATH="/run/swarm-external-secrets/plugin.log" \
+  PLUGIN_LOG_LEVEL="debug"
+```
+
+To expose plugin logs through `docker compose logs`, use the bundled override file:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.logs.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.logs.yml logs -f secrets-logger
+```
+
+The sidecar service in `docker-compose.logs.yml` is:
+
+```yaml
+services:
+  secrets-logger:
+    image: alpine:3.20
+    command: sh -c "touch /run/swarm-external-secrets/plugin.log && tail -F /run/swarm-external-secrets/plugin.log"
+    volumes:
+      - /run/swarm-external-secrets:/run/swarm-external-secrets:ro
+```
+
+The plugin mount for this path is defined in `config.json`, so make sure the host directory exists:
+
+```bash
+sudo mkdir -p /run/swarm-external-secrets
+```
+
+Daemon logs remain available for fallback troubleshooting:
 
 ```bash
 sudo journalctl -u docker.service -f \

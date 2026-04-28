@@ -131,9 +131,10 @@ func NewDriver() (*SecretsDriver, error) {
 
 // Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
-	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
+	log.Debugf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
 
 	if req.SecretName == "" {
+		log.Warn("Get request rejected: secret name is required")
 		return secrets.Response{
 			Err: "secret name is required",
 		}
@@ -146,13 +147,13 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	// Get secret from the provider
 	value, err := d.provider.GetSecret(ctx, req)
 	if err != nil {
-		log.Printf("Error getting secret from provider: %v", err)
+		log.Errorf("Error getting secret from provider %s for secret %s: %v", d.provider.GetProviderName(), req.SecretName, err)
 		return secrets.Response{
 			Err: fmt.Sprintf("failed to get secret: %v", err),
 		}
 	}
 
-	log.Printf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
+	log.Debugf("Successfully retrieved secret from %s provider", d.provider.GetProviderName())
 
 	// Track this secret for monitoring if rotation is enabled
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
@@ -161,9 +162,9 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 
 	// Determine if secret should be reusable (Docker DoNotReuse=true means do not cache/reuse)
 	doNotReuse := d.shouldNotReuse(req)
-	log.Printf("Get secret %q: DoNotReuse=%v (Swarm may reuse cached value when false)", req.SecretName, doNotReuse)
+	log.Debugf("Get secret %q: DoNotReuse=%v (Swarm may reuse cached value when false)", req.SecretName, doNotReuse)
 
-	log.Printf("Successfully returning secret value")
+	log.Debug("Successfully returning secret value")
 	return secrets.Response{
 		Value:      value,
 		DoNotReuse: doNotReuse,
@@ -178,10 +179,10 @@ func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
 		v := strings.ToLower(strings.TrimSpace(reuse))
 		allowReuse := v == "true"
 		if allowReuse {
-			log.Printf("secret_reuse=%q for %q: allowing Swarm reuse (DoNotReuse=false)", reuse, req.SecretName)
+			log.Debugf("secret_reuse=%q for %q: allowing Swarm reuse (DoNotReuse=false)", reuse, req.SecretName)
 			return false
 		}
-		log.Printf("secret_reuse=%q for %q: disallowing Swarm reuse (DoNotReuse=true)", reuse, req.SecretName)
+		log.Debugf("secret_reuse=%q for %q: disallowing Swarm reuse (DoNotReuse=true)", reuse, req.SecretName)
 		return true
 	}
 
@@ -239,7 +240,7 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		secretPath = req.SecretName
 	}
 
-	log.Tracef("Current provider %s tracking secret: %s at path: %s with field: %s",
+	log.Debugf("Current provider %s tracking secret: %s at path: %s with field: %s",
 		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
 
 	secretInfo := &providers.SecretInfo{
@@ -271,7 +272,7 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		d.secretTracker[req.SecretName] = secretInfo
 	}
 
-	log.Tracef("Tracking secret: %s -> %s (provider: %s, services: %v)",
+	log.Debugf("Tracking secret: %s -> %s (provider: %s, services: %v)",
 		req.SecretName, secretPath, d.provider.GetProviderName(), secretInfo.ServiceNames)
 }
 
@@ -311,7 +312,7 @@ func (d *SecretsDriver) checkForSecretChanges() {
 		return
 	}
 
-	log.Printf("Checking %d tracked secrets for changes", len(secrets))
+	log.Debugf("Checking %d tracked secrets for changes", len(secrets))
 	// TODO: Revisit this limit if secret-label fanout or provider latency changes.
 	concurrentSecretChecks := len(secrets) + 1
 
@@ -329,7 +330,7 @@ func (d *SecretsDriver) checkForSecretChanges() {
 				return
 			}
 
-			log.Tracef("Detected change in secret: %s", secretName)
+			log.Infof("Detected change in secret: %s", secretName)
 			d.handleSecretRotationResult(secretName, secretInfo)
 		}(secretName, secretInfo)
 	}
@@ -367,7 +368,7 @@ func (d *SecretsDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool 
 
 // rotateSecret handles the secret rotation process
 func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
-	log.Printf("Starting rotation for secret: %s", secretInfo.DockerSecretName)
+	log.Infof("Starting rotation for secret: %s", secretInfo.DockerSecretName)
 
 	// Create a dummy request to get the new secret value
 	req := secrets.Request{
@@ -415,7 +416,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	secretInfo.LastUpdated = time.Now()
 	d.trackerMutex.Unlock()
 
-	log.Printf("Successfully rotated secret: %s", secretInfo.DockerSecretName)
+	log.Infof("Successfully rotated secret: %s", secretInfo.DockerSecretName)
 	return nil
 }
 
@@ -460,7 +461,7 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 		return fmt.Errorf("failed to create new secret version: %v", err)
 	}
 
-	log.Printf("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
+	log.Infof("Created new version of secret %s with name %s and ID: %s", secretName, newSecretName, createResponse.ID)
 
 	// Update all services that use this secret to point to the new version
 	if err := d.updateServicesSecretReference(secretName, existingSecret.ID, newSecretName, createResponse.ID); err != nil {
@@ -519,7 +520,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID
 	}
 
 	if len(updatedServices) > 0 {
-		log.Printf("Updated services to use new secret %s: %v", newSecretName, updatedServices)
+		log.Infof("Updated services to use new secret %s: %v", newSecretName, updatedServices)
 	}
 
 	return nil
