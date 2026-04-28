@@ -350,11 +350,11 @@ func isValidEnvKey(key string) bool {
 		return false
 	}
 	first := key[0]
-	if !((first >= 'A' && first <= 'Z') || first == '_') {
+	if (first < 'A' || first > 'Z') && first != '_' {
 		return false
 	}
 	for _, c := range key {
-		if !((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+		if (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
 			return false
 		}
 	}

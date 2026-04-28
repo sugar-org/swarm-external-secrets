@@ -9,6 +9,8 @@ DEF='\033[0m'
 
 PLUGIN_NAME="swarm-external-secrets:latest"
 
+DESIRED_STATE="desired-state=running"
+
 # Logging
 info()    { echo -e "${BLU}[INFO]${DEF} $*"; }
 success() { echo -e "${GRN}[PASS]${DEF} $*"; }
@@ -117,13 +119,13 @@ deploy_stack() {
 
     info "Waiting for stack '${stack_name}' to be ready (timeout: ${timeout}s)..."
     local elapsed=0
-    while [ "${elapsed}" -lt "${timeout}" ]; do
+    while [[ "${elapsed}" -lt "${timeout}" ]]; do
         local running
         running=$(docker stack ps "${stack_name}" \
-            --filter "desired-state=running" \
+            --filter "${DESIRED_STATE}" \
             --format '{{.CurrentState}}' 2>/dev/null \
             | grep -c "Running" || true)
-        if [ "${running}" -gt 0 ]; then
+        if [[ "${running}" -gt 0 ]]; then
             success "Stack '${stack_name}' is running."
             return 0
         fi
@@ -152,18 +154,18 @@ verify_secret() {
     info "Verifying secret '${secret_name}' matches expected value..."
 
     local elapsed=0
-    while [ "${elapsed}" -lt "${timeout}" ]; do
+    while [[ "${elapsed}" -lt "${timeout}" ]]; do
         local task_id
         task_id=$(docker service ps "${stack_name}_${service_suffix}" \
-            --filter "desired-state=running" \
+            --filter "${DESIRED_STATE}" \
             --format '{{.ID}}' 2>/dev/null | head -1)
 
-        if [ -n "${task_id}" ]; then
+        if [[ -n "${task_id}" ]]; then
             local container_id
             container_id=$(docker inspect "${task_id}" \
                 --format '{{.Status.ContainerStatus.ContainerID}}' 2>/dev/null || true)
 
-            if [ -n "${container_id}" ]; then
+            if [[ -n "${container_id}" ]]; then
                 local actual
                 actual=$(docker exec "${container_id}" \
                     cat "/run/secrets/${secret_name}" 2>/dev/null | tr -d '[:space:]' || true)
@@ -172,7 +174,7 @@ verify_secret() {
 
                 info "Expected: '${expected_trimmed}' | Got: '${actual}'"
 
-                if [ "${actual}" = "${expected_trimmed}" ]; then
+                if [[ "${actual}" == "${expected_trimmed}" ]]; then
                     success "Secret '${secret_name}' verified: value matches expected."
                     return 0
                 fi
@@ -195,18 +197,18 @@ verify_secret_contains() {
     info "Verifying secret '${secret_name}' contains '${expected_substring}'..."
 
     local elapsed=0
-    while [ "${elapsed}" -lt "${timeout}" ]; do
+    while [[ "${elapsed}" -lt "${timeout}" ]]; do
         local task_id
         task_id=$(docker service ps "${stack_name}_${service_suffix}" \
-            --filter "desired-state=running" \
+            --filter "${DESIRED_STATE}" \
             --format '{{.ID}}' 2>/dev/null | head -1)
 
-        if [ -n "${task_id}" ]; then
+        if [[ -n "${task_id}" ]]; then
             local container_id
             container_id=$(docker inspect "${task_id}" \
                 --format '{{.Status.ContainerStatus.ContainerID}}' 2>/dev/null || true)
 
-            if [ -n "${container_id}" ]; then
+            if [[ -n "${container_id}" ]]; then
                 local actual
                 actual=$(docker exec "${container_id}" \
                     cat "/run/secrets/${secret_name}" 2>/dev/null || true)
@@ -230,9 +232,9 @@ get_running_container_id() {
     local service_suffix="$2"
     local task_id
     task_id=$(docker service ps "${stack_name}_${service_suffix}" \
-        --filter "desired-state=running" \
+        --filter "${DESIRED_STATE}" \
         --format '{{.ID}}' 2>/dev/null | head -1)
-    if [ -n "${task_id}" ]; then
+    if [[ -n "${task_id}" ]]; then
         docker inspect "${task_id}" \
             --format '{{.Status.ContainerStatus.ContainerID}}' 2>/dev/null || true
     fi
@@ -244,7 +246,7 @@ remove_stack() {
     info "Removing stack '${stack_name}'..."
     docker stack rm "${stack_name}" 2>/dev/null || true
     local elapsed=0
-    while docker stack ps "${stack_name}" &>/dev/null && [ "${elapsed}" -lt 30 ]; do
+    while docker stack ps "${stack_name}" &>/dev/null && [[ "${elapsed}" -lt 30 ]]; do
         sleep 3
         elapsed=$((elapsed + 3))
     done

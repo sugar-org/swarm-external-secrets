@@ -26,6 +26,11 @@ MULTI_SOURCE_REDIS="redis-pass-v1"
 MULTI_SOURCE_MYSQL_ROOT_ROTATED="mysql-root-pass-v2"
 MULTI_SOURCE_MYSQL_USER_ROTATED="mysql-user-pass-v2"
 MULTI_SOURCE_REDIS_ROTATED="redis-pass-v2"
+
+# Secret names
+SECRET_APP_CREDENTIALS="app_credentials"
+SECRET_APP_CREDENTIALS_ENV="app_credentials_env"
+
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
 EXIT_CODE=0
 # Cleanup trap
@@ -137,14 +142,14 @@ verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
 # Verify multi-source JSON secret
 info "Verifying multi-source JSON secret (app_credentials)..."
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials" "MYSQL_ROOT_PASSWORD" 60
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials" "MYSQL_USER_PASSWORD" 60
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials" "REDIS_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "MYSQL_ROOT_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "MYSQL_USER_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "REDIS_PASSWORD" 60
 
 # Verify multi-source ENV secret
 info "Verifying multi-source ENV secret (app_credentials_env)..."
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials_env" "MYSQL_ROOT_PASSWORD" 60
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials_env" "REDIS_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "MYSQL_ROOT_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "REDIS_PASSWORD" 60
 
 # Capture container ID now, before rotation, to verify in-place update
 info "Capturing running container ID before rotation..."
@@ -193,12 +198,12 @@ info "Waiting for multi-source rotation to propagate (20s)..."
 sleep 20
 
 info "Verifying rotated multi-source JSON secret..."
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials" "${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" 60
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials" "${MULTI_SOURCE_MYSQL_USER_ROTATED}" 60
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials" "${MULTI_SOURCE_REDIS_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "${MULTI_SOURCE_MYSQL_USER_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "${MULTI_SOURCE_REDIS_ROTATED}" 60
 
 info "Verifying rotated multi-source ENV secret..."
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials_env" "${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" 60
-verify_secret_contains "${STACK_NAME}" "app" "app_credentials_env" "${MULTI_SOURCE_REDIS_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "${MULTI_SOURCE_REDIS_ROTATED}" 60
 
 success "Vault smoke test PASSED (incl. multi-source)"
