@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types/swarm"
@@ -52,6 +53,10 @@ func (f *fakeProvider) CheckSecretChanged(ctx context.Context, secretInfo *provi
 
 func (f *fakeProvider) GetProviderName() string {
 	return f.name
+}
+
+func (f *fakeProvider) Matches(requested string) bool {
+	return strings.EqualFold(requested, f.name)
 }
 
 func (f *fakeProvider) Close() error {
@@ -168,9 +173,10 @@ func TestGetAggregatedSecretEnvFormat(t *testing.T) {
 }
 
 func TestParseSecretSourcesRejectsDifferentProvider(t *testing.T) {
+	provider := &fakeProvider{name: "vault"}
 	_, err := parseSecretSources(map[string]string{
 		secretSourcesLabel: `[{"provider":"aws","path":"prod/db","field":"password","key":"DB_PASSWORD"}]`,
-	}, "vault")
+	}, provider)
 	if err == nil {
 		t.Fatal("expected provider mismatch error")
 	}

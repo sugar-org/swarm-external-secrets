@@ -203,7 +203,7 @@ func getSecretSourcesSpec(labels map[string]string) (string, bool) {
 }
 
 func (d *SecretsDriver) getAggregatedSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
-	sources, err := parseSecretSources(req.SecretLabels, d.provider.GetProviderName())
+	sources, err := parseSecretSources(req.SecretLabels, d.provider)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func (d *SecretsDriver) getAggregatedSecret(ctx context.Context, req secrets.Req
 	return renderAggregatedSecret(values, getSecretFormat(req.SecretLabels))
 }
 
-func parseSecretSources(labels map[string]string, currentProvider string) ([]secretSource, error) {
+func parseSecretSources(labels map[string]string, provider providers.SecretsProvider) ([]secretSource, error) {
 	spec, exists := getSecretSourcesSpec(labels)
 	if !exists {
 		return nil, fmt.Errorf("%s label is required", secretSourcesLabel)
@@ -250,8 +250,8 @@ func parseSecretSources(labels map[string]string, currentProvider string) ([]sec
 		if sources[i].Key == "" {
 			return nil, fmt.Errorf("source %d key is required", i)
 		}
-		if sources[i].Provider != "" && !providerMatches(currentProvider, sources[i].Provider) {
-			return nil, fmt.Errorf("source %d provider %q does not match configured provider %q", i, sources[i].Provider, currentProvider)
+		if sources[i].Provider != "" && !provider.Matches(sources[i].Provider) {
+			return nil, fmt.Errorf("source %d provider %q does not match", i, sources[i].Provider)
 		}
 		if _, exists := seenKeys[sources[i].Key]; exists {
 			return nil, fmt.Errorf("duplicate source key %q", sources[i].Key)
@@ -260,26 +260,6 @@ func parseSecretSources(labels map[string]string, currentProvider string) ([]sec
 	}
 
 	return sources, nil
-}
-
-func providerMatches(currentProvider, requestedProvider string) bool {
-	currentProvider = strings.ToLower(strings.TrimSpace(currentProvider))
-	requestedProvider = strings.ToLower(strings.TrimSpace(requestedProvider))
-
-	switch currentProvider {
-	case "vault":
-		return requestedProvider == "vault" || requestedProvider == "hashicorp-vault"
-	case "aws":
-		return requestedProvider == "aws" || requestedProvider == "aws-secrets-manager"
-	case "gcp":
-		return requestedProvider == "gcp" || requestedProvider == "gcp-secret-manager" || requestedProvider == "google"
-	case "azure":
-		return requestedProvider == "azure" || requestedProvider == "azure-key-vault"
-	case "openbao":
-		return requestedProvider == "openbao"
-	default:
-		return requestedProvider == currentProvider
-	}
 }
 
 func labelsForSecretSource(baseLabels map[string]string, providerName string, source secretSource) map[string]string {

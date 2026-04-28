@@ -37,6 +37,9 @@ type SecretsProvider interface {
 	// GetProviderName returns the name of this provider
 	GetProviderName() string
 
+	// Matches checks if this provider matches the given provider identifier
+	Matches(requested string) bool
+
 	// Close performs any cleanup needed by the provider
 	Close() error
 }

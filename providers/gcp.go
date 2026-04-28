@@ -251,6 +251,12 @@ func (g *GCPProvider) GetProviderName() string {
 	return "gcp"
 }
 
+// Matches checks if this provider matches the given provider identifier
+func (g *GCPProvider) Matches(requested string) bool {
+	requested = strings.ToLower(strings.TrimSpace(requested))
+	return requested == "gcp" || requested == "gcp-secret-manager" || requested == "google"
+}
+
 // Close performs cleanup for the GCP provider
 func (g *GCPProvider) Close() error {
 	if g.client != nil {
