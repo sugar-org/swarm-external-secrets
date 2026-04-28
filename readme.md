@@ -1,5 +1,5 @@
 ### Swarm External Secrets
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sugar-org/swarm-external-secrets/badge)](https://scorecard.dev/viewer/?uri=github.com/sugar-org/swarm-external-secrets) ![Discord](https://img.shields.io/discord/1476983394977054740?logo=discord&color=blue) [![Join our Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/4NYdBu7bZy)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sugar-org/swarm-external-secrets/badge)](https://scorecard.dev/viewer/?uri=github.com/sugar-org/swarm-external-secrets) ![Discord](https://img.shields.io/discord/1476983394977054740?logo=discord&color=blue) [![Join our Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/4NYdBu7bZy) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sugar-org/swarm-external-secrets)
 
 ---
 
@@ -168,3 +168,7 @@ docker plugin set swarm-external-secrets:latest \
 ### License
 
 [BSD-3-Clause license](https://github.com/sugar-org/swarm-external-secrets/blob/main/LICENSE)
+
+## Explore the Repository
+
+If you want to explore the repository or read more, check out [Ask DeepWiki](https://deepwiki.com/sugar-org/swarm-external-secrets).
