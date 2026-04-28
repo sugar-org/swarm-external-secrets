@@ -2,12 +2,11 @@
 
 set -ex
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
-REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
+REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/..")"
 
-# shellcheck source=smoke-test-helper.sh
+# shellcheck source=scripts/smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
-# Configuration
 VAULT_CONTAINER="smoke-vault"
 VAULT_ROOT_TOKEN="smoke-root-token"
 VAULT_ADDR="http://127.0.0.1:8200"
@@ -20,19 +19,18 @@ SECRET_VALUE_ROTATED="vault-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-vault-compose.yml"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
 EXIT_CODE=0
-# Cleanup trap
+
 cleanup() {
     echo -e "${RED}Running Vault smoke test cleanup...${DEF}"
     remove_stack "${STACK_NAME}"
     docker secret rm "${SECRET_NAME}" 2>/dev/null || true
     docker stop "${VAULT_CONTAINER}" 2>/dev/null || true
-    docker rm   "${VAULT_CONTAINER}" 2>/dev/null || true
+    docker rm "${VAULT_CONTAINER}" 2>/dev/null || true
     remove_plugin
     exit "${EXIT_CODE}"
 }
 trap cleanup EXIT
 
-# Create hashicorp/vault container
 info "Starting HashiCorp Vault dev container..."
 docker run -d \
     --name "${VAULT_CONTAINER}" \
@@ -40,7 +38,6 @@ docker run -d \
     -e "VAULT_DEV_ROOT_TOKEN_ID=${VAULT_ROOT_TOKEN}" \
     hashicorp/vault:latest server -dev
 
-# Wait for Vault to be ready
 info "Waiting for Vault to be ready..."
 elapsed=0
 until docker exec "${VAULT_CONTAINER}" \
@@ -51,7 +48,6 @@ until docker exec "${VAULT_CONTAINER}" \
 done
 success "Vault is ready."
 
-# Apply policy from vault_conf/admin.hcl
 info "Applying policy to Vault..."
 docker cp "${POLICY_FILE}" "${VAULT_CONTAINER}:/tmp/admin.hcl"
 docker exec "${VAULT_CONTAINER}" \
@@ -59,7 +55,6 @@ docker exec "${VAULT_CONTAINER}" \
     vault policy write smoke-policy /tmp/admin.hcl
 success "Policy applied."
 
-# Add passwords (write test secret)
 info "Writing test secret to Vault..."
 docker exec "${VAULT_CONTAINER}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
@@ -68,7 +63,6 @@ docker exec "${VAULT_CONTAINER}" \
     "${SECRET_FIELD}=${SECRET_VALUE}"
 success "Secret written: secret/${SECRET_PATH} ${SECRET_FIELD}=${SECRET_VALUE}"
 
-# Get the tmp auth token from vault
 info "Getting auth token from Vault..."
 VAULT_TOKEN=$(docker exec "${VAULT_CONTAINER}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
@@ -77,7 +71,6 @@ VAULT_TOKEN=$(docker exec "${VAULT_CONTAINER}" \
         -field=token)
 success "Got auth token: ${VAULT_TOKEN}"
 
-# Put the auth token in the plugin
 info "Building plugin and setting Vault auth token..."
 build_plugin
 
@@ -93,30 +86,24 @@ docker plugin set "${PLUGIN_NAME}" \
     ENABLE_MONITORING="false"
 success "Plugin configured with Vault token."
 
-# Run (enable) the plugin
 info "Enabling plugin..."
 enable_plugin
 
-# Run docker stack deploy
 info "Deploying swarm stack..."
 deploy_stack "${COMPOSE_FILE}" "${STACK_NAME}" 60
 
-# Log docker service output
 info "Logging service output..."
 sleep 10
 log_stack "${STACK_NAME}" "app"
 assert_no_sensitive_rotation_metadata_logs
 
-# Compare password == logged secret
 info "Verifying secret value matches expected password..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
-# Capture container ID now, before rotation, to verify in-place update
 info "Capturing running container ID before rotation..."
 APP_CONTAINER_ID=$(get_running_container_id "${STACK_NAME}" "app")
 success "Container to watch: ${APP_CONTAINER_ID:0:12}"
 
-# Rotate the password and verify
 info "Rotating secret in Vault..."
 docker exec "${VAULT_CONTAINER}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
@@ -137,6 +124,5 @@ log_stack "${STACK_NAME}" "app"
 
 info "Verifying rotated secret value (waiting for in-place update, up to 180s)..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
-
 
 success "Vault smoke test PASSED"

@@ -162,7 +162,7 @@ makim scripts.build
 ```bash
 makim scripts.test
 # or directly:
-./scripts/test.sh
+bash ./scripts/smoke-test-all.sh
 ```
 
 ### Linting
@@ -221,7 +221,7 @@ To add support for a new secret backend:
 2. Implement the provider interface expected by `driver.go`.
 3. Register the provider in `driver.go` with the appropriate `SECRETS_PROVIDER` value.
 4. Add configuration documentation to `docs/MULTI_PROVIDER.md`.
-5. Add integration tests in `scripts/test.sh` or a dedicated test script.
+5. Add end-to-end coverage through the smoke-test entrypoints in `scripts/`.
 6. Update the provider table in [`readme.md`](readme.md).
 ---
 

@@ -22,7 +22,7 @@ jobs:
         run: docker swarm init
 
       - name: Run smoke test for ${{ matrix.provider }}
-        run: bash scripts/tests/smoke-test-${{ matrix.provider }}.sh
+        run: bash scripts/smoke-test-${{ matrix.provider }}.sh
 
   smoke-test-awssm:
     runs-on: ubuntu-latest
@@ -44,5 +44,5 @@ jobs:
         run: docker swarm init
 
       - name: Run smoke test for awssm
-        run: bash scripts/tests/smoke-test-awssm.sh
+        run: bash scripts/smoke-test-awssm.sh
         
