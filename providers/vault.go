@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/docker/go-plugins-helpers/secrets"
 	"github.com/hashicorp/vault/api"
@@ -145,6 +146,12 @@ func (v *VaultProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secr
 // GetProviderName returns the name of this provider
 func (v *VaultProvider) GetProviderName() string {
 	return "vault"
+}
+
+// Matches checks if this provider matches the given provider identifier
+func (v *VaultProvider) Matches(requested string) bool {
+	requested = strings.ToLower(strings.TrimSpace(requested))
+	return requested == "vault" || requested == "hashicorp-vault"
 }
 
 // Close performs cleanup for the Vault provider

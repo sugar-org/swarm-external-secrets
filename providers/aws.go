@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -120,6 +121,12 @@ func (a *AWSProvider) CheckSecretChanged(ctx context.Context, secretInfo *Secret
 // GetProviderName returns the name of this provider
 func (a *AWSProvider) GetProviderName() string {
 	return "aws"
+}
+
+// Matches checks if this provider matches the given provider identifier
+func (a *AWSProvider) Matches(requested string) bool {
+	requested = strings.ToLower(strings.TrimSpace(requested))
+	return requested == "aws" || requested == "aws-secrets-manager"
 }
 
 // Close performs cleanup for the AWS provider

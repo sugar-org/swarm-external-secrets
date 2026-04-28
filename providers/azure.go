@@ -107,6 +107,12 @@ func (az *AzureProvider) GetProviderName() string {
 	return "azure"
 }
 
+// Matches checks if this provider matches the given provider identifier
+func (az *AzureProvider) Matches(requested string) bool {
+	requested = strings.ToLower(strings.TrimSpace(requested))
+	return requested == "azure" || requested == "azure-key-vault"
+}
+
 // CheckSecretChanged checks if a secret's value has changed in Azure Key Vault.
 func (az *AzureProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
 	resp, err := az.client.GetSecret(ctx, secretInfo.SecretPath, "", nil)

@@ -175,6 +175,31 @@ secrets:
       azure_field: "connection_string"
 ```
 
+### Multiple Sources into One Docker Secret
+
+Use `swarm-external-secrets.sources` when one mounted Docker secret should contain values from multiple external secrets. The label value is a JSON array encoded as a single string, which keeps the Compose file valid and avoids repeated label keys.
+
+```yaml
+secrets:
+  app_credentials:
+    driver: swarm-external-secrets:latest
+    labels:
+      swarm-external-secrets.sources: >-
+        [
+          {"path":"database/mysql","field":"password","key":"MYSQL_PASSWORD"},
+          {"path":"database/postgres","field":"password","key":"POSTGRES_PASSWORD"},
+          {"path":"database/redis","field":"password","key":"REDIS_PASSWORD"}
+        ]
+```
+
+The driver fetches each source from the currently configured provider and renders a JSON object by default:
+
+```json
+{"MYSQL_PASSWORD":"...","POSTGRES_PASSWORD":"...","REDIS_PASSWORD":"..."}
+```
+
+For an env-file style payload, set `swarm-external-secrets.format: "env"`.
+
 ## Multiple Providers in the Same Swarm Cluster
 
 For production isolation, run one provider per plugin instance (unique plugin name) and reference each instance as a separate secret driver.

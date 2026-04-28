@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +23,18 @@ import (
 const (
 	kvV2PathFormat        = "secret/data/%s"
 	kvV2ServicePathFormat = "secret/data/%s/%s"
+	secretSourcesLabel    = "swarm-external-secrets.sources"
+	secretSourcesLabelAlt = "secret_sources"
+	secretFormatLabel     = "swarm-external-secrets.format"
+	secretFormatLabelAlt  = "secret_format"
 )
+
+type secretSource struct {
+	Provider string `json:"provider,omitempty"`
+	Path     string `json:"path"`
+	Field    string `json:"field,omitempty"`
+	Key      string `json:"key"`
+}
 
 // SecretsDriver implements the secrets.Driver interface with multi-provider support
 type SecretsDriver struct {
@@ -143,8 +156,7 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Get secret from the provider
-	value, err := d.provider.GetSecret(ctx, req)
+	value, err := d.getSecretValue(ctx, req)
 	if err != nil {
 		log.Printf("Error getting secret from provider: %v", err)
 		return secrets.Response{
@@ -168,6 +180,204 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		Value:      value,
 		DoNotReuse: doNotReuse,
 	}
+}
+
+func (d *SecretsDriver) getSecretValue(ctx context.Context, req secrets.Request) ([]byte, error) {
+	if _, exists := getSecretSourcesSpec(req.SecretLabels); exists {
+		return d.getAggregatedSecret(ctx, req)
+	}
+	return d.provider.GetSecret(ctx, req)
+}
+
+func getSecretSourcesSpec(labels map[string]string) (string, bool) {
+	if labels == nil {
+		return "", false
+	}
+	if spec, exists := labels[secretSourcesLabel]; exists {
+		return spec, true
+	}
+	if spec, exists := labels[secretSourcesLabelAlt]; exists {
+		return spec, true
+	}
+	return "", false
+}
+
+func (d *SecretsDriver) getAggregatedSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
+	sources, err := parseSecretSources(req.SecretLabels, d.provider)
+	if err != nil {
+		return nil, err
+	}
+
+	values := make(map[string]string, len(sources))
+	for _, source := range sources {
+		sourceReq := req
+		sourceReq.SecretLabels = labelsForSecretSource(req.SecretLabels, d.provider.GetProviderName(), source)
+
+		value, err := d.provider.GetSecret(ctx, sourceReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get source %q (path %q): %w", source.Key, source.Path, err)
+		}
+		values[source.Key] = string(value)
+	}
+
+	return renderAggregatedSecret(values, getSecretFormat(req.SecretLabels))
+}
+
+func parseSecretSources(labels map[string]string, provider providers.SecretsProvider) ([]secretSource, error) {
+	spec, exists := getSecretSourcesSpec(labels)
+	if !exists {
+		return nil, fmt.Errorf("%s label is required", secretSourcesLabel)
+	}
+
+	var sources []secretSource
+	if err := json.Unmarshal([]byte(spec), &sources); err != nil {
+		return nil, fmt.Errorf("invalid %s JSON: %v", secretSourcesLabel, err)
+	}
+	if len(sources) == 0 {
+		return nil, fmt.Errorf("%s must contain at least one source", secretSourcesLabel)
+	}
+
+	seenKeys := make(map[string]struct{}, len(sources))
+	for i := range sources {
+		sources[i].Provider = strings.TrimSpace(sources[i].Provider)
+		sources[i].Path = strings.TrimSpace(sources[i].Path)
+		sources[i].Field = strings.TrimSpace(sources[i].Field)
+		sources[i].Key = strings.TrimSpace(sources[i].Key)
+
+		if sources[i].Path == "" {
+			return nil, fmt.Errorf("source %d path is required", i)
+		}
+		if sources[i].Key == "" {
+			return nil, fmt.Errorf("source %d key is required", i)
+		}
+		if sources[i].Provider != "" && !provider.Matches(sources[i].Provider) {
+			return nil, fmt.Errorf("source %d provider %q does not match", i, sources[i].Provider)
+		}
+		if _, exists := seenKeys[sources[i].Key]; exists {
+			return nil, fmt.Errorf("duplicate source key %q", sources[i].Key)
+		}
+		seenKeys[sources[i].Key] = struct{}{}
+	}
+
+	return sources, nil
+}
+
+func labelsForSecretSource(baseLabels map[string]string, providerName string, source secretSource) map[string]string {
+	labels := copyStringMap(baseLabels)
+	delete(labels, secretSourcesLabel)
+	delete(labels, secretSourcesLabelAlt)
+	delete(labels, secretFormatLabel)
+	delete(labels, secretFormatLabelAlt)
+
+	switch providerName {
+	case "vault":
+		labels["vault_path"] = source.Path
+		setOrDelete(labels, "vault_field", source.Field)
+	case "aws":
+		labels["aws_secret_name"] = source.Path
+		setOrDelete(labels, "aws_field", source.Field)
+	case "gcp":
+		labels["gcp_secret_name"] = source.Path
+		setOrDelete(labels, "gcp_field", source.Field)
+	case "azure":
+		labels["azure_secret_name"] = source.Path
+		setOrDelete(labels, "azure_field", source.Field)
+	case "openbao":
+		labels["openbao_path"] = source.Path
+		setOrDelete(labels, "openbao_field", source.Field)
+	}
+
+	return labels
+}
+
+func setOrDelete(labels map[string]string, key, value string) {
+	if value == "" {
+		delete(labels, key)
+		return
+	}
+	labels[key] = value
+}
+
+func copyStringMap(values map[string]string) map[string]string {
+	copied := make(map[string]string, len(values))
+	for key, value := range values {
+		copied[key] = value
+	}
+	return copied
+}
+
+func getSecretFormat(labels map[string]string) string {
+	if labels == nil {
+		return "json"
+	}
+	if format := strings.TrimSpace(labels[secretFormatLabel]); format != "" {
+		return strings.ToLower(format)
+	}
+	if format := strings.TrimSpace(labels[secretFormatLabelAlt]); format != "" {
+		return strings.ToLower(format)
+	}
+	return "json"
+}
+
+func renderAggregatedSecret(values map[string]string, format string) ([]byte, error) {
+	switch format {
+	case "", "json":
+		return json.Marshal(values)
+	case "env":
+		keys := make([]string, 0, len(values))
+		for key := range values {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		lines := make([]string, 0, len(values))
+		for _, key := range keys {
+			if !isValidEnvKey(key) {
+				return nil, fmt.Errorf("invalid env key %q: must match [A-Z_][A-Z0-9_]*", key)
+			}
+			value := values[key]
+			value = escapeEnvValue(value)
+			lines = append(lines, fmt.Sprintf("%s=%s", key, value))
+		}
+		return []byte(strings.Join(lines, "\n") + "\n"), nil
+	default:
+		return nil, fmt.Errorf("unsupported aggregated secret format %q", format)
+	}
+}
+
+func isValidEnvKey(key string) bool {
+	if key == "" {
+		return false
+	}
+	first := key[0]
+	if (first < 'A' || first > 'Z') && first != '_' {
+		return false
+	}
+	for _, c := range key {
+		if (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func escapeEnvValue(value string) string {
+	result := make([]rune, 0, len(value))
+	for _, c := range value {
+		switch c {
+		case '\\':
+			result = append(result, '\\', '\\')
+		case '\n':
+			result = append(result, '\\', 'n')
+		case '\r':
+			result = append(result, '\\', 'r')
+		case '"':
+			result = append(result, '\\', '"')
+		default:
+			result = append(result, c)
+		}
+	}
+	return string(result)
 }
 
 // shouldNotReuse returns the value for secrets.Response.DoNotReuse.
@@ -246,6 +456,8 @@ func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
 		DockerSecretName: req.SecretName,
 		SecretPath:       secretPath,
 		SecretField:      secretField,
+		SecretLabels:     copyStringMap(req.SecretLabels),
+		ServiceName:      req.ServiceName,
 		ServiceNames:     []string{req.ServiceName}, // Start with current service
 		LastHash:         hash,
 		LastUpdated:      time.Now(),
@@ -356,6 +568,21 @@ func (d *SecretsDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	if _, exists := getSecretSourcesSpec(secretInfo.SecretLabels); exists {
+		req := secrets.Request{
+			SecretName:   secretInfo.DockerSecretName,
+			ServiceName:  secretInfo.ServiceName,
+			SecretLabels: copyStringMap(secretInfo.SecretLabels),
+		}
+		value, err := d.getAggregatedSecret(ctx, req)
+		if err != nil {
+			log.Errorf("Error checking aggregated secret change for %s: %v", secretInfo.DockerSecretName, err)
+			return false
+		}
+		currentHash := fmt.Sprintf("%x", sha256.Sum256(value))
+		return currentHash != secretInfo.LastHash
+	}
+
 	changed, err := d.provider.CheckSecretChanged(ctx, secretInfo)
 	if err != nil {
 		log.Errorf("Error checking secret change for %s: %v", secretInfo.DockerSecretName, err)
@@ -373,33 +600,38 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	req := secrets.Request{
 		SecretName:   secretInfo.DockerSecretName,
 		SecretLabels: make(map[string]string),
+		ServiceName:  secretInfo.ServiceName,
 	}
 
-	// Set appropriate field and path labels based on provider
-	switch secretInfo.Provider {
-	case "vault":
-		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		// Extract the specific path part from the full path
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
-	case "aws":
-		req.SecretLabels["aws_field"] = secretInfo.SecretField
-		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
-	case "gcp":
-		req.SecretLabels["gcp_field"] = secretInfo.SecretField
-		req.SecretLabels["gcp_secret_name"] = secretInfo.SecretPath
-	case "azure":
-		req.SecretLabels["azure_field"] = secretInfo.SecretField
-		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
-	case "openbao":
-		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+	if len(secretInfo.SecretLabels) > 0 {
+		req.SecretLabels = copyStringMap(secretInfo.SecretLabels)
+	} else {
+		// Set appropriate field and path labels based on provider
+		switch secretInfo.Provider {
+		case "vault":
+			req.SecretLabels["vault_field"] = secretInfo.SecretField
+			// Extract the specific path part from the full path
+			req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		case "aws":
+			req.SecretLabels["aws_field"] = secretInfo.SecretField
+			req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
+		case "gcp":
+			req.SecretLabels["gcp_field"] = secretInfo.SecretField
+			req.SecretLabels["gcp_secret_name"] = secretInfo.SecretPath
+		case "azure":
+			req.SecretLabels["azure_field"] = secretInfo.SecretField
+			req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
+		case "openbao":
+			req.SecretLabels["openbao_field"] = secretInfo.SecretField
+			req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
+		}
 	}
 
 	// Get the new secret value from the provider
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	newValue, err := d.provider.GetSecret(ctx, req)
+	newValue, err := d.getSecretValue(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to get updated secret from provider: %v", err)
 	}

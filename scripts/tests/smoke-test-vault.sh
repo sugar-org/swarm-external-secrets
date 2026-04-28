@@ -18,6 +18,19 @@ SECRET_FIELD="password"
 SECRET_VALUE="vault-smoke-pass-v1"
 SECRET_VALUE_ROTATED="vault-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-vault-compose.yml"
+
+# Multi-source test values
+MULTI_SOURCE_MYSQL_ROOT="mysql-root-pass-v1"
+MULTI_SOURCE_MYSQL_USER="mysql-user-pass-v1"
+MULTI_SOURCE_REDIS="redis-pass-v1"
+MULTI_SOURCE_MYSQL_ROOT_ROTATED="mysql-root-pass-v2"
+MULTI_SOURCE_MYSQL_USER_ROTATED="mysql-user-pass-v2"
+MULTI_SOURCE_REDIS_ROTATED="redis-pass-v2"
+
+# Secret names
+SECRET_APP_CREDENTIALS="app_credentials"
+SECRET_APP_CREDENTIALS_ENV="app_credentials_env"
+
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
 EXIT_CODE=0
 # Cleanup trap
@@ -68,6 +81,22 @@ docker exec "${VAULT_CONTAINER}" \
     "${SECRET_FIELD}=${SECRET_VALUE}"
 success "Secret written: secret/${SECRET_PATH} ${SECRET_FIELD}=${SECRET_VALUE}"
 
+# Write multi-source secrets to Vault
+info "Writing multi-source secrets to Vault..."
+docker exec "${VAULT_CONTAINER}" \
+    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
+    vault kv put \
+    "secret/database/mysql" \
+    "password=${SECRET_VALUE}" \
+    "root_password=${MULTI_SOURCE_MYSQL_ROOT}" \
+    "user_password=${MULTI_SOURCE_MYSQL_USER}"
+docker exec "${VAULT_CONTAINER}" \
+    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
+    vault kv put \
+    "secret/database/redis" \
+    "password=${MULTI_SOURCE_REDIS}"
+success "Multi-source secrets written."
+
 # Get the tmp auth token from vault
 info "Getting auth token from Vault..."
 VAULT_TOKEN=$(docker exec "${VAULT_CONTAINER}" \
@@ -111,12 +140,23 @@ assert_no_sensitive_rotation_metadata_logs
 info "Verifying secret value matches expected password..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
+# Verify multi-source JSON secret
+info "Verifying multi-source JSON secret (app_credentials)..."
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "MYSQL_ROOT_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "MYSQL_USER_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "REDIS_PASSWORD" 60
+
+# Verify multi-source ENV secret
+info "Verifying multi-source ENV secret (app_credentials_env)..."
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "MYSQL_ROOT_PASSWORD" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "REDIS_PASSWORD" 60
+
 # Capture container ID now, before rotation, to verify in-place update
 info "Capturing running container ID before rotation..."
 APP_CONTAINER_ID=$(get_running_container_id "${STACK_NAME}" "app")
 success "Container to watch: ${APP_CONTAINER_ID:0:12}"
 
-# Rotate the password and verify
+# Rotate single secret and verify
 info "Rotating secret in Vault..."
 docker exec "${VAULT_CONTAINER}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
@@ -138,5 +178,32 @@ log_stack "${STACK_NAME}" "app"
 info "Verifying rotated secret value (waiting for in-place update, up to 180s)..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
+# Rotate multi-source secrets and verify
+info "Rotating multi-source secrets in Vault..."
+docker exec "${VAULT_CONTAINER}" \
+    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
+    vault kv put \
+    "secret/database/mysql" \
+    "password=${SECRET_VALUE_ROTATED}" \
+    "root_password=${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" \
+    "user_password=${MULTI_SOURCE_MYSQL_USER_ROTATED}"
+docker exec "${VAULT_CONTAINER}" \
+    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
+    vault kv put \
+    "secret/database/redis" \
+    "password=${MULTI_SOURCE_REDIS_ROTATED}"
+success "Multi-source secrets rotated."
 
-success "Vault smoke test PASSED"
+info "Waiting for multi-source rotation to propagate (20s)..."
+sleep 20
+
+info "Verifying rotated multi-source JSON secret..."
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "${MULTI_SOURCE_MYSQL_USER_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS}" "${MULTI_SOURCE_REDIS_ROTATED}" 60
+
+info "Verifying rotated multi-source ENV secret..."
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "${MULTI_SOURCE_MYSQL_ROOT_ROTATED}" 60
+verify_secret_contains "${STACK_NAME}" "app" "${SECRET_APP_CREDENTIALS_ENV}" "${MULTI_SOURCE_REDIS_ROTATED}" 60
+
+success "Vault smoke test PASSED (incl. multi-source)"
