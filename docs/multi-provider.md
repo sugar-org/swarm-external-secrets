@@ -28,6 +28,20 @@ docker plugin set swarm-external-secrets:latest \
     VAULT_TOKEN="hvs.example-token"
 ```
 
+**Mount Path Behavior:**
+
+- By default, Vault KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
+- If you set `VAULT_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
+
+**Example with Custom Mount Path:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="https://vault.example.com:8200" \
+    VAULT_TOKEN="hvs.example-token" \
+    VAULT_MOUNT_PATH="kv"
+```
+
 ---
 
 ### 2. AWS Secrets Manager
@@ -112,6 +126,20 @@ docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="openbao" \
     OPENBAO_ADDR="https://openbao.example.com:8200" \
     OPENBAO_TOKEN="ob_example-token"
+```
+
+**Mount Path Behavior:**
+
+- By default, OpenBao KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
+- If you set `OPENBAO_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
+
+**Example with Custom Mount Path:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_TOKEN="ob_example-token" \
+    OPENBAO_MOUNT_PATH="kv"
 ```
 
 ---
