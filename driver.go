@@ -18,11 +18,6 @@ import (
 	"github.com/sugar-org/vault-swarm-plugin/providers"
 )
 
-const (
-	kvV2PathFormat        = "secret/data/%s"
-	kvV2ServicePathFormat = "secret/data/%s/%s"
-)
-
 // SecretsDriver implements the secrets.Driver interface with multi-provider support
 type SecretsDriver struct {
 	provider      providers.SecretsProvider
@@ -129,6 +124,25 @@ func NewDriver() (*SecretsDriver, error) {
 	return driver, nil
 }
 
+// buildSecretInfo constructs a SecretInfo from the incoming request, using the
+// provider to resolve the secret path. This is the single point where we
+// translate a Docker secrets.Request into our internal representation.
+func (d *SecretsDriver) buildSecretInfo(req secrets.Request) *providers.SecretInfo {
+	secretField := req.SecretLabels[d.provider.GetSecretFieldLabel()]
+	if secretField == "" {
+		secretField = "value"
+	}
+
+	return &providers.SecretInfo{
+		DockerSecretName: req.SecretName,
+		SecretPath:       d.provider.BuildSecretPath(req),
+		SecretField:	  secretField,
+		ServiceNames:     []string{req.ServiceName},
+		Provider:         d.provider.GetProviderName(),
+		Labels:           req.SecretLabels,
+	}
+}
+
 // Get method implements the secrets.Driver interface
 func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 	log.Printf("Received secret request for: %s using provider: %s", req.SecretName, d.provider.GetProviderName())
@@ -139,12 +153,15 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 		}
 	}
 
+	// Build SecretInfo once from the request — used for all downstream calls
+	secretInfo := d.buildSecretInfo(req)
+
 	// Add context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Get secret from the provider
-	value, err := d.provider.GetSecret(ctx, req)
+	value, err := d.provider.GetSecret(ctx, secretInfo)
 	if err != nil {
 		log.Printf("Error getting secret from provider: %v", err)
 		return secrets.Response{
@@ -156,11 +173,11 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 
 	// Track this secret for monitoring if rotation is enabled
 	if d.config.EnableRotation && d.provider.SupportsRotation() {
-		d.trackSecret(req, value)
+		d.trackSecret(secretInfo, value)
 	}
 
 	// Determine if secret should be reusable (Docker DoNotReuse=true means do not cache/reuse)
-	doNotReuse := d.shouldNotReuse(req)
+	doNotReuse := d.shouldNotReuse(secretInfo)
 	log.Printf("Get secret %q: DoNotReuse=%v (Swarm may reuse cached value when false)", req.SecretName, doNotReuse)
 
 	log.Printf("Successfully returning secret value")
@@ -173,22 +190,22 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 // shouldNotReuse returns the value for secrets.Response.DoNotReuse.
 // When true, Docker should not reuse a cached value (fetch from provider again).
 // Label secret_reuse: "true" means allow reuse → DoNotReuse must be false (see docs/multi-provider.md).
-func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
-	if reuse, exists := req.SecretLabels["secret_reuse"]; exists {
+func (d *SecretsDriver) shouldNotReuse(secretInfo *providers.SecretInfo) bool {
+	if reuse, exists := secretInfo.Labels["secret_reuse"]; exists {
 		v := strings.ToLower(strings.TrimSpace(reuse))
 		allowReuse := v == "true"
 		if allowReuse {
-			log.Printf("secret_reuse=%q for %q: allowing Swarm reuse (DoNotReuse=false)", reuse, req.SecretName)
+			log.Printf("secret_reuse=%q for %q: allowing Swarm reuse (DoNotReuse=false)", reuse, secretInfo.DockerSecretName)
 			return false
 		}
-		log.Printf("secret_reuse=%q for %q: disallowing Swarm reuse (DoNotReuse=true)", reuse, req.SecretName)
+		log.Printf("secret_reuse=%q for %q: disallowing Swarm reuse (DoNotReuse=true)", reuse, secretInfo.DockerSecretName)
 		return true
 	}
 
 	// Don't reuse dynamic secrets or certificates
-	if strings.Contains(req.SecretName, "cert") ||
-		strings.Contains(req.SecretName, "token") ||
-		strings.Contains(req.SecretName, "dynamic") {
+	if strings.Contains(secretInfo.DockerSecretName, "cert") ||
+		strings.Contains(secretInfo.DockerSecretName, "token") ||
+		strings.Contains(secretInfo.DockerSecretName, "dynamic") {
 		return true
 	}
 
@@ -196,83 +213,41 @@ func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
 }
 
 // trackSecret adds or updates a secret in the tracking system
-func (d *SecretsDriver) trackSecret(req secrets.Request, value []byte) {
+func (d *SecretsDriver) trackSecret(secretInfo *providers.SecretInfo, value []byte) {
 	d.trackerMutex.Lock()
 	defer d.trackerMutex.Unlock()
 
 	// Calculate hash for change detection
 	hash := fmt.Sprintf("%x", sha256.Sum256(value))
 
-	// Extract secret field from labels based on provider
-	var secretField string
-	switch d.provider.GetProviderName() {
-	case "vault":
-		secretField = req.SecretLabels["vault_field"]
-	case "aws":
-		secretField = req.SecretLabels["aws_field"]
-	case "gcp":
-		secretField = req.SecretLabels["gcp_field"]
-	case "azure":
-		secretField = req.SecretLabels["azure_field"]
-	case "openbao":
-		secretField = req.SecretLabels["openbao_field"]
-	}
+	log.Tracef("Current provider %s tracking secret: %s at path: %s",
+		secretInfo.Provider, secretInfo.DockerSecretName, secretInfo.SecretPath)
 
-	if secretField == "" {
-		secretField = "value" // default field
-	}
-
-	// Build secret path using provider-specific logic
-	var secretPath string
-	switch d.provider.GetProviderName() {
-	case "vault":
-		secretPath = d.buildVaultSecretPath(req)
-	case "aws":
-		secretPath = d.buildAWSSecretName(req)
-	case "gcp":
-		secretPath = d.buildGCPSecretName(req)
-	case "azure":
-		secretPath = d.buildAzureSecretName(req)
-	case "openbao":
-		secretPath = d.buildOpenBaoSecretPath(req)
-	default:
-		secretPath = req.SecretName
-	}
-
-	log.Tracef("Current provider %s tracking secret: %s at path: %s with field: %s",
-		d.provider.GetProviderName(), req.SecretName, secretPath, secretField)
-
-	secretInfo := &providers.SecretInfo{
-		DockerSecretName: req.SecretName,
-		SecretPath:       secretPath,
-		SecretField:      secretField,
-		ServiceNames:     []string{req.ServiceName}, // Start with current service
-		LastHash:         hash,
-		LastUpdated:      time.Now(),
-		Provider:         d.provider.GetProviderName(),
-	}
-
-	// If already tracking, update service names
-	if existing, exists := d.secretTracker[req.SecretName]; exists {
+	// If already tracking, update service names and hash
+	if existing, exists := d.secretTracker[secretInfo.DockerSecretName]; exists {
 		// Add service name if not already present
+		serviceName := secretInfo.ServiceNames[0]
 		serviceFound := false
 		for _, svc := range existing.ServiceNames {
-			if svc == req.ServiceName {
+			if svc == serviceName {
 				serviceFound = true
 				break
 			}
 		}
-		if !serviceFound && req.ServiceName != "" {
-			existing.ServiceNames = append(existing.ServiceNames, req.ServiceName)
+		if !serviceFound && serviceName != "" {
+			existing.ServiceNames = append(existing.ServiceNames, serviceName)
 		}
 		existing.LastHash = hash
 		existing.LastUpdated = time.Now()
+		existing.Labels = secretInfo.Labels
 	} else {
-		d.secretTracker[req.SecretName] = secretInfo
+		secretInfo.LastHash = hash
+		secretInfo.LastUpdated = time.Now()
+		d.secretTracker[secretInfo.DockerSecretName] = secretInfo
 	}
 
 	log.Tracef("Tracking secret: %s -> %s (provider: %s, services: %v)",
-		req.SecretName, secretPath, d.provider.GetProviderName(), secretInfo.ServiceNames)
+		secretInfo.DockerSecretName, secretInfo.SecretPath, secretInfo.Provider, secretInfo.ServiceNames)
 }
 
 // startMonitoring starts the background monitoring goroutine
@@ -351,55 +326,31 @@ func (d *SecretsDriver) handleSecretRotationResult(secretName string, secretInfo
 	}
 }
 
-// hasSecretChanged checks if a secret has changed using the provider
+// hasSecretChanged fetches the current secret value and compares its hash
+// against the stored hash to detect changes.
 func (d *SecretsDriver) hasSecretChanged(secretInfo *providers.SecretInfo) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	changed, err := d.provider.CheckSecretChanged(ctx, secretInfo)
+	currentValue, err := d.provider.GetSecret(ctx, secretInfo)
 	if err != nil {
 		log.Errorf("Error checking secret change for %s: %v", secretInfo.DockerSecretName, err)
 		return false
 	}
 
-	return changed
+	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
+	return currentHash != secretInfo.LastHash
 }
 
 // rotateSecret handles the secret rotation process
 func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	log.Printf("Starting rotation for secret: %s", secretInfo.DockerSecretName)
 
-	// Create a dummy request to get the new secret value
-	req := secrets.Request{
-		SecretName:   secretInfo.DockerSecretName,
-		SecretLabels: make(map[string]string),
-	}
-
-	// Set appropriate field and path labels based on provider
-	switch secretInfo.Provider {
-	case "vault":
-		req.SecretLabels["vault_field"] = secretInfo.SecretField
-		// Extract the specific path part from the full path
-		req.SecretLabels["vault_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
-	case "aws":
-		req.SecretLabels["aws_field"] = secretInfo.SecretField
-		req.SecretLabels["aws_secret_name"] = secretInfo.SecretPath
-	case "gcp":
-		req.SecretLabels["gcp_field"] = secretInfo.SecretField
-		req.SecretLabels["gcp_secret_name"] = secretInfo.SecretPath
-	case "azure":
-		req.SecretLabels["azure_field"] = secretInfo.SecretField
-		req.SecretLabels["azure_secret_name"] = secretInfo.SecretPath
-	case "openbao":
-		req.SecretLabels["openbao_field"] = secretInfo.SecretField
-		req.SecretLabels["openbao_path"] = strings.TrimPrefix(secretInfo.SecretPath, "secret/data/")
-	}
-
-	// Get the new secret value from the provider
+	// Get the new secret value from the provider using the existing SecretInfo
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	newValue, err := d.provider.GetSecret(ctx, req)
+	newValue, err := d.provider.GetSecret(ctx, secretInfo)
 	if err != nil {
 		return fmt.Errorf("failed to get updated secret from provider: %v", err)
 	}
@@ -589,36 +540,6 @@ func (d *SecretsDriver) applyServiceSecretUpdate(
 	return nil
 }
 
-// forceServiceUpdate forces a service to update (recreate tasks)
-// TODO - This method is currently not used, check later if needed
-// func (d *SecretsDriver) forceServiceUpdate(service swarm.Service) error {
-// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-// 	defer cancel()
-
-// 	// Get current service spec
-// 	serviceSpec := service.Spec
-
-// 	// Add/update a label to force the update
-// 	if serviceSpec.Labels == nil {
-// 		serviceSpec.Labels = make(map[string]string)
-// 	}
-// 	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
-
-// 	// Update the service
-// 	updateOptions := types.ServiceUpdateOptions{}
-// 	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, updateOptions)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to update service: %v", err)
-// 	}
-
-// 	if len(updateResponse.Warnings) > 0 {
-// 		log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
-// 	}
-
-// 	log.Printf("Forced update for service: %s", service.Spec.Name)
-// 	return nil
-// }
-
 // Stop gracefully stops the monitoring and cleans up resources
 func (d *SecretsDriver) Stop() error {
 	if d.monitorCancel != nil {
@@ -646,101 +567,3 @@ func (d *SecretsDriver) Stop() error {
 	}
 	return nil
 }
-
-// Helper methods for building provider-specific secret paths/names
-
-func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		return fmt.Sprintf(kvV2PathFormat, customPath)
-	}
-
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf(kvV2ServicePathFormat, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf(kvV2PathFormat, req.SecretName)
-}
-
-func (d *SecretsDriver) buildOpenBaoSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		return fmt.Sprintf(kvV2PathFormat, customPath)
-	}
-
-	// Default path structure for KV v2
-	if req.ServiceName != "" {
-		return fmt.Sprintf(kvV2ServicePathFormat, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf(kvV2PathFormat, req.SecretName)
-}
-
-func (d *SecretsDriver) buildAWSSecretName(req secrets.Request) string {
-	if customName, exists := req.SecretLabels["aws_secret_name"]; exists {
-		return customName
-	}
-
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s", req.ServiceName, req.SecretName)
-	}
-	return req.SecretName
-}
-
-func (d *SecretsDriver) buildGCPSecretName(req secrets.Request) string {
-	if customName, exists := req.SecretLabels["gcp_secret_name"]; exists {
-		return customName
-	}
-
-	secretName := req.SecretName
-	if req.ServiceName != "" {
-		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
-	}
-
-	return normalizeGCPSecretName(secretName)
-}
-
-func (d *SecretsDriver) buildAzureSecretName(req secrets.Request) string {
-	if customName, exists := req.SecretLabels["azure_secret_name"]; exists {
-		return customName
-	}
-
-	secretName := req.SecretName
-	if req.ServiceName != "" {
-		secretName = fmt.Sprintf("%s-%s", req.ServiceName, req.SecretName)
-	}
-
-	// Azure Key Vault secret names must match regex: ^[0-9a-zA-Z-]+$
-	result := ""
-	for _, char := range secretName {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == '-' {
-			result += string(char)
-		} else {
-			result += "-"
-		}
-	}
-
-	// Remove consecutive hyphens and leading/trailing hyphens
-	for strings.Contains(result, "--") {
-		result = strings.ReplaceAll(result, "--", "-")
-	}
-	result = strings.Trim(result, "-")
-
-	if result == "" || (result[0] >= '0' && result[0] <= '9') {
-		result = "secret-" + result
-	}
-	return result
-}
-
-// func (d *SecretsDriver) buildVaultSecretPath(req secrets.Request) string {
-// 	// Use custom path from labels if provided
-// 	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-// 		return fmt.Sprintf("secret/data/%s", customPath)
-// 	}
-
-// 	// Default path structure for KV v2
-// 	if req.ServiceName != "" {
-// 		return fmt.Sprintf("secret/data/%s/%s", req.ServiceName, req.SecretName)
-// 	}
-// 	return fmt.Sprintf("secret/data/%s", req.SecretName)
-// }

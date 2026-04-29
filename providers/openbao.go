@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 
 	"github.com/docker/go-plugins-helpers/secrets"
@@ -80,22 +79,21 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 }
 
 // GetSecret retrieves a secret value from OpenBao
-func (o *OpenBaoProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
-	secretPath := o.buildSecretPath(req)
-	log.Printf("Reading secret from OpenBao path: %s", secretPath)
+func (o *OpenBaoProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
+	log.Printf("Reading secret from OpenBao path: %s", secretInfo.SecretPath)
 
 	// Read secret from OpenBao
-	secret, err := o.client.Logical().ReadWithContext(ctx, secretPath)
+	secret, err := o.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret from OpenBao: %v", err)
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("secret not found at path: %s", secretPath)
+		return nil, fmt.Errorf("secret not found at path: %s", secretInfo.SecretPath)
 	}
 
-	// Extract the secret value
-	value, err := o.extractSecretValue(secret, req)
+	// Extract the secret value (unwraps KV v2 nested data if present)
+	value, err := ExtractSecretValueFromKV(secret.Data, secretInfo.SecretField)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}
@@ -109,37 +107,35 @@ func (o *OpenBaoProvider) SupportsRotation() bool {
 	return true
 }
 
-// CheckSecretChanged checks if a secret has changed in OpenBao
-func (o *OpenBaoProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
-	// Read secret from OpenBao
-	secret, err := o.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
-	if err != nil {
-		return false, fmt.Errorf("error reading secret from OpenBao: %v", err)
+// GetSecretFieldLabel returns the label key used by OpenBao for the secret field
+func (o *OpenBaoProvider) GetSecretFieldLabel() string {
+	return "openbao_field"
+}
+
+// BuildSecretPath constructs the OpenBao secret path based on request labels and service information
+func (o *OpenBaoProvider) BuildSecretPath(req secrets.Request) string {
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
+		// For KV v2, ensure we have the /data/ prefix
+		if o.config.MountPath == "secret" {
+			return fmt.Sprintf("%s/data/%s", o.config.MountPath, customPath)
+		}
+		return fmt.Sprintf("%s/%s", o.config.MountPath, customPath)
 	}
 
-	if secret == nil {
-		return false, fmt.Errorf("secret not found at path: %s", secretInfo.SecretPath)
+	// Default path structure for KV v2
+	if o.config.MountPath == "secret" {
+		if req.ServiceName != "" {
+			return fmt.Sprintf("%s/data/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
+		}
+		return fmt.Sprintf("%s/data/%s", o.config.MountPath, req.SecretName)
 	}
 
-	// Extract current value
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
+	// For other mount paths
+	if req.ServiceName != "" {
+		return fmt.Sprintf("%s/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
 	}
-
-	var currentValue []byte
-	if value, ok := data[secretInfo.SecretField]; ok {
-		currentValue = []byte(fmt.Sprintf("%v", value))
-	} else {
-		return false, fmt.Errorf("field %s not found in secret", secretInfo.SecretField)
-	}
-
-	// Calculate current hash
-	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
-
-	return currentHash != secretInfo.LastHash, nil
+	return fmt.Sprintf("%s/%s", o.config.MountPath, req.SecretName)
 }
 
 // GetProviderName returns the name of this provider
@@ -188,68 +184,4 @@ func (o *OpenBaoProvider) authenticate() error {
 	}
 
 	return nil
-}
-
-// buildSecretPath constructs the OpenBao secret path based on request labels and service information
-func (o *OpenBaoProvider) buildSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["openbao_path"]; exists {
-		// For KV v2, ensure we have the /data/ prefix
-		if o.config.MountPath == "secret" {
-			return fmt.Sprintf("%s/data/%s", o.config.MountPath, customPath)
-		}
-		return fmt.Sprintf("%s/%s", o.config.MountPath, customPath)
-	}
-
-	// Default path structure for KV v2
-	if o.config.MountPath == "secret" {
-		if req.ServiceName != "" {
-			return fmt.Sprintf("%s/data/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
-		}
-		return fmt.Sprintf("%s/data/%s", o.config.MountPath, req.SecretName)
-	}
-
-	// For other mount paths
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s/%s", o.config.MountPath, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("%s/%s", o.config.MountPath, req.SecretName)
-}
-
-// extractSecretValue extracts the appropriate value from the OpenBao response
-func (o *OpenBaoProvider) extractSecretValue(secret *api.Secret, req secrets.Request) ([]byte, error) {
-	// For KV v2, data is nested under "data"
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
-	}
-
-	// Check for specific field in labels
-	if field, exists := req.SecretLabels["openbao_field"]; exists {
-		if value, ok := data[field]; ok {
-			return []byte(fmt.Sprintf("%v", value)), nil
-		}
-		return nil, fmt.Errorf("field %s not found in secret", field)
-	}
-
-	// Default field names to try
-	defaultFields := []string{"value", "password", "secret", "data"}
-
-	// Try to find a value using default field names
-	for _, field := range defaultFields {
-		if value, ok := data[field]; ok {
-			return []byte(fmt.Sprintf("%v", value)), nil
-		}
-	}
-
-	// If no specific field found, return the first string value
-	for _, value := range data {
-		if strValue, ok := value.(string); ok {
-			return []byte(strValue), nil
-		}
-	}
-
-	return nil, fmt.Errorf("no suitable secret value found")
 }
