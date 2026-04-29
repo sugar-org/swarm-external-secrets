@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 
@@ -80,22 +79,21 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 }
 
 // GetSecret retrieves a secret value from Vault
-func (v *VaultProvider) GetSecret(ctx context.Context, req secrets.Request) ([]byte, error) {
-	secretPath := v.buildSecretPath(req)
-	log.Printf("Reading secret from Vault/OpenBao path: %s", secretPath)
+func (v *VaultProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
+	log.Printf("Reading secret from Vault/OpenBao path: %s", secretInfo.SecretPath)
 
 	// Read secret from Vault
-	secret, err := v.client.Logical().ReadWithContext(ctx, secretPath)
+	secret, err := v.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret from vault: %v", err)
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("secret not found at path: %s", secretPath)
+		return nil, fmt.Errorf("secret not found at path: %s", secretInfo.SecretPath)
 	}
 
-	// Extract the secret value
-	value, err := v.extractSecretValue(secret, req)
+	// Extract the secret value (unwraps KV v2 nested data if present)
+	value, err := ExtractSecretValueFromVaultKVv2(secret.Data, secretInfo.SecretField)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %v", err)
 	}
@@ -109,37 +107,35 @@ func (v *VaultProvider) SupportsRotation() bool {
 	return true
 }
 
-// CheckSecretChanged checks if a secret has changed in Vault
-func (v *VaultProvider) CheckSecretChanged(ctx context.Context, secretInfo *SecretInfo) (bool, error) {
-	// Read secret from Vault
-	secret, err := v.client.Logical().ReadWithContext(ctx, secretInfo.SecretPath)
-	if err != nil {
-		return false, fmt.Errorf("error reading secret from vault: %v", err)
+// GetSecretFieldLabel returns the label key used by Vault for the secret field
+func (v *VaultProvider) GetSecretFieldLabel() string {
+	return "vault_field"
+}
+
+// BuildSecretPath constructs the Vault secret path based on request labels and service information
+func (v *VaultProvider) BuildSecretPath(req secrets.Request) string {
+	// Use custom path from labels if provided
+	if customPath, exists := req.SecretLabels["vault_path"]; exists {
+		// For KV v2, ensure we have the /data/ prefix
+		if v.config.MountPath == "secret" {
+			return fmt.Sprintf("%s/data/%s", v.config.MountPath, customPath)
+		}
+		return fmt.Sprintf("%s/%s", v.config.MountPath, customPath)
 	}
 
-	if secret == nil {
-		return false, fmt.Errorf("secret not found at path: %s", secretInfo.SecretPath)
+	// Default path structure for KV v2
+	if v.config.MountPath == "secret" {
+		if req.ServiceName != "" {
+			return fmt.Sprintf("%s/data/%s/%s", v.config.MountPath, req.ServiceName, req.SecretName)
+		}
+		return fmt.Sprintf("%s/data/%s", v.config.MountPath, req.SecretName)
 	}
 
-	// Extract current value
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
+	// For other mount paths
+	if req.ServiceName != "" {
+		return fmt.Sprintf("%s/%s/%s", v.config.MountPath, req.ServiceName, req.SecretName)
 	}
-
-	var currentValue []byte
-	if value, ok := data[secretInfo.SecretField]; ok {
-		currentValue = []byte(fmt.Sprintf("%v", value))
-	} else {
-		return false, fmt.Errorf("field %s not found in secret", secretInfo.SecretField)
-	}
-
-	// Calculate current hash
-	currentHash := fmt.Sprintf("%x", sha256.Sum256(currentValue))
-
-	return currentHash != secretInfo.LastHash, nil
+	return fmt.Sprintf("%s/%s", v.config.MountPath, req.SecretName)
 }
 
 // GetProviderName returns the name of this provider
@@ -188,70 +184,6 @@ func (v *VaultProvider) authenticate() error {
 	}
 
 	return nil
-}
-
-// buildSecretPath constructs the Vault secret path based on request labels and service information
-func (v *VaultProvider) buildSecretPath(req secrets.Request) string {
-	// Use custom path from labels if provided
-	if customPath, exists := req.SecretLabels["vault_path"]; exists {
-		// For KV v2, ensure we have the /data/ prefix
-		if v.config.MountPath == "secret" {
-			return fmt.Sprintf("%s/data/%s", v.config.MountPath, customPath)
-		}
-		return fmt.Sprintf("%s/%s", v.config.MountPath, customPath)
-	}
-
-	// Default path structure for KV v2
-	if v.config.MountPath == "secret" {
-		if req.ServiceName != "" {
-			return fmt.Sprintf("%s/data/%s/%s", v.config.MountPath, req.ServiceName, req.SecretName)
-		}
-		return fmt.Sprintf("%s/data/%s", v.config.MountPath, req.SecretName)
-	}
-
-	// For other mount paths
-	if req.ServiceName != "" {
-		return fmt.Sprintf("%s/%s/%s", v.config.MountPath, req.ServiceName, req.SecretName)
-	}
-	return fmt.Sprintf("%s/%s", v.config.MountPath, req.SecretName)
-}
-
-// extractSecretValue extracts the appropriate value from the Vault response
-func (v *VaultProvider) extractSecretValue(secret *api.Secret, req secrets.Request) ([]byte, error) {
-	// For KV v2, data is nested under "data"
-	var data map[string]interface{}
-	if secretData, ok := secret.Data["data"]; ok {
-		data = secretData.(map[string]interface{})
-	} else {
-		data = secret.Data
-	}
-
-	// Check for specific field in labels
-	if field, exists := req.SecretLabels["vault_field"]; exists {
-		if value, ok := data[field]; ok {
-			return []byte(fmt.Sprintf("%v", value)), nil
-		}
-		return nil, fmt.Errorf("field %s not found in secret", field)
-	}
-
-	// Default field names to try
-	defaultFields := []string{"value", "password", "secret", "data"}
-
-	// Try to find a value using default field names
-	for _, field := range defaultFields {
-		if value, ok := data[field]; ok {
-			return []byte(fmt.Sprintf("%v", value)), nil
-		}
-	}
-
-	// If no specific field found, return the first string value
-	for _, value := range data {
-		if strValue, ok := value.(string); ok {
-			return []byte(strValue), nil
-		}
-	}
-
-	return nil, fmt.Errorf("no suitable secret value found")
 }
 
 // getConfigOrDefault returns config value or environment variable or default
