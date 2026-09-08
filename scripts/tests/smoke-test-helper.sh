@@ -45,6 +45,7 @@ path "auth/token/renew-self" {
 }
 EOF
     } | docker exec -i "${container}" "$@"
+    return $?
 }
 
 # Pass a JWT into `docker plugin set` with xtrace off so `set -x` does not
