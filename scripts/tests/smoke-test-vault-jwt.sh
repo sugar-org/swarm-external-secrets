@@ -136,13 +136,7 @@ done
 success "Vault is ready."
 
 info "Applying policy to Vault..."
-docker cp "${POLICY_FILE}" "${VAULT_CONTAINER}:/tmp/admin.hcl"
-docker exec "${VAULT_CONTAINER}" sh -lc 'cat >>/tmp/admin.hcl <<EOF
-
-path "auth/token/renew-self" {
-  capabilities = ["update"]
-}
-EOF'
+copy_jwt_smoke_policy "${VAULT_CONTAINER}" "${POLICY_FILE}"
 docker exec "${VAULT_CONTAINER}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
     vault policy write smoke-policy /tmp/admin.hcl

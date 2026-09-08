@@ -136,13 +136,7 @@ done
 success "OpenBao is ready."
 
 info "Applying policy to OpenBao..."
-docker cp "${POLICY_FILE}" "${OPENBAO_CONTAINER}:/tmp/admin.hcl"
-docker exec "${OPENBAO_CONTAINER}" sh -lc 'cat >>/tmp/admin.hcl <<EOF
-
-path "auth/token/renew-self" {
-  capabilities = ["update"]
-}
-EOF'
+copy_jwt_smoke_policy "${OPENBAO_CONTAINER}" "${POLICY_FILE}"
 docker exec "${OPENBAO_CONTAINER}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
     bao policy write smoke-policy /tmp/admin.hcl
