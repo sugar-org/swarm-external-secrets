@@ -15,9 +15,14 @@ The Vault Swarm Plugin supports multiple secrets providers, allowing you to use 
 | `VAULT_ADDR` | Vault server address | `http://localhost:8200` |
 | `VAULT_TOKEN` | Vault token for authentication | — |
 | `VAULT_MOUNT_PATH` | Mount path for KV engine | `secret` |
-| `VAULT_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
+| `VAULT_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `VAULT_ROLE_ID` | Role ID for AppRole authentication | — |
 | `VAULT_SECRET_ID` | Secret ID for AppRole authentication | — |
+| `VAULT_APPROLE_AUTH_PATH` | AppRole auth mount path | `approle` |
+| `VAULT_JWT_ROLE` | JWT auth role name | — |
+| `VAULT_JWT` | Signed JWT (or use `VAULT_JWT_FILE`) | — |
+| `VAULT_JWT_FILE` | Path inside the plugin to a JWT file | — |
+| `VAULT_JWT_AUTH_PATH` | JWT auth mount path | `jwt` |
 | `VAULT_SKIP_VERIFY` | Skip TLS verification (not recommended for production) | `false` |
 
 **Example:**
@@ -26,6 +31,17 @@ docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="vault" \
     VAULT_ADDR="https://vault.example.com:8200" \
     VAULT_TOKEN="hvs.example-token"
+```
+
+JWT authentication (client token is renewed; see [Vault and OpenBao JWT](jwt.md)):
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="https://vault.example.com:8200" \
+    VAULT_AUTH_METHOD="jwt" \
+    VAULT_JWT_ROLE="swarm-external-secrets" \
+    VAULT_JWT="<signed-jwt>"
 ```
 
 **Mount Path Behavior:**
@@ -115,9 +131,14 @@ docker plugin set swarm-external-secrets:latest \
 | `OPENBAO_ADDR` | OpenBao server address | `http://localhost:8200` |
 | `OPENBAO_TOKEN` | OpenBao token for authentication | — |
 | `OPENBAO_MOUNT_PATH` | Mount path for KV engine | `secret` |
-| `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
+| `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `OPENBAO_ROLE_ID` | Role ID for AppRole authentication | — |
 | `OPENBAO_SECRET_ID` | Secret ID for AppRole authentication | — |
+| `OPENBAO_APPROLE_AUTH_PATH` | AppRole auth mount path | `approle` |
+| `OPENBAO_JWT_ROLE` | JWT auth role name | — |
+| `OPENBAO_JWT` | Signed JWT (or use `OPENBAO_JWT_FILE`) | — |
+| `OPENBAO_JWT_FILE` | Path inside the plugin to a JWT file | — |
+| `OPENBAO_JWT_AUTH_PATH` | JWT auth mount path | `jwt` |
 | `OPENBAO_SKIP_VERIFY` | Skip TLS verification (not recommended for production) | `false` |
 
 **Example:**
@@ -126,6 +147,17 @@ docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="openbao" \
     OPENBAO_ADDR="https://openbao.example.com:8200" \
     OPENBAO_TOKEN="ob_example-token"
+```
+
+JWT authentication (client token is renewed; see [Vault and OpenBao JWT](jwt.md)):
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_AUTH_METHOD="jwt" \
+    OPENBAO_JWT_ROLE="swarm-external-secrets" \
+    OPENBAO_JWT="<signed-jwt>"
 ```
 
 **Mount Path Behavior:**
@@ -381,6 +413,10 @@ secrets:
 
 ## Provider-Specific Notes
 
+### HashiCorp Vault
+- Supports token, AppRole, and JWT authentication
+- JWT and AppRole client tokens are renewed at about two-thirds of TTL; static tokens are not (see [Vault and OpenBao JWT](jwt.md))
+
 ### AWS Secrets Manager
 - Supports IAM roles, access keys, and profiles
 - JSON secrets are parsed automatically
@@ -394,7 +430,8 @@ secrets:
 ### OpenBao
 - Fully compatible with Vault API
 - Use for Vault migration or open-source requirements
-- Supports all Vault authentication methods
+- Supports token, AppRole, and JWT authentication
+- JWT and AppRole client tokens are renewed at about two-thirds of TTL; static tokens are not (see [Vault and OpenBao JWT](jwt.md))
 
 ### OCI Vault
 - Supports API key and instance principal authentication

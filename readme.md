@@ -22,14 +22,14 @@ For more information, check out [GSoC Contribution Guidelines](./CONTRIBUTING.md
 
 ## Documentation
 
-Please refer to the [docs](https://sugar-org.github.io/swarm-external-secrets/) for more information.
+Please refer to the [docs](https://sugar-org.github.io/swarm-external-secrets/) for more information. JWT login and Vault/OpenBao client-token renewal are in `docs/jwt.md`.
 
 ## Supported Providers
 
 ## Features
 
 - **Multi-Provider Support**: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault
-- **Multiple Auth Methods**: Support for various authentication methods per provider
+- **Multiple Auth Methods**: Token, AppRole, and JWT for Vault and OpenBao, including client-token renewal
 - **Automatic Secret Rotation**: Monitor providers for changes and automatically update Docker secrets and services
 - **Real-time Monitoring**: Web dashboard with system metrics, health status, and performance tracking
 - **Flexible Path Mapping**: Customize secret paths and field extraction per provider
@@ -168,10 +168,10 @@ docker plugin set swarm-external-secrets:latest \
 
 | Provider | Status | Authentication | Rotation |
 |----------|--------|---------------|----------|
-| HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
+| HashiCorp Vault | ✅ Stable | Token, AppRole, JWT | ✅ |
 | AWS Secrets Manager | ✅ Stable | IAM, Access Keys | ✅ |
 | Azure Key Vault | ✅ Stable | Service Principal, Access Token | ✅ |
-| OpenBao | ✅ Stable | Token, AppRole | ✅ |
+| OpenBao | ✅ Stable | Token, AppRole, JWT | ✅ |
 | OCI Vault | 🚧 Beta | API Key, Instance Principal | ✅ |
 | GCP Secret Manager | 🚧 Placeholder | - | - |
 

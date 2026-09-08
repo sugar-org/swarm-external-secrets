@@ -6,6 +6,11 @@ This document describes the automatic secret rotation feature of the Swarm Exter
 
 The plugin automatically monitors secrets in Vault and updates the corresponding Docker Swarm secrets and services when changes are detected. This ensures that applications always use the latest secret values without manual intervention.
 
+This is **secret value** rotation. Keeping the plugin logged in to Vault or OpenBao
+(AppRole/JWT client-token renew-self and re-login) is documented separately in
+[Vault and OpenBao JWT](jwt.md). A static `VAULT_TOKEN` or `OPENBAO_TOKEN` is
+not renewed.
+
 ## How It Works
 
 1. **Secret Tracking**: When a Docker service requests a secret, the plugin tracks the mapping between the Docker secret and its corresponding Vault path.
