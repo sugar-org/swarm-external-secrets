@@ -49,6 +49,16 @@ groups:
       smoke-test-openbao:
         help: Run OpenBao smoke test to validate plugin end-to-end
         run: bash ./scripts/tests/smoke-test-openbao.sh
+  release:
+    tasks:
+      dry-run:
+        help: Preview the next semantic version from conventional commits on origin/main
+        run: ./scripts/cut-release.sh --dry-run
+
+      cut:
+        help: Create a GitHub release from conventional commits on origin/main (no CI)
+        run: ./scripts/cut-release.sh
+
   ci:
     # Aggregate tasks useful for CI pipelines
     tasks:
