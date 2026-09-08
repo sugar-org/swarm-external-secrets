@@ -6,6 +6,24 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 )
 
+func TestShortID(t *testing.T) {
+	if got := shortID(); len(got) != 8 {
+		t.Fatalf("shortID() length = %d, want 8", len(got))
+	}
+
+	seen := make(map[string]bool, 1000)
+	for i := 0; i < 1000; i++ {
+		id := shortID()
+		if len(id) != 8 {
+			t.Fatalf("shortID() length = %d, want 8", len(id))
+		}
+		if seen[id] {
+			t.Fatalf("shortID() returned duplicate id %q", id)
+		}
+		seen[id] = true
+	}
+}
+
 func TestBuildUpdatedSecretReferences(t *testing.T) {
 	tests := []struct {
 		name          string
