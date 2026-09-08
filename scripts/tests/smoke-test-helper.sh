@@ -36,29 +36,39 @@ write_jwt_smoke_policy() {
     local container="$1"
     local policy_file="$2"
     shift 2
-    {
-        cat "${policy_file}"
-        cat <<'EOF'
+    local tmp status=0
+    tmp="$(mktemp)"
+    if [[ ! -r "${policy_file}" ]] || ! cat "${policy_file}" > "${tmp}"; then
+        rm -f "${tmp}"
+        return 1
+    fi
+    cat <<'EOF' >> "${tmp}"
 
 path "auth/token/renew-self" {
   capabilities = ["update"]
 }
 EOF
-    } | docker exec -i "${container}" "$@"
-    return $?
+    docker exec -i "${container}" "$@" < "${tmp}" || status=$?
+    rm -f "${tmp}"
+    return "${status}"
 }
 
 # Pass a JWT into `docker plugin set` with xtrace off so `set -x` does not
-# print the token in CI logs.
+# print the token in CI logs. Restore xtrace only if the caller had it on.
 configure_plugin_jwt() {
     local jwt_file="$1"
     local jwt_env="$2"
     shift 2
-    local jwt status=0
+    local jwt status=0 xtrace_was_on=0
+    case "$-" in
+        *x*) xtrace_was_on=1 ;;
+    esac
     set +x
     jwt="$(tr -d '\n' < "${jwt_file}")"
     docker plugin set "${PLUGIN_NAME}" "$@" "${jwt_env}=${jwt}" || status=$?
-    set -x
+    if [[ "${xtrace_was_on}" -eq 1 ]]; then
+        set -x
+    fi
     return "${status}"
 }
 
