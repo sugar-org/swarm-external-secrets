@@ -8,7 +8,8 @@ The plugin automatically monitors secrets in Vault and updates the corresponding
 
 This is **secret value** rotation. Keeping the plugin logged in to Vault or OpenBao
 (AppRole/JWT client-token renew-self and re-login) is documented separately in
-[Vault and OpenBao JWT](jwt.md). A static `VAULT_TOKEN` is not renewed.
+[Vault and OpenBao JWT](jwt.md). A static `VAULT_TOKEN` or `OPENBAO_TOKEN` is
+not renewed.
 
 ## How It Works
 

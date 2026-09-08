@@ -74,7 +74,9 @@ path "auth/token/renew-self" {
 }
 ```
 
-Renewal and re-auth log lines (with `vault` or `openbao` as the provider name):
+Renewal and re-auth log lines (with `vault` or `openbao` as the provider name).
+The re-auth warning is visible at the default log level; the two success lines
+are debug-only (`LOG_LEVEL=debug` or `6`):
 
 ```text
 Successfully renewed vault token

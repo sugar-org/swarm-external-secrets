@@ -24,9 +24,10 @@ used. The file is read again on every re-login, so you can rotate the identity
 JWT on disk without reconfiguring the plugin. A JWT stored in `*_JWT` is fixed
 until the next `docker plugin set`.
 
-`*_JWT_FILE` is opened **inside the plugin**. The plugin bind-mounts host
-`/run/swarm-external-secrets`, so put the file there (or another mounted path)
-and point the env var at that in-plugin path.
+`*_JWT_FILE` is opened **inside the plugin**. The default plugin config
+bind-mounts host `/run/swarm-external-secrets` only, so the JWT file must live
+under that directory (same path on the host and in the plugin). Additional
+paths work only if you ship a custom plugin with extra mounts.
 
 ### Environment JWT
 
@@ -56,7 +57,7 @@ docker plugin set swarm-external-secrets:latest \
 
 ```bash
 sudo mkdir -p /run/swarm-external-secrets
-sudo install -m 0644 ./workload.jwt /run/swarm-external-secrets/workload.jwt
+sudo install -m 0600 ./workload.jwt /run/swarm-external-secrets/workload.jwt
 
 docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="vault" \
@@ -72,8 +73,12 @@ Enable JWT auth and create a role whose policies can read your KV secrets.
 The issued token must also be allowed to renew itself:
 
 ```hcl
-path "secret/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+path "secret/data/*" {
+  capabilities = ["read"]
+}
+
+path "secret/metadata/*" {
+  capabilities = ["list"]
 }
 
 path "auth/token/renew-self" {
@@ -112,13 +117,12 @@ When the issued token is renewable and has a positive TTL, a background worker:
 Retries after a failed renew use a 5s wait that doubles up to one minute.
 
 Look for these plugin log lines (`vault` or `openbao` depending on the
-provider):
+provider). The re-auth warning is emitted at warn level; the two success lines
+are **debug** (`LOG_LEVEL=debug` or `6`):
 
-- `Successfully renewed vault token`
-- `Renewing vault token failed, attempting re-authentication`
-- `Successfully re-authenticated with vault`
-
-Enable `LOG_LEVEL=debug` (or `6`) if you need the debug-level renewal lines.
+- `Successfully renewed vault token` (debug)
+- `Renewing vault token failed, attempting re-authentication` (warn)
+- `Successfully re-authenticated with vault` (debug)
 
 !!! warning "Static tokens do not auto-renew"
     `VAULT_AUTH_METHOD=token` (the default) never starts the renewal worker.
