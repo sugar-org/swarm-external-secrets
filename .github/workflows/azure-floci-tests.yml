@@ -2,8 +2,18 @@ name: Azure Floci Tests
 
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "mkdocs.yml"
   push:
     branches: [main, alpha/provider-integration]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "mkdocs.yml"
 
 jobs:
   azure-floci-tests:
