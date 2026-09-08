@@ -175,17 +175,14 @@ docker exec "${VAULT_CONTAINER}" \
         max_ttl="${JWT_TOKEN_MAX_TTL}"
 success "Vault JWT auth configured."
 
-WORKLOAD_JWT="$(tr -d '\n' < "${JWT_WORKDIR}/workload.jwt")"
-
 info "Building plugin and configuring JWT auth..."
 build_plugin
 
-docker plugin set "${PLUGIN_NAME}" \
+configure_plugin_jwt "${JWT_WORKDIR}/workload.jwt" VAULT_JWT \
     SECRETS_PROVIDER="vault" \
     VAULT_ADDR="${VAULT_ADDR}" \
     VAULT_AUTH_METHOD="jwt" \
     VAULT_JWT_ROLE="${JWT_ROLE}" \
-    VAULT_JWT="${WORKLOAD_JWT}" \
     VAULT_JWT_AUTH_PATH="jwt" \
     VAULT_MOUNT_PATH="secret" \
     ENABLE_ROTATION="false" \

@@ -175,17 +175,14 @@ docker exec "${OPENBAO_CONTAINER}" \
         max_ttl="${JWT_TOKEN_MAX_TTL}"
 success "OpenBao JWT auth configured."
 
-WORKLOAD_JWT="$(tr -d '\n' < "${JWT_WORKDIR}/workload.jwt")"
-
 info "Building plugin and configuring JWT auth..."
 build_plugin
 
-docker plugin set "${PLUGIN_NAME}" \
+configure_plugin_jwt "${JWT_WORKDIR}/workload.jwt" OPENBAO_JWT \
     SECRETS_PROVIDER="openbao" \
     OPENBAO_ADDR="${OPENBAO_ADDR}" \
     OPENBAO_AUTH_METHOD="jwt" \
     OPENBAO_JWT_ROLE="${JWT_ROLE}" \
-    OPENBAO_JWT="${WORKLOAD_JWT}" \
     OPENBAO_JWT_AUTH_PATH="jwt" \
     OPENBAO_MOUNT_PATH="secret" \
     ENABLE_ROTATION="false" \

@@ -49,6 +49,20 @@ EOF
     rm -f "${tmp}"
 }
 
+# Pass a JWT into `docker plugin set` with xtrace off so `set -x` does not
+# print the token in CI logs.
+configure_plugin_jwt() {
+    local jwt_file="$1"
+    local jwt_env="$2"
+    shift 2
+    local jwt status=0
+    set +x
+    jwt="$(tr -d '\n' < "${jwt_file}")"
+    docker plugin set "${PLUGIN_NAME}" "$@" "${jwt_env}=${jwt}" || status=$?
+    set -x
+    return "${status}"
+}
+
 assert_no_sensitive_rotation_metadata_logs() {
     # Ensure trace-only rotation metadata isn't emitted at default log levels.
     # We look for the exact strings used by the driver.
