@@ -37,9 +37,12 @@ generate_local_jwt() {
     openssl genrsa -out "${JWT_WORKDIR}/jwt-private.pem" 2048 >/dev/null 2>&1
     openssl rsa -in "${JWT_WORKDIR}/jwt-private.pem" -pubout -out "${JWT_WORKDIR}/jwt-public.pem" >/dev/null 2>&1
 
-    local header payload unsigned signature
+    local header payload unsigned signature now exp
+    now="$(date +%s)"
+    exp="$((now + 3600))"
     header="$(printf '{"alg":"RS256","typ":"JWT"}' | base64url)"
-    payload="$(printf '{"iss":"swarm-external-secrets-local","sub":"swarm-external-secrets","aud":"vault"}' | base64url)"
+    # Vault/OpenBao JWT auth rejects tokens that omit iat, nbf, and exp.
+    payload="$(printf '{"iss":"swarm-external-secrets-local","sub":"swarm-external-secrets","aud":"vault","iat":%s,"nbf":%s,"exp":%s}' "${now}" "${now}" "${exp}" | base64url)"
     unsigned="${header}.${payload}"
     signature="$(printf '%s' "${unsigned}" | openssl dgst -sha256 -sign "${JWT_WORKDIR}/jwt-private.pem" -binary | base64url)"
     printf '%s.%s\n' "${unsigned}" "${signature}" > "${JWT_WORKDIR}/workload.jwt"
