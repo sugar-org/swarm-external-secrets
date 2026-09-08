@@ -29,13 +29,13 @@ docker_daemon_logs() {
     return 0
 }
 
-# Vault/OpenBao images land docker-cp files in /tmp as root, so appending inside
-# the container fails with "Permission denied". Assemble the policy on the host.
-copy_jwt_smoke_policy() {
+# Assemble the JWT smoke policy on the host and pipe it into `vault`/`bao
+# policy write -`. docker cp into /tmp as root leaves 0600 files the
+# non-root server user cannot read.
+write_jwt_smoke_policy() {
     local container="$1"
     local policy_file="$2"
-    local tmp
-    tmp="$(mktemp)"
+    shift 2
     {
         cat "${policy_file}"
         cat <<'EOF'
@@ -44,9 +44,7 @@ path "auth/token/renew-self" {
   capabilities = ["update"]
 }
 EOF
-    } > "${tmp}"
-    docker cp "${tmp}" "${container}:/tmp/admin.hcl"
-    rm -f "${tmp}"
+    } | docker exec -i "${container}" "$@"
 }
 
 # Pass a JWT into `docker plugin set` with xtrace off so `set -x` does not

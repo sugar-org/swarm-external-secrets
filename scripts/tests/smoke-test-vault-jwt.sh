@@ -136,10 +136,9 @@ done
 success "Vault is ready."
 
 info "Applying policy to Vault..."
-copy_jwt_smoke_policy "${VAULT_CONTAINER}" "${POLICY_FILE}"
-docker exec "${VAULT_CONTAINER}" \
+write_jwt_smoke_policy "${VAULT_CONTAINER}" "${POLICY_FILE}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault policy write smoke-policy /tmp/admin.hcl
+    vault policy write smoke-policy -
 success "Policy applied."
 
 info "Writing test secret to Vault..."
@@ -152,6 +151,7 @@ success "Secret written."
 
 info "Generating local JWT signing keys and signed JWT..."
 generate_local_jwt
+chmod 0644 "${JWT_WORKDIR}/jwt-public.pem"
 docker cp "${JWT_WORKDIR}/jwt-public.pem" "${VAULT_CONTAINER}:/tmp/jwt-public.pem"
 
 info "Configuring Vault JWT auth..."

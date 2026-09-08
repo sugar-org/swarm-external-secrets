@@ -136,10 +136,9 @@ done
 success "OpenBao is ready."
 
 info "Applying policy to OpenBao..."
-copy_jwt_smoke_policy "${OPENBAO_CONTAINER}" "${POLICY_FILE}"
-docker exec "${OPENBAO_CONTAINER}" \
+write_jwt_smoke_policy "${OPENBAO_CONTAINER}" "${POLICY_FILE}" \
     env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
-    bao policy write smoke-policy /tmp/admin.hcl
+    bao policy write smoke-policy -
 success "Policy applied."
 
 info "Writing test secret to OpenBao..."
@@ -152,6 +151,7 @@ success "Secret written."
 
 info "Generating local JWT signing keys and signed JWT..."
 generate_local_jwt
+chmod 0644 "${JWT_WORKDIR}/jwt-public.pem"
 docker cp "${JWT_WORKDIR}/jwt-public.pem" "${OPENBAO_CONTAINER}:/tmp/jwt-public.pem"
 
 info "Configuring OpenBao JWT auth..."
