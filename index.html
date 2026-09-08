@@ -553,6 +553,8 @@
       
         
       
+        
+      
     
     
     
@@ -610,6 +612,34 @@
     
   
     GCP Secret Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="jwt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vault and OpenBao JWT
   
 
     
@@ -1039,12 +1069,12 @@
 <h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
 <p><img alt="Architecture" src="https://raw.githubusercontent.com/sugar-org/swarm-external-secrets/refs/heads/main/docs/architecture.png" /></p>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<p>Please refer to the <a href="https://sugar-org.github.io/swarm-external-secrets/">docs</a> for more information.</p>
+<p>Please refer to the <a href="https://sugar-org.github.io/swarm-external-secrets/">docs</a> for more information. JWT login and Vault/OpenBao client-token renewal are in <code>docs/jwt.md</code>.</p>
 <h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Multi-Provider Support</strong>: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault</li>
-<li><strong>Multiple Auth Methods</strong>: Support for various authentication methods per provider</li>
+<li><strong>Multiple Auth Methods</strong>: Token, AppRole, and JWT for Vault and OpenBao, including client-token renewal</li>
 <li><strong>Automatic Secret Rotation</strong>: Monitor providers for changes and automatically update Docker secrets and services</li>
 <li><strong>Real-time Monitoring</strong>: Web dashboard with system metrics, health status, and performance tracking</li>
 <li><strong>Flexible Path Mapping</strong>: Customize secret paths and field extraction per provider</li>
@@ -1054,19 +1084,19 @@
 <h2 id="new-multi-provider-support">New: Multi-Provider Support<a class="headerlink" href="#new-multi-provider-support" title="Permanent link">&para;</a></h2>
 <p>The plugin now supports multiple secret providers. Configure with <code>SECRETS_PROVIDER</code> environment variable:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># HashiCorp Vault (default)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;vault&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># AWS Secrets Manager  </span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;aws&quot;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"aws"</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Azure Key Vault</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;azure&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"azure"</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># OpenBao</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;openbao&quot;</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"openbao"</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># OCI Vault</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;oci&quot;</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"oci"</span>
 </code></pre></div>
 <p>For multi-instance usage (for example, Vault + OpenBao with separate plugin names in Swarm), see <a href="./docs/multi-provider.md"><code>docs/multi-provider.md</code></a>.</p>
 <h2 id="new-real-time-monitoring">New: Real-time Monitoring<a class="headerlink" href="#new-real-time-monitoring" title="Permanent link">&para;</a></h2>
@@ -1079,8 +1109,8 @@
 </ul>
 <h3 id="monitor-configuration">Monitor Configuration<a class="headerlink" href="#monitor-configuration" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nv">ENABLE_MONITORING</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nv">MONITORING_PORT</span><span class="o">=</span><span class="s2">&quot;8080&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nv">ENABLE_MONITORING</span><span class="o">=</span><span class="s2">"true"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nv">MONITORING_PORT</span><span class="o">=</span><span class="s2">"8080"</span>
 </code></pre></div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <ol>
@@ -1092,11 +1122,11 @@
 <li>
 <p>Configure the plugin:
    <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">&quot;https://your-vault-server:8200&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nv">VAULT_AUTH_METHOD</span><span class="o">=</span><span class="s2">&quot;token&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-vault-token&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nv">LOG_LEVEL</span><span class="o">=</span><span class="s2">&quot;4&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;true&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"https://your-vault-server:8200"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nv">VAULT_AUTH_METHOD</span><span class="o">=</span><span class="s2">"token"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="s2">"your-vault-token"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nv">LOG_LEVEL</span><span class="o">=</span><span class="s2">"4"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">"true"</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -1108,39 +1138,39 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">mysql_password</span><span class="p">:</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">vault_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;database/mysql&quot;</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">vault_field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;password&quot;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">vault_path</span><span class="p">:</span><span class="w"> </span><span class="s">"database/mysql"</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">vault_field</span><span class="p">:</span><span class="w"> </span><span class="s">"password"</span>
 </code></pre></div></p>
 <p><strong>AWS Secrets Manager:</strong>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">secrets</span><span class="p">:</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">aws_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;prod/api/key&quot;</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">aws_field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_key&quot;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">aws_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">"prod/api/key"</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">aws_field</span><span class="p">:</span><span class="w"> </span><span class="s">"api_key"</span>
 </code></pre></div></p>
 <p><strong>Azure Key Vault:</strong>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">secrets</span><span class="p">:</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">database_connection</span><span class="p">:</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">azure_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;database-connection-string&quot;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">azure_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">"database-connection-string"</span>
 </code></pre></div></p>
 <p><strong>OpenBao:</strong>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">secrets</span><span class="p">:</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">app_secret</span><span class="p">:</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="nt">openbao_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app/config&quot;</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="nt">openbao_field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;secret_key&quot;</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="nt">openbao_path</span><span class="p">:</span><span class="w"> </span><span class="s">"app/config"</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="nt">openbao_field</span><span class="p">:</span><span class="w"> </span><span class="s">"secret_key"</span>
 </code></pre></div></p>
 <p><strong>OCI Vault:</strong>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">secrets</span><span class="p">:</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">db_password</span><span class="p">:</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">oci_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my-database-password&quot;</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">oci_field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;password&quot;</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">oci_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">"my-database-password"</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">oci_field</span><span class="p">:</span><span class="w"> </span><span class="s">"password"</span>
 </code></pre></div></p>
 <ol>
 <li>Optional: enable plugin log sidecar (for <code>docker compose logs</code> visibility):</li>
@@ -1157,7 +1187,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>./logs
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>touch<span class="w"> </span>./logs/plugin.log
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/logs/plugin.log&quot;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">/logs/plugin.log"</span>
 </code></pre></div>
 <table>
 <thead>
@@ -1172,7 +1202,7 @@
 <tr>
 <td>HashiCorp Vault</td>
 <td>✅ Stable</td>
-<td>Token, AppRole</td>
+<td>Token, AppRole, JWT</td>
 <td>✅</td>
 </tr>
 <tr>
@@ -1190,7 +1220,7 @@
 <tr>
 <td>OpenBao</td>
 <td>✅ Stable</td>
-<td>Token, AppRole</td>
+<td>Token, AppRole, JWT</td>
 <td>✅</td>
 </tr>
 <tr>
@@ -1210,35 +1240,35 @@
 <h2 id="quick-start-examples">Quick Start Examples<a class="headerlink" href="#quick-start-examples" title="Permanent link">&para;</a></h2>
 <h3 id="hashicorp-vault">HashiCorp Vault<a class="headerlink" href="#hashicorp-vault" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;vault&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">&quot;https://vault.example.com:8200&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="s2">&quot;hvs.example-token&quot;</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"https://vault.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="s2">"hvs.example-token"</span>
 </code></pre></div>
 <h3 id="aws-secrets-manager">AWS Secrets Manager<a class="headerlink" href="#aws-secrets-manager" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;aws&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nv">AWS_REGION</span><span class="o">=</span><span class="s2">&quot;us-west-2&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="s2">&quot;AKIAIOSFODNN7EXAMPLE&quot;</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"aws"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nv">AWS_REGION</span><span class="o">=</span><span class="s2">"us-west-2"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="s2">"AKIAIOSFODNN7EXAMPLE"</span>
 </code></pre></div>
 <h3 id="azure-key-vault">Azure Key Vault<a class="headerlink" href="#azure-key-vault" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;azure&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nv">AZURE_VAULT_URL</span><span class="o">=</span><span class="s2">&quot;https://myvault.vault.azure.net/&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nv">AZURE_TENANT_ID</span><span class="o">=</span><span class="s2">&quot;12345678-1234-1234-1234-123456789012&quot;</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"azure"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nv">AZURE_VAULT_URL</span><span class="o">=</span><span class="s2">"https://myvault.vault.azure.net/"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nv">AZURE_TENANT_ID</span><span class="o">=</span><span class="s2">"12345678-1234-1234-1234-123456789012"</span>
 </code></pre></div>
 <h3 id="oci-vault">OCI Vault<a class="headerlink" href="#oci-vault" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Base64-encode your PEM private key</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nv">OCI_KEY</span><span class="o">=</span><span class="k">$(</span>base64<span class="w"> </span>&lt;<span class="w"> </span>~/.oci/oci_api_key.pem<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;\n&#39;</span><span class="k">)</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nv">OCI_KEY</span><span class="o">=</span><span class="k">$(</span>base64<span class="w"> </span>&lt;<span class="w"> </span>~/.oci/oci_api_key.pem<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">'\n'</span><span class="k">)</span>
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 <a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;oci&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="nv">OCI_AUTH_METHOD</span><span class="o">=</span><span class="s2">&quot;api_key&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="nv">OCI_REGION</span><span class="o">=</span><span class="s2">&quot;us-ashburn-1&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="nv">OCI_TENANCY_OCID</span><span class="o">=</span><span class="s2">&quot;ocid1.tenancy.oc1..example&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="nv">OCI_USER_OCID</span><span class="o">=</span><span class="s2">&quot;ocid1.user.oc1..example&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">    </span><span class="nv">OCI_FINGERPRINT</span><span class="o">=</span><span class="s2">&quot;aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">    </span><span class="nv">OCI_PRIVATE_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OCI_KEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span><span class="nv">OCI_VAULT_OCID</span><span class="o">=</span><span class="s2">&quot;ocid1.vault.oc1..example&quot;</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"oci"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="nv">OCI_AUTH_METHOD</span><span class="o">=</span><span class="s2">"api_key"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="nv">OCI_REGION</span><span class="o">=</span><span class="s2">"us-ashburn-1"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="nv">OCI_TENANCY_OCID</span><span class="o">=</span><span class="s2">"ocid1.tenancy.oc1..example"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="nv">OCI_USER_OCID</span><span class="o">=</span><span class="s2">"ocid1.user.oc1..example"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">    </span><span class="nv">OCI_FINGERPRINT</span><span class="o">=</span><span class="s2">"aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">    </span><span class="nv">OCI_PRIVATE_KEY</span><span class="o">=</span><span class="s2">"</span><span class="si">${</span><span class="nv">OCI_KEY</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span><span class="nv">OCI_VAULT_OCID</span><span class="o">=</span><span class="s2">"ocid1.vault.oc1..example"</span>
 </code></pre></div>
 <h3 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h3>
 <p><a href="https://github.com/sugar-org/swarm-external-secrets/blob/main/LICENSE">BSD-3-Clause license</a></p>

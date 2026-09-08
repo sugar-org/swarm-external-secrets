@@ -296,6 +296,8 @@
       
         
       
+        
+      
     
     
     
@@ -353,6 +355,34 @@
     
   
     GCP Secret Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jwt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vault and OpenBao JWT
   
 
     
@@ -871,6 +901,10 @@
 <p>This document describes the automatic secret rotation feature of the Swarm External Secrets plugin.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>The plugin automatically monitors secrets in Vault and updates the corresponding Docker Swarm secrets and services when changes are detected. This ensures that applications always use the latest secret values without manual intervention.</p>
+<p>This is <strong>secret value</strong> rotation. Keeping the plugin logged in to Vault or OpenBao
+(AppRole/JWT client-token renew-self and re-login) is documented separately in
+<a href="../jwt/">Vault and OpenBao JWT</a>. A static <code>VAULT_TOKEN</code> or <code>OPENBAO_TOKEN</code> is
+not renewed.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ol>
 <li>
@@ -924,12 +958,12 @@
 <h3 id="example-configuration">Example Configuration<a class="headerlink" href="#example-configuration" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Enable rotation with 2-minute check interval</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">ROTATION_INTERVAL</span><span class="o">=</span><span class="s2">&quot;2m&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">"true"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">ROTATION_INTERVAL</span><span class="o">=</span><span class="s2">"2m"</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Disable rotation</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">&quot;false&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">"false"</span>
 </code></pre></div>
 <h2 id="usage-example">Usage Example<a class="headerlink" href="#usage-example" title="Permanent link">&para;</a></h2>
 <ol>
@@ -939,8 +973,8 @@
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">mysql_password</span><span class="p">:</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">vault_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;database/mysql&quot;</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">vault_field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;password&quot;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">vault_path</span><span class="p">:</span><span class="w"> </span><span class="s">"database/mysql"</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">vault_field</span><span class="p">:</span><span class="w"> </span><span class="s">"password"</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -952,10 +986,10 @@
 <h3 id="custom-mount-path-example">Custom Mount Path Example<a class="headerlink" href="#custom-mount-path-example" title="Permanent link">&para;</a></h3>
 <p>If Vault or OpenBao is mounted somewhere other than <code>secret</code>, configure the plugin with the matching mount path so rotation tracking monitors the correct backend:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">&quot;vault&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:8200&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="s2">&quot;root&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nv">VAULT_MOUNT_PATH</span><span class="o">=</span><span class="s2">&quot;kv&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"http://127.0.0.1:8200"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nv">VAULT_TOKEN</span><span class="o">=</span><span class="s2">"root"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nv">VAULT_MOUNT_PATH</span><span class="o">=</span><span class="s2">"kv"</span>
 </code></pre></div>
 <p>Then a secret such as <code>kv/data/database/mysql</code> is tracked and rotated against the configured <code>kv</code> mount instead of the default <code>secret</code> mount.</p>
 <ol>
@@ -970,7 +1004,7 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>tail<span class="w"> </span>-F<span class="w"> </span>/run/swarm-external-secrets/plugin.log
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Filter rotation events</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>tail<span class="w"> </span>-F<span class="w"> </span>/run/swarm-external-secrets/plugin.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;rotation|Failed to rotate|Detected change&quot;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>tail<span class="w"> </span>-F<span class="w"> </span>/run/swarm-external-secrets/plugin.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">"rotation|Failed to rotate|Detected change"</span>
 </code></pre></div>
 <p>On Linux, the default plugin log path is <code>/run/swarm-external-secrets/plugin.log</code>.
 macOS and Windows filesystems do not support this <code>/run/**</code> path by default. On
@@ -979,7 +1013,7 @@ those hosts, create a log directory with read/write permissions and set
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>./logs
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>touch<span class="w"> </span>./logs/plugin.log
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/logs/plugin.log&quot;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">/logs/plugin.log"</span>
 </code></pre></div>
 <p>You can also expose these logs through the bundled compose override:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/run/swarm-external-secrets
@@ -991,7 +1025,7 @@ those hosts, create a log directory with read/write permissions and set
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">services</span><span class="p">:</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">secrets-logger</span><span class="p">:</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3.20</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sh -c &quot;tail -F /run/swarm-external-secrets/plugin.log&quot;</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sh -c "tail -F /run/swarm-external-secrets/plugin.log"</span>
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/run/swarm-external-secrets:/run/swarm-external-secrets:ro</span>
 </code></pre></div>

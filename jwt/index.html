@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://sugar-org.github.io/swarm-external-secrets/debugging/">
+        <link rel="canonical" href="https://sugar-org.github.io/swarm-external-secrets/jwt/">
       
       
-        <link rel="prev" href="../rotation/">
+        <link rel="prev" href="../gcp/">
       
       
-        <link rel="next" href="../CONTRIBUTING/">
+        <link rel="next" href="../multi-provider/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Debugging - Swarm External Secrets</title>
+        <title>Vault and OpenBao JWT - Swarm External Secrets</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#debugging" class="md-skip">
+        <a href="#vault-and-openbao-jwt-authentication" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Debugging
+              Vault and OpenBao JWT
             
           </span>
         </div>
@@ -289,8 +289,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -302,13 +304,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -329,7 +329,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -372,10 +372,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../jwt/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vault and OpenBao JWT
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -391,6 +418,98 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#plugin-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plugin configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-jwt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment JWT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jwt-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JWT file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jwt-role-and-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JWT role and policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-token-renewal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client-token renewal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ci-smoke-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CI smoke tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -488,37 +607,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Debugging
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../debugging/" class="md-nav__link">
         
   
   
@@ -534,125 +626,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#start-a-dev-vault-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Start a Dev Vault Server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#create-an-approle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create an AppRole
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#retrieve-the-role-id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retrieve the Role ID
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#get-the-secret-id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Get the Secret ID
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#login-with-approle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Login with AppRole
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#write-and-attach-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Write and Attach Policy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#jwt-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        JWT authentication
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-and-get-kv-secrets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Set and Get KV Secrets
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#debug-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Debug the Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -711,10 +684,49 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#start-a-dev-vault-server" class="md-nav__link">
+  <a href="#plugin-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Start a Dev Vault Server
+        Plugin configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-jwt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment JWT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jwt-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JWT file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jwt-role-and-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JWT role and policy
       
     </span>
   </a>
@@ -722,10 +734,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#create-an-approle" class="md-nav__link">
+  <a href="#client-token-renewal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Create an AppRole
+        Client-token renewal
       
     </span>
   </a>
@@ -733,76 +745,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#retrieve-the-role-id" class="md-nav__link">
+  <a href="#ci-smoke-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Retrieve the Role ID
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#get-the-secret-id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Get the Secret ID
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#login-with-approle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Login with AppRole
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#write-and-attach-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Write and Attach Policy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#jwt-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        JWT authentication
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-and-get-kv-secrets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Set and Get KV Secrets
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#debug-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Debug the Plugin
+        CI smoke tests
       
     </span>
   </a>
@@ -829,110 +775,170 @@
   
 
 
-<h1 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">&para;</a></h1>
-<p>This page covers useful commands for debugging the plugin using HashiCorp Vault.</p>
-<h2 id="start-a-dev-vault-server">Start a Dev Vault Server<a class="headerlink" href="#start-a-dev-vault-server" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>vault<span class="w"> </span>server<span class="w"> </span>-dev
+<h1 id="vault-and-openbao-jwt-authentication">Vault and OpenBao JWT authentication<a class="headerlink" href="#vault-and-openbao-jwt-authentication" title="Permanent link">&para;</a></h1>
+<p>The plugin can log in to HashiCorp Vault and OpenBao with a signed JWT, then
+keep the <strong>issued client token</strong> alive. That client-token renewal is not the
+same as <a href="../rotation/">secret rotation</a>.</p>
+<p>OpenBao uses the same behavior with <code>OPENBAO_*</code> variables instead of <code>VAULT_*</code>.</p>
+<h2 id="plugin-configuration">Plugin configuration<a class="headerlink" href="#plugin-configuration" title="Permanent link">&para;</a></h2>
+<p>Set <code>VAULT_AUTH_METHOD=jwt</code> (or <code>OPENBAO_AUTH_METHOD=jwt</code>). You must also set a
+role name and provide a JWT from the environment <strong>or</strong> a file.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VAULT_AUTH_METHOD</code> / <code>OPENBAO_AUTH_METHOD</code></td>
+<td>Set to <code>jwt</code></td>
+<td><code>token</code></td>
+</tr>
+<tr>
+<td><code>VAULT_JWT_ROLE</code> / <code>OPENBAO_JWT_ROLE</code></td>
+<td>JWT/OIDC role name (required)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>VAULT_JWT</code> / <code>OPENBAO_JWT</code></td>
+<td>Signed JWT string</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>VAULT_JWT_FILE</code> / <code>OPENBAO_JWT_FILE</code></td>
+<td>Path to a file containing the JWT</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>VAULT_JWT_AUTH_PATH</code> / <code>OPENBAO_JWT_AUTH_PATH</code></td>
+<td>Auth mount path</td>
+<td><code>jwt</code></td>
+</tr>
+</tbody>
+</table>
+<p>Either <code>*_JWT</code> or <code>*_JWT_FILE</code> is required. If both are set, the <strong>file</strong> is
+used. The file is read again on every re-login, so you can rotate the identity
+JWT on disk without reconfiguring the plugin. A JWT stored in <code>*_JWT</code> is fixed
+until the next <code>docker plugin set</code>.</p>
+<p><code>*_JWT_FILE</code> is opened <strong>inside the plugin</strong>. The default plugin config
+bind-mounts host <code>/run/swarm-external-secrets</code> only, so the JWT file must live
+under that directory (same path on the host and in the plugin). Additional
+paths work only if you ship a custom plugin with extra mounts.</p>
+<h3 id="environment-jwt">Environment JWT<a class="headerlink" href="#environment-jwt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"https://vault.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">VAULT_AUTH_METHOD</span><span class="o">=</span><span class="s2">"jwt"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nv">VAULT_JWT_ROLE</span><span class="o">=</span><span class="s2">"swarm-external-secrets"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nv">VAULT_JWT</span><span class="o">=</span><span class="s2">"&lt;signed-jwt&gt;"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nv">VAULT_JWT_AUTH_PATH</span><span class="o">=</span><span class="s2">"jwt"</span>
 </code></pre></div>
-<h2 id="create-an-approle">Create an AppRole<a class="headerlink" href="#create-an-approle" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>vault<span class="w"> </span>write<span class="w"> </span>auth/approle/role/my-role<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nv">token_policies</span><span class="o">=</span><span class="s2">"default,web-app"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nv">token_ttl</span><span class="o">=</span>1h<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nv">token_max_ttl</span><span class="o">=</span>4h<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nv">secret_id_ttl</span><span class="o">=</span>24h<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nv">secret_id_num_uses</span><span class="o">=</span><span class="m">10</span>
+<p>OpenBao:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"openbao"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nv">OPENBAO_ADDR</span><span class="o">=</span><span class="s2">"https://openbao.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nv">OPENBAO_AUTH_METHOD</span><span class="o">=</span><span class="s2">"jwt"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nv">OPENBAO_JWT_ROLE</span><span class="o">=</span><span class="s2">"swarm-external-secrets"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nv">OPENBAO_JWT</span><span class="o">=</span><span class="s2">"&lt;signed-jwt&gt;"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nv">OPENBAO_JWT_AUTH_PATH</span><span class="o">=</span><span class="s2">"jwt"</span>
 </code></pre></div>
-<h2 id="retrieve-the-role-id">Retrieve the Role ID<a class="headerlink" href="#retrieve-the-role-id" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>vault<span class="w"> </span><span class="nb">read</span><span class="w"> </span>auth/approle/role/my-role/role-id
+<h3 id="jwt-file">JWT file<a class="headerlink" href="#jwt-file" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/run/swarm-external-secrets
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">0600</span><span class="w"> </span>./workload.jwt<span class="w"> </span>/run/swarm-external-secrets/workload.jwt
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"https://vault.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nv">VAULT_AUTH_METHOD</span><span class="o">=</span><span class="s2">"jwt"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nv">VAULT_JWT_ROLE</span><span class="o">=</span><span class="s2">"swarm-external-secrets"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nv">VAULT_JWT_FILE</span><span class="o">=</span><span class="s2">"/run/swarm-external-secrets/workload.jwt"</span>
 </code></pre></div>
-<p>For automation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>vault<span class="w"> </span><span class="nb">read</span><span class="w"> </span>-format<span class="o">=</span>json<span class="w"> </span>auth/approle/role/my-role/role-id<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span>.data.role_id
+<h2 id="jwt-role-and-policy">JWT role and policy<a class="headerlink" href="#jwt-role-and-policy" title="Permanent link">&para;</a></h2>
+<p>Enable JWT auth and create a role whose policies can read your KV secrets.
+The issued token must also be allowed to renew itself:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="err">path</span><span class="w"> </span><span class="s2">"secret/data/*"</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"read"</span><span class="p">]</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">}</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="err">path</span><span class="w"> </span><span class="s2">"secret/metadata/*"</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"list"</span><span class="p">]</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">}</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="err">path</span><span class="w"> </span><span class="s2">"auth/token/renew-self"</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"update"</span><span class="p">]</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">}</span>
 </code></pre></div>
-<h2 id="get-the-secret-id">Get the Secret ID<a class="headerlink" href="#get-the-secret-id" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>vault<span class="w"> </span>write<span class="w"> </span>-f<span class="w"> </span>auth/approle/role/my-role/secret-id
-</code></pre></div>
-<h2 id="login-with-approle">Login with AppRole<a class="headerlink" href="#login-with-approle" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>vault<span class="w"> </span>write<span class="w"> </span>auth/approle/login<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nv">role_id</span><span class="o">=</span><span class="s2">"192e9220-f35c-c2e9-2931-464696e0ff24"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nv">secret_id</span><span class="o">=</span><span class="s2">"4e46a226-fdd5-5ed1-f7bb-7b92a0013cad"</span>
-</code></pre></div>
-<h2 id="write-and-attach-policy">Write and Attach Policy<a class="headerlink" href="#write-and-attach-policy" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>vault<span class="w"> </span>policy<span class="w"> </span>write<span class="w"> </span>db-policy<span class="w"> </span>./db-policy.hcl
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>vault<span class="w"> </span>write<span class="w"> </span>auth/approle/role/my-role<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nv">token_policies</span><span class="o">=</span><span class="s2">"db-policy"</span>
-</code></pre></div>
-<h2 id="jwt-authentication">JWT authentication<a class="headerlink" href="#jwt-authentication" title="Permanent link">&para;</a></h2>
-<p>JWT login and client-token renewal (including max-TTL re-login) are documented in
-<a href="../jwt/">Vault and OpenBao JWT</a>.</p>
-<p>Enable JWT auth and a role, then configure the plugin with <code>VAULT_AUTH_METHOD=jwt</code>
-(or <code>OPENBAO_AUTH_METHOD=jwt</code>). Current Vault/OpenBao JWT auth requires the
-identity token to include at least one of <code>iat</code>, <code>nbf</code>, or <code>exp</code>.</p>
-<p>The issued client token policy should allow renew-self:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="err">path</span><span class="w"> </span><span class="s2">"auth/token/renew-self"</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"update"</span><span class="p">]</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="p">}</span>
-</code></pre></div>
-<p>Renewal and re-auth log lines (with <code>vault</code> or <code>openbao</code> as the provider name).
-The re-auth warning is visible at the default log level; the two success lines
-are debug-only (<code>LOG_LEVEL=debug</code> or <code>6</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Successfully renewed vault token
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Renewing vault token failed, attempting re-authentication
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Successfully re-authenticated with vault
-</code></pre></div>
-<h2 id="set-and-get-kv-secrets">Set and Get KV Secrets<a class="headerlink" href="#set-and-get-kv-secrets" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>vault<span class="w"> </span>kv<span class="w"> </span>put<span class="w"> </span>secret/database/mysql<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nv">root_password</span><span class="o">=</span>admin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nv">user_password</span><span class="o">=</span>admin
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>vault<span class="w"> </span>kv<span class="w"> </span>get<span class="w"> </span>secret/database/mysql
-</code></pre></div>
-<h2 id="debug-the-plugin">Debug the Plugin<a class="headerlink" href="#debug-the-plugin" title="Permanent link">&para;</a></h2>
-<p>The plugin now writes logs to a host-mounted file by default:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>tail<span class="w"> </span>-F<span class="w"> </span>/run/swarm-external-secrets/plugin.log
-</code></pre></div>
-<p>On Linux, the default plugin log path is <code>/run/swarm-external-secrets/plugin.log</code>.
-macOS and Windows filesystems do not support this <code>/run/**</code> path by default. On
-those hosts, create a log directory with read/write permissions and set
-<code>PLUGIN_LOG_PATH</code> to that file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>./logs
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>touch<span class="w"> </span>./logs/plugin.log
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">/logs/plugin.log"</span>
-</code></pre></div>
-<p>You can override path and level:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_PATH</span><span class="o">=</span><span class="s2">"/run/swarm-external-secrets/plugin.log"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nv">PLUGIN_LOG_LEVEL</span><span class="o">=</span><span class="s2">"debug"</span>
-</code></pre></div>
-<p>To expose plugin logs through <code>docker compose logs</code>, use the bundled override file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/run/swarm-external-secrets
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>sudo<span class="w"> </span>touch<span class="w"> </span>/run/swarm-external-secrets/plugin.log
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.logs.yml<span class="w"> </span>up<span class="w"> </span>-d
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.logs.yml<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>secrets-logger
-</code></pre></div>
-<p>The sidecar service in <code>docker-compose.logs.yml</code> is:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">services</span><span class="p">:</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">secrets-logger</span><span class="p">:</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alpine:3.20</span>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sh -c "tail -F /run/swarm-external-secrets/plugin.log"</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/run/swarm-external-secrets:/run/swarm-external-secrets:ro</span>
-</code></pre></div>
-<p>The plugin mount for this path is defined in <code>config.json</code>, so make sure the host directory and log file exist:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/run/swarm-external-secrets
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>sudo<span class="w"> </span>touch<span class="w"> </span>/run/swarm-external-secrets/plugin.log
-</code></pre></div>
-<p>For macOS and Windows, use the same read/write host directory configured with
-<code>PLUGIN_LOG_PATH</code> instead of <code>/run/swarm-external-secrets</code>.</p>
-<p>Daemon logs remain available for fallback troubleshooting:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker.service<span class="w"> </span>-f<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>plugin_id
-</code></pre></div>
-<p>or</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker.service<span class="w"> </span>-f<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>docker<span class="w"> </span>plugin<span class="w"> </span>ls<span class="w"> </span>--format<span class="w"> </span><span class="s1">'{{.ID}}'</span><span class="k">)</span><span class="s2">"</span>
-</code></pre></div>
+<p>Current Vault and OpenBao JWT auth reject identity tokens that omit <strong>all</strong> of
+<code>iat</code>, <code>nbf</code>, and <code>exp</code>. Include at least one (typically <code>iat</code> and <code>exp</code>) and
+match <code>iss</code>, <code>sub</code>, and <code>aud</code> to the role (<code>bound_issuer</code>, <code>bound_subject</code>,
+<code>bound_audiences</code>).</p>
+<p>A full local setup used by CI is in <code>scripts/tests/smoke-test-vault-jwt.sh</code> and
+<code>scripts/tests/smoke-test-openbao-jwt.sh</code> in this repository.</p>
+<h2 id="client-token-renewal">Client-token renewal<a class="headerlink" href="#client-token-renewal" title="Permanent link">&para;</a></h2>
+<p>After a successful AppRole or JWT login, Vault/OpenBao returns a <strong>client
+token</strong> with a TTL. The plugin renews that token; it does not mint a new
+identity JWT.</p>
+<table>
+<thead>
+<tr>
+<th>Auth method</th>
+<th>Client-token renewal</th>
+<th>Re-login when renew fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>token</code></td>
+<td>No. A static <code>VAULT_TOKEN</code> / <code>OPENBAO_TOKEN</code> is used until it expires.</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>approle</code></td>
+<td>Yes</td>
+<td>Yes (<code>role_id</code> / <code>secret_id</code>)</td>
+</tr>
+<tr>
+<td><code>jwt</code></td>
+<td>Yes</td>
+<td>Yes (same JWT, or a freshly read <code>*_JWT_FILE</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>When the issued token is renewable and has a positive TTL, a background worker:</p>
+<ol>
+<li>Waits until about <strong>two-thirds</strong> of the remaining lease TTL.</li>
+<li>Calls <code>auth/token/renew-self</code>.</li>
+<li>If renew fails (including when <strong>max TTL</strong> is reached), logs in again with
+   AppRole or JWT.</li>
+<li>If a secret read returns <code>401</code> or <code>403</code>, logs in again and retries the read.</li>
+</ol>
+<p>Retries after a failed renew use a 5s wait that doubles up to one minute.</p>
+<p>Look for these plugin log lines (<code>vault</code> or <code>openbao</code> depending on the
+provider). The re-auth warning is emitted at warn level; the two success lines
+are <strong>debug</strong> (<code>LOG_LEVEL=debug</code> or <code>6</code>):</p>
+<ul>
+<li><code>Successfully renewed vault token</code> (debug)</li>
+<li><code>Renewing vault token failed, attempting re-authentication</code> (warn)</li>
+<li><code>Successfully re-authenticated with vault</code> (debug)</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Static tokens do not auto-renew</p>
+<p><code>VAULT_AUTH_METHOD=token</code> (the default) never starts the renewal worker.
+Use AppRole or JWT when the plugin must outlive a short-lived client token.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Secret rotation is separate</p>
+<p><code>ENABLE_ROTATION</code> watches KV values and updates Swarm secrets. Token
+renewal keeps the plugin authenticated. See <a href="../rotation/">Secret rotation</a>.</p>
+</div>
+<h2 id="ci-smoke-tests">CI smoke tests<a class="headerlink" href="#ci-smoke-tests" title="Permanent link">&para;</a></h2>
+<p>The <code>smoke-test-jwt-renewal</code> job in <code>.github/workflows/smoke-tests.yml</code> runs
+the Vault and OpenBao JWT scripts with a 10s token TTL, 25s max TTL, and a 45s
+wait so CI asserts both renew-self and max-TTL re-login, then redeploys a
+stack to prove reads still work.</p>
 
 
 
