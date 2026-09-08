@@ -17,14 +17,14 @@ elif [[ -n "${1:-}" ]]; then
   exit 2
 fi
 
-PREVIEW_BRANCH="makim-release-preview"
-WORKTREE=""
+ROOT="$(pwd)"
+WORKDIR=""
 
 cleanup() {
-  if [[ -n "${WORKTREE}" && -d "${WORKTREE}" ]]; then
-    git worktree remove --force "${WORKTREE}" >/dev/null 2>&1 || true
+  if [[ -n "${WORKDIR}" && -d "${WORKDIR}" ]]; then
+    rm -rf "${WORKDIR}"
   fi
-  git branch -D "${PREVIEW_BRANCH}" >/dev/null 2>&1 || true
+  git -C "${ROOT}" branch -D makim-release-preview >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -48,9 +48,16 @@ fi
 
 git fetch origin main --tags
 
-WORKTREE="$(mktemp -d)"
-git worktree add -B "${PREVIEW_BRANCH}" "${WORKTREE}" origin/main >/dev/null
-cd "${WORKTREE}"
+# semantic-release only accepts release branches that exist on the remote
+# (git ls-remote). A local preview branch is invisible to that check, and a
+# second worktree cannot check out main while this repo already has it.
+ORIGIN_URL="$(git remote get-url origin)"
+WORKDIR="$(mktemp -d)"
+git clone --quiet --local "${ROOT}" "${WORKDIR}"
+cd "${WORKDIR}"
+git remote set-url origin "${ORIGIN_URL}"
+git fetch origin main --tags
+git checkout -q -B main origin/main
 
 echo "Analyzing origin/main at $(git rev-parse --short HEAD) (latest tag: $(git describe --tags --abbrev=0))"
 
@@ -58,7 +65,7 @@ log="$(
   semantic_release \
     --dry-run \
     --no-ci \
-    --branches "${PREVIEW_BRANCH}" \
+    --branches main \
     --plugins @semantic-release/commit-analyzer \
     --verify-conditions "" \
     2>&1 | tee /dev/stderr
