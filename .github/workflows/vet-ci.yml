@@ -2,9 +2,19 @@ name: vet OSS Components
 
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "mkdocs.yml"
   push:
     branches:
       - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "mkdocs.yml"
 
 permissions:
   # Required for actions/checkout@v4

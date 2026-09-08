@@ -2,8 +2,18 @@ name: OCI Floci Tests
 
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "mkdocs.yml"
   push:
     branches: [main, alpha/provider-integration, feat/oci-provider]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "mkdocs.yml"
 
 jobs:
   # AWS-style: start the emulator and exercise Vault + KMS crypto + secret
