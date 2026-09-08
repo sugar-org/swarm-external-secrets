@@ -29,6 +29,49 @@ docker_daemon_logs() {
     return 0
 }
 
+# Assemble the JWT smoke policy on the host and pipe it into `vault`/`bao
+# policy write -`. docker cp into /tmp as root leaves 0600 files the
+# non-root server user cannot read.
+write_jwt_smoke_policy() {
+    local container="$1"
+    local policy_file="$2"
+    shift 2
+    local tmp status=0
+    tmp="$(mktemp)"
+    if [[ ! -r "${policy_file}" ]] || ! cat "${policy_file}" > "${tmp}"; then
+        rm -f "${tmp}"
+        return 1
+    fi
+    cat <<'EOF' >> "${tmp}"
+
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+EOF
+    docker exec -i "${container}" "$@" < "${tmp}" || status=$?
+    rm -f "${tmp}"
+    return "${status}"
+}
+
+# Pass a JWT into `docker plugin set` with xtrace off so `set -x` does not
+# print the token in CI logs. Restore xtrace only if the caller had it on.
+configure_plugin_jwt() {
+    local jwt_file="$1"
+    local jwt_env="$2"
+    shift 2
+    local jwt status=0 xtrace_was_on=0
+    case "$-" in
+        *x*) xtrace_was_on=1 ;;
+    esac
+    set +x
+    jwt="$(tr -d '\n' < "${jwt_file}")"
+    docker plugin set "${PLUGIN_NAME}" "$@" "${jwt_env}=${jwt}" || status=$?
+    if [[ "${xtrace_was_on}" -eq 1 ]]; then
+        set -x
+    fi
+    return "${status}"
+}
+
 assert_no_sensitive_rotation_metadata_logs() {
     # Ensure trace-only rotation metadata isn't emitted at default log levels.
     # We look for the exact strings used by the driver.

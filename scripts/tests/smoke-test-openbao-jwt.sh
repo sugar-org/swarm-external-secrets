@@ -8,22 +8,22 @@ REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
 # shellcheck source=smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
-VAULT_CONTAINER="smoke-vault-jwt"
-VAULT_ROOT_TOKEN="smoke-root-token"
-VAULT_ADDR="http://127.0.0.1:8200"
-STACK_NAME="smoke-vault-jwt"
+OPENBAO_CONTAINER="smoke-openbao-jwt"
+OPENBAO_ROOT_TOKEN="smoke-root-token"
+OPENBAO_ADDR="http://127.0.0.1:8200"
+STACK_NAME="smoke-openbao-jwt"
 SECRET_NAME="smoke_secret"
 SECRET_PATH="database/mysql"
 SECRET_FIELD="password"
-SECRET_VALUE="vault-jwt-smoke-pass-v1"
-COMPOSE_FILE="${SCRIPT_DIR}/smoke-vault-compose.yml"
+SECRET_VALUE="openbao-jwt-smoke-pass-v1"
+COMPOSE_FILE="${SCRIPT_DIR}/smoke-openbao-compose.yml"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
 JWT_WORKDIR="$(mktemp -d)"
 JWT_ROLE="swarm-external-secrets"
 JWT_TOKEN_TTL="10s"
 JWT_TOKEN_MAX_TTL="25s"
 RENEWAL_WAIT_SECONDS=45
-LOG_EXPORT_DIR="${REPO_ROOT}/.tmp/smoke-vault-jwt"
+LOG_EXPORT_DIR="${REPO_ROOT}/.tmp/smoke-openbao-jwt"
 PLUGIN_LOG_PATH="/run/swarm-external-secrets/plugin.log"
 PLUGIN_LOG_EXPORT="${LOG_EXPORT_DIR}/plugin.log"
 DAEMON_LOG_EXPORT="${LOG_EXPORT_DIR}/docker-daemon.log"
@@ -108,12 +108,12 @@ assert_log_contains_any() {
 cleanup() {
     EXIT_CODE=$?
     set +e
-    echo -e "${RED}Running Vault JWT smoke test cleanup...${DEF}"
+    echo -e "${RED}Running OpenBao JWT smoke test cleanup...${DEF}"
     export_plugin_logs
     remove_stack "${STACK_NAME}"
     docker secret rm "${SECRET_NAME}" 2>/dev/null || true
-    docker stop "${VAULT_CONTAINER}" 2>/dev/null || true
-    docker rm   "${VAULT_CONTAINER}" 2>/dev/null || true
+    docker stop "${OPENBAO_CONTAINER}" 2>/dev/null || true
+    docker rm   "${OPENBAO_CONTAINER}" 2>/dev/null || true
     rm -rf "${JWT_WORKDIR}"
     remove_plugin
     exit "${EXIT_CODE}"
@@ -122,32 +122,32 @@ trap cleanup EXIT
 
 prepare_plugin_log_path
 
-info "Starting HashiCorp Vault dev container..."
+info "Starting OpenBao dev container..."
 docker run -d \
-    --name "${VAULT_CONTAINER}" \
+    --name "${OPENBAO_CONTAINER}" \
     -p 8200:8200 \
-    -e "VAULT_DEV_ROOT_TOKEN_ID=${VAULT_ROOT_TOKEN}" \
-    hashicorp/vault:latest server -dev
+    -e "BAO_DEV_ROOT_TOKEN_ID=${OPENBAO_ROOT_TOKEN}" \
+    quay.io/openbao/openbao:latest server -dev
 
-info "Waiting for Vault to be ready..."
+info "Waiting for OpenBao to be ready..."
 elapsed=0
-until docker exec "${VAULT_CONTAINER}" vault status -address="${VAULT_ADDR}" &>/dev/null; do
+until docker exec "${OPENBAO_CONTAINER}" bao status -address="${OPENBAO_ADDR}" >/dev/null 2>&1; do
     sleep 2
     elapsed=$((elapsed + 2))
-    [[ "${elapsed}" -lt 30 ]] || die "Vault did not become ready within 30s."
+    [[ "${elapsed}" -lt 30 ]] || die "OpenBao did not become ready within 30s."
 done
-success "Vault is ready."
+success "OpenBao is ready."
 
-info "Applying policy to Vault..."
-write_jwt_smoke_policy "${VAULT_CONTAINER}" "${POLICY_FILE}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault policy write smoke-policy -
+info "Applying policy to OpenBao..."
+write_jwt_smoke_policy "${OPENBAO_CONTAINER}" "${POLICY_FILE}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    bao policy write smoke-policy -
 success "Policy applied."
 
-info "Writing test secret to Vault..."
-docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault kv put \
+info "Writing test secret to OpenBao..."
+docker exec "${OPENBAO_CONTAINER}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    bao kv put \
     "secret/${SECRET_PATH}" \
     "${SECRET_FIELD}=${SECRET_VALUE}"
 success "Secret written."
@@ -155,20 +155,20 @@ success "Secret written."
 info "Generating local JWT signing keys and signed JWT..."
 generate_local_jwt
 chmod 0644 "${JWT_WORKDIR}/jwt-public.pem"
-docker cp "${JWT_WORKDIR}/jwt-public.pem" "${VAULT_CONTAINER}:/tmp/jwt-public.pem"
+docker cp "${JWT_WORKDIR}/jwt-public.pem" "${OPENBAO_CONTAINER}:/tmp/jwt-public.pem"
 
-info "Configuring Vault JWT auth..."
-docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault auth enable jwt
-docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault write auth/jwt/config \
+info "Configuring OpenBao JWT auth..."
+docker exec "${OPENBAO_CONTAINER}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    bao auth enable jwt
+docker exec "${OPENBAO_CONTAINER}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    bao write auth/jwt/config \
         jwt_validation_pubkeys=@/tmp/jwt-public.pem \
         bound_issuer="swarm-external-secrets-local"
-docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault write "auth/jwt/role/${JWT_ROLE}" \
+docker exec "${OPENBAO_CONTAINER}" \
+    env BAO_ADDR="${OPENBAO_ADDR}" BAO_TOKEN="${OPENBAO_ROOT_TOKEN}" \
+    bao write "auth/jwt/role/${JWT_ROLE}" \
         role_type="jwt" \
         user_claim="sub" \
         bound_audiences="vault" \
@@ -176,23 +176,23 @@ docker exec "${VAULT_CONTAINER}" \
         policies="smoke-policy" \
         ttl="${JWT_TOKEN_TTL}" \
         max_ttl="${JWT_TOKEN_MAX_TTL}"
-success "Vault JWT auth configured."
+success "OpenBao JWT auth configured."
 
 info "Building plugin and configuring JWT auth..."
 build_plugin
 
-configure_plugin_jwt "${JWT_WORKDIR}/workload.jwt" VAULT_JWT \
-    SECRETS_PROVIDER="vault" \
-    VAULT_ADDR="${VAULT_ADDR}" \
-    VAULT_AUTH_METHOD="jwt" \
-    VAULT_JWT_ROLE="${JWT_ROLE}" \
-    VAULT_JWT_AUTH_PATH="jwt" \
-    VAULT_MOUNT_PATH="secret" \
+configure_plugin_jwt "${JWT_WORKDIR}/workload.jwt" OPENBAO_JWT \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="${OPENBAO_ADDR}" \
+    OPENBAO_AUTH_METHOD="jwt" \
+    OPENBAO_JWT_ROLE="${JWT_ROLE}" \
+    OPENBAO_JWT_AUTH_PATH="jwt" \
+    OPENBAO_MOUNT_PATH="secret" \
     ENABLE_ROTATION="false" \
     ENABLE_MONITORING="false" \
     LOG_LEVEL="debug" \
     PLUGIN_LOG_PATH="${PLUGIN_LOG_PATH}"
-success "Plugin configured with Vault JWT auth."
+success "Plugin configured with OpenBao JWT auth."
 
 info "Enabling plugin..."
 enable_plugin
@@ -209,12 +209,12 @@ export_plugin_logs
 
 assert_log_contains_any \
     "JWT renewal path" \
-    "Successfully renewed vault token"
+    "Successfully renewed openbao token"
 
 assert_log_contains_any \
     "JWT re-auth fallback path" \
-    "Renewing vault token failed, attempting re-authentication" \
-    "Successfully re-authenticated with vault"
+    "Renewing openbao token failed, attempting re-authentication" \
+    "Successfully re-authenticated with openbao"
 
 info "Re-deploying stack to prove reads still work after original token max TTL..."
 remove_stack "${STACK_NAME}"
@@ -222,4 +222,4 @@ docker secret rm "${SECRET_NAME}" 2>/dev/null || true
 deploy_stack "${COMPOSE_FILE}" "${STACK_NAME}" 60
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
-success "Vault JWT smoke test PASSED"
+success "OpenBao JWT smoke test PASSED"

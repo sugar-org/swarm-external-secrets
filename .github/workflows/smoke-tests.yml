@@ -60,3 +60,23 @@ jobs:
       # preinstalled on ubuntu-latest runners.
       - name: Run smoke test for awssm
         run: bash scripts/tests/smoke-test-awssm.sh
+
+  smoke-test-jwt-renewal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [vault-jwt, openbao-jwt]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Init Docker Swarm
+        run: docker swarm init
+
+      - name: Run JWT renewal smoke test for ${{ matrix.provider }}
+        run: bash scripts/tests/smoke-test-${{ matrix.provider }}.sh
