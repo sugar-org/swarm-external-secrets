@@ -60,6 +60,7 @@ nav:
   - index.md
   - Providers:
       - GCP Secret Manager: gcp.md
+      - Vault and OpenBao JWT: jwt.md
   - Multi-Provider: multi-provider.md
   - Monitoring: monitoring.md
   - Rotation: rotation.md

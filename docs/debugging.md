@@ -57,6 +57,31 @@ vault write auth/approle/role/my-role \
     token_policies="db-policy"
 ```
 
+## JWT authentication
+
+JWT login and client-token renewal (including max-TTL re-login) are documented in
+[Vault and OpenBao JWT](jwt.md).
+
+Enable JWT auth and a role, then configure the plugin with `VAULT_AUTH_METHOD=jwt`
+(or `OPENBAO_AUTH_METHOD=jwt`). Current Vault/OpenBao JWT auth requires the
+identity token to include at least one of `iat`, `nbf`, or `exp`.
+
+The issued client token policy should allow renew-self:
+
+```hcl
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+```
+
+Renewal and re-auth log lines (with `vault` or `openbao` as the provider name):
+
+```text
+Successfully renewed vault token
+Renewing vault token failed, attempting re-authentication
+Successfully re-authenticated with vault
+```
+
 ## Set and Get KV Secrets
 
 ```bash
