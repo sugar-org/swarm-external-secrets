@@ -174,6 +174,130 @@ remove_plugin() {
     docker image rm swarm-external-secrets:temp --force 2>/dev/null || true
 }
 
+# Generate a Doppler smoke-test compose file.
+# Usage: write_doppler_compose <out_file> <docker_secret_name> <doppler_secret_key>
+write_doppler_compose() {
+    local out_file="$1"
+    local secret_name="$2"
+    local secret_key="$3"
+
+    cat > "${out_file}" <<EOF
+version: '3.8'
+
+services:
+  app:
+    image: busybox:latest
+    command: >
+      sh -c "
+        while true; do
+          echo 'Current secret:' && cat /run/secrets/${secret_name}
+          sleep 5
+        done
+      "
+    secrets:
+      - ${secret_name}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    networks:
+      - smoke-network
+
+secrets:
+  ${secret_name}:
+    driver: swarm-external-secrets:latest
+    labels:
+      doppler_secret_name: "${secret_key}"
+
+networks:
+  smoke-network:
+    driver: overlay
+EOF
+    return 0
+}
+
+# ---- Doppler backend helpers (real Doppler vs local mock) ----
+# Inputs (set by caller before use):
+#   DOPPLER_SMOKE_TOKEN  - real service token (read/write); real mode when set
+#   DOPPLER_API_URL      - real API base (default https://api.doppler.com)
+#   DOPPLER_PROJECT      - optional real project override
+#   DOPPLER_CONFIG       - optional real config override
+#   DOPPLER_MOCK_URL     - local mock base URL (mock mode)
+#   DOPPLER_MOCK_TOKEN   - local mock bearer token (mock mode)
+# Derived by doppler_init_backend:
+#   DOPPLER_MODE           - "real" | "mock"
+#   DOPPLER_PLUGIN_TOKEN   - token the plugin should use
+#   DOPPLER_PLUGIN_API_URL - API base the plugin should use
+
+doppler_is_real() {
+    [[ -n "${DOPPLER_SMOKE_TOKEN:-}" ]] && return 0
+    return 1
+}
+
+doppler_init_backend() {
+    if doppler_is_real; then
+        DOPPLER_MODE="real"
+        DOPPLER_PLUGIN_TOKEN="${DOPPLER_SMOKE_TOKEN}"
+        DOPPLER_PLUGIN_API_URL="${DOPPLER_API_URL:-https://api.doppler.com}"
+    else
+        DOPPLER_MODE="mock"
+        DOPPLER_PLUGIN_TOKEN="${DOPPLER_MOCK_TOKEN}"
+        DOPPLER_PLUGIN_API_URL="${DOPPLER_MOCK_URL}"
+    fi
+    export DOPPLER_MODE DOPPLER_PLUGIN_TOKEN DOPPLER_PLUGIN_API_URL
+    return 0
+}
+
+# Build the project/config query string shared by real-mode API calls.
+doppler_query() {
+    local sep="?" qs=""
+    if [[ -n "${DOPPLER_PROJECT:-}" ]]; then qs+="${sep}project=${DOPPLER_PROJECT}"; sep="&"; fi
+    if [[ -n "${DOPPLER_CONFIG:-}" ]]; then qs+="${sep}config=${DOPPLER_CONFIG}"; sep="&"; fi
+    printf '%s' "${qs}"
+    return 0
+}
+
+# doppler_seed_secret NAME VALUE — create/update a secret in the active backend.
+doppler_seed_secret() {
+    local name="$1" value="$2"
+    if doppler_is_real; then
+        curl -fsS -X POST "${DOPPLER_API_URL:-https://api.doppler.com}/v3/configs/config/secrets$(doppler_query)" \
+            -H "Authorization: Bearer ${DOPPLER_SMOKE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"secrets\":{\"${name}\":\"${value}\"}}" >/dev/null
+    else
+        curl -fsS -X POST "${DOPPLER_MOCK_URL}/mock/set-secret" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"${name}\",\"value\":\"${value}\"}" >/dev/null
+    fi
+    return 0
+}
+
+# doppler_delete_secret NAME — best-effort cleanup of a real Doppler secret.
+doppler_delete_secret() {
+    local name="$1"
+    doppler_is_real || return 0
+    curl -fsS -X POST "${DOPPLER_API_URL:-https://api.doppler.com}/v3/configs/config/secrets$(doppler_query)" \
+        -H "Authorization: Bearer ${DOPPLER_SMOKE_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"secrets\":{\"${name}\":null}}" >/dev/null 2>&1 || true
+}
+
+# doppler_wait_readable VALUE [TIMEOUT] — wait until VALUE is returned by the
+# active backend's download endpoint (confirms a seed propagated).
+doppler_wait_readable() {
+    local value="$1" timeout="${2:-30}" elapsed=0 q=""
+    if doppler_is_real; then q="$(doppler_query | sed 's/^?/\&/')"; fi
+    until curl -fsS -H "Authorization: Bearer ${DOPPLER_PLUGIN_TOKEN}" \
+        "${DOPPLER_PLUGIN_API_URL}/v3/configs/config/secrets/download?format=json${q}" \
+        | grep -q "${value}"; do
+        sleep 2
+        elapsed=$((elapsed + 2))
+        [[ "${elapsed}" -lt "${timeout}" ]] || die "Seeded secret did not become readable within ${timeout}s."
+    done
+    return 0
+}
+
 # Deploy swarm stack (mirrors deploy.sh pattern)
 deploy_stack() {
     local compose_file="$1"

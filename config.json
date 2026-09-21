@@ -327,6 +327,56 @@
       "name": "OPENBAO_SKIP_VERIFY",
       "description": "Skip TLS certificate verification for OpenBao (true/false)",
       "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_TOKEN",
+      "description": "Doppler service token or CLI token",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_PROJECT",
+      "description": "Doppler project (required for non-service tokens)",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_CONFIG",
+      "description": "Doppler config/environment (dev, stg, prd)",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_API_URL",
+      "description": "Doppler API origin (default https://api.doppler.com). HTTP is allowed only for loopback hosts.",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_CACHE_TTL",
+      "description": "Cache duration for Doppler config downloads (e.g. 30s, 1m)",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_WEBHOOK_SECRET",
+      "description": "Doppler webhook signing secret used to verify X-Doppler-Signature. Required when DOPPLER_WEBHOOK_ENABLE=true.",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_WEBHOOK_INSECURE",
+      "description": "Accept unsigned Doppler webhooks (true/false). Local development only, default false",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_WEBHOOK_ENABLE",
+      "description": "Enable the Doppler webhook listener for event-driven rotation (true/false), default false",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_WEBHOOK_PORT",
+      "description": "Port for the Doppler webhook listener (host network), default 8081",
+      "settable": ["value"]
+    },
+    {
+      "name": "DOPPLER_WEBHOOK_PATH",
+      "description": "HTTP path for the Doppler webhook listener, default /webhooks/doppler",
+      "settable": ["value"]
     }
   ]
 }

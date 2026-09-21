@@ -16,6 +16,7 @@ import (
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/sugar-org/swarm-external-secrets/dopplerwebhook"
 	"github.com/sugar-org/swarm-external-secrets/internal/secrettransform"
 	"github.com/sugar-org/swarm-external-secrets/internal/utils"
 	"github.com/sugar-org/swarm-external-secrets/monitoring"
@@ -30,20 +31,27 @@ type SecretsDriver struct {
 	transformer   secrettransform.Transformer      // aws kms service which decrypts ciphertexts
 	secretTracker map[string]*providers.SecretInfo // key: docker secret name
 	trackerMutex  sync.RWMutex
+	rotationMu    sync.Mutex // serializes rotation cycles (poll loop vs webhook)
 	monitorCtx    context.Context
 	monitorCancel context.CancelFunc
 	monitor       *monitoring.Monitor
 	webInterface  *monitoring.WebInterface
+	webhookServer *dopplerwebhook.Server
 }
 
 // SecretsConfig holds the configuration for the multi-provider driver
 type SecretsConfig struct {
-	ProviderType     string
-	EnableRotation   bool
-	RotationInterval time.Duration
-	EnableMonitoring bool
-	MonitoringPort   int
-	Settings         map[string]string
+	ProviderType         string
+	EnableRotation       bool
+	RotationInterval     time.Duration
+	EnableMonitoring     bool
+	MonitoringPort       int
+	WebhookEnable        bool
+	WebhookPort          int
+	WebhookPath          string
+	WebhookSecret        string
+	WebhookAllowUnsigned bool
+	Settings             map[string]string
 }
 
 // NewDriver creates a new Driver instance with multi-provider support
@@ -63,12 +71,17 @@ func NewDriver() (*SecretsDriver, error) {
 	}
 
 	config := &SecretsConfig{
-		ProviderType:     providerType,
-		EnableRotation:   utils.GetEnvOrDefault("ENABLE_ROTATION", "true") == "true",
-		RotationInterval: utils.ParseDurationOrDefault(utils.GetEnvOrDefault("ROTATION_INTERVAL", "10s")),
-		EnableMonitoring: utils.GetEnvOrDefault("ENABLE_MONITORING", "true") == "true",
-		MonitoringPort:   utils.ParseIntOrDefault(utils.GetEnvOrDefault("MONITORING_PORT", "8080")),
-		Settings:         settings,
+		ProviderType:         providerType,
+		EnableRotation:       utils.GetEnvOrDefault("ENABLE_ROTATION", "true") == "true",
+		RotationInterval:     utils.ParseDurationOrDefault(utils.GetEnvOrDefault("ROTATION_INTERVAL", "10s")),
+		EnableMonitoring:     utils.GetEnvOrDefault("ENABLE_MONITORING", "true") == "true",
+		MonitoringPort:       utils.ParseIntOrDefault(utils.GetEnvOrDefault("MONITORING_PORT", "8080")),
+		WebhookEnable:        utils.GetEnvOrDefault("DOPPLER_WEBHOOK_ENABLE", "false") == "true",
+		WebhookPort:          utils.ParseIntOrDefault(utils.GetEnvOrDefault("DOPPLER_WEBHOOK_PORT", "8081")),
+		WebhookPath:          utils.GetEnvOrDefault("DOPPLER_WEBHOOK_PATH", "/webhooks/doppler"),
+		WebhookSecret:        utils.GetConfigOrDefault(settings, "DOPPLER_WEBHOOK_SECRET", ""),
+		WebhookAllowUnsigned: utils.GetEnvOrDefault("DOPPLER_WEBHOOK_INSECURE", "false") == "true",
+		Settings:             settings,
 	}
 
 	// Create the appropriate provider
@@ -126,8 +139,55 @@ func NewDriver() (*SecretsDriver, error) {
 		log.Debug("Secret rotation monitoring is disabled")
 	}
 
+	// Start the webhook listener for event-driven rotation (e.g. Doppler).
+	if config.WebhookEnable {
+		if err := driver.startWebhookServer(); err != nil {
+			return nil, err
+		}
+	}
+
 	log.Infof("Successfully initialized driver with %s provider", provider.GetProviderName())
 	return driver, nil
+}
+
+// startWebhookServer starts the HTTP listener that receives provider webhooks
+// (currently Doppler config.secrets.update) and triggers an immediate rotation
+// check, bypassing the poll interval.
+func (d *SecretsDriver) startWebhookServer() error {
+	if !d.config.EnableRotation || !d.provider.SupportsRotation() {
+		log.Warnf("DOPPLER_WEBHOOK_ENABLE is set but provider %s cannot rotate (rotation disabled or unsupported); webhook listener will not be started", d.config.ProviderType)
+		return nil
+	}
+	if d.config.WebhookSecret == "" && !d.config.WebhookAllowUnsigned {
+		return fmt.Errorf("DOPPLER_WEBHOOK_SECRET is required when DOPPLER_WEBHOOK_ENABLE=true; set DOPPLER_WEBHOOK_INSECURE=true only for local development")
+	}
+	if d.config.WebhookSecret == "" {
+		log.Warn("DOPPLER_WEBHOOK_INSECURE=true: Doppler webhook listener will accept unsigned requests")
+	}
+
+	addr := fmt.Sprintf(":%d", d.config.WebhookPort)
+	server, err := dopplerwebhook.New(addr, d.config.WebhookPath, d.config.WebhookSecret, d.config.WebhookAllowUnsigned, d.handleWebhookEvent)
+	if err != nil {
+		return err
+	}
+	d.webhookServer = server
+	if err := d.webhookServer.Start(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// handleWebhookEvent drops any cached provider secrets and runs a rotation
+// check. Invoked asynchronously by the webhook server after authentication.
+func (d *SecretsDriver) handleWebhookEvent(_ dopplerwebhook.Payload) {
+	if !d.config.EnableRotation || !d.provider.SupportsRotation() {
+		log.Debug("Webhook received but rotation is disabled or unsupported; ignoring")
+		return
+	}
+	if invalidator, ok := d.provider.(providers.CacheInvalidator); ok {
+		invalidator.InvalidateCache()
+	}
+	d.checkForSecretChanges()
 }
 
 // buildSecretInfo constructs a SecretInfo from the incoming request, using the
@@ -294,8 +354,14 @@ func (d *SecretsDriver) startMonitoring() {
 	}
 }
 
-// checkForSecretChanges monitors tracked secrets for changes
+// checkForSecretChanges monitors tracked secrets for changes.
+// The rotation mutex serializes whole cycles so a webhook-triggered check
+// cannot overlap a poll-triggered one (concurrent cycles could interleave the
+// create -> update -> remove rotation steps on the same secret).
 func (d *SecretsDriver) checkForSecretChanges() {
+	d.rotationMu.Lock()
+	defer d.rotationMu.Unlock()
+
 	d.trackerMutex.RLock()
 	secrets := make(map[string]*providers.SecretInfo, len(d.secretTracker))
 	maps.Copy(secrets, d.secretTracker)
@@ -305,6 +371,8 @@ func (d *SecretsDriver) checkForSecretChanges() {
 		log.Debug("No secrets to monitor")
 		return
 	}
+
+	d.prepareReconciliation(secrets)
 
 	log.Debugf("Checking %d tracked secrets for changes", len(secrets))
 	// TODO: Revisit this limit if secret-label fanout or provider latency changes.
@@ -330,6 +398,28 @@ func (d *SecretsDriver) checkForSecretChanges() {
 	}
 
 	wg.Wait()
+}
+
+// prepareReconciliation refreshes provider caches once per cycle. Doppler
+// downloads the tracked names for each config in one request, so the checks
+// below share that response instead of waiting out DOPPLER_CACHE_TTL.
+func (d *SecretsDriver) prepareReconciliation(secrets map[string]*providers.SecretInfo) {
+	infos := make([]*providers.SecretInfo, 0, len(secrets))
+	for _, info := range secrets {
+		infos = append(infos, info)
+	}
+
+	if preparer, ok := d.provider.(providers.ReconciliationPreparer); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := preparer.PrepareReconciliation(ctx, infos); err != nil {
+			log.Errorf("Failed to refresh secrets before rotation check: %v", err)
+		}
+		return
+	}
+	if invalidator, ok := d.provider.(providers.CacheInvalidator); ok {
+		invalidator.InvalidateCache()
+	}
 }
 
 func (d *SecretsDriver) handleSecretRotationResult(secretName string, secretInfo *providers.SecretInfo) {
@@ -582,6 +672,12 @@ func (d *SecretsDriver) Stop() error {
 	if d.webInterface != nil {
 		if err := d.webInterface.Stop(); err != nil {
 			log.Warnf("Error stopping web interface: %v", err)
+		}
+	}
+
+	if d.webhookServer != nil {
+		if err := d.webhookServer.Stop(); err != nil {
+			log.Warnf("Error stopping webhook server: %v", err)
 		}
 	}
 

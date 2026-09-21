@@ -20,6 +20,8 @@ func CreateProvider(providerType string) (SecretsProvider, error) {
 		return &OpenBaoProvider{}, nil
 	case "oci", "oracle", "oci-vault":
 		return &OCIProvider{}, nil
+	case "doppler":
+		return &DopplerProvider{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
 	}
@@ -34,6 +36,7 @@ func GetSupportedProviders() []string {
 		"azure",
 		"openbao",
 		"oci",
+		"doppler",
 	}
 }
 
@@ -77,6 +80,12 @@ func GetProviderInfo(providerType string) (map[string]string, error) {
 		info["description"] = "Oracle Cloud Infrastructure Vault"
 		info["auth_methods"] = "api_key, instance_principal"
 		info["env_vars"] = "OCI_REGION, OCI_TENANCY_OCID, OCI_USER_OCID, OCI_FINGERPRINT, OCI_PRIVATE_KEY, OCI_PRIVATE_KEY_PASSPHRASE, OCI_VAULT_OCID, OCI_AUTH_METHOD, OCI_ENDPOINT"
+
+	case "doppler":
+		info["name"] = "Doppler"
+		info["description"] = "Doppler secrets management platform"
+		info["auth_methods"] = "service token, CLI token"
+		info["env_vars"] = "DOPPLER_TOKEN, DOPPLER_PROJECT, DOPPLER_CONFIG, DOPPLER_API_URL, DOPPLER_CACHE_TTL, DOPPLER_WEBHOOK_SECRET, DOPPLER_WEBHOOK_INSECURE"
 
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)

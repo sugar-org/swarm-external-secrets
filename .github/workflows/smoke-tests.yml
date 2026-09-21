@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        provider: [vault, openbao]
+        provider: [vault, openbao, doppler, doppler-webhook]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,6 +32,14 @@ jobs:
         run: docker swarm init
 
       - name: Run smoke test for ${{ matrix.provider }}
+        # Doppler vars are only consumed by the doppler script. The service
+        # token is passed on push to main. Pull requests leave it empty and use
+        # the local Go mock, so pull-request code cannot read the token.
+        # doppler-webhook is mock-only. Other providers ignore these variables.
+        env:
+          DOPPLER_SMOKE_TOKEN: ${{ github.event_name == 'push' && secrets.DOPPLER_SMOKE_TOKEN || '' }}
+          DOPPLER_PROJECT: ${{ vars.DOPPLER_SMOKE_PROJECT }}
+          DOPPLER_CONFIG: ${{ vars.DOPPLER_SMOKE_CONFIG }}
         run: bash scripts/tests/smoke-test-${{ matrix.provider }}.sh
 
   smoke-test-kv-custom-path:
