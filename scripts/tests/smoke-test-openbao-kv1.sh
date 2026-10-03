@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/smoke-test-helper.sh"
 OPENBAO_CONTAINER="smoke-openbao"
 OPENBAO_ROOT_TOKEN="smoke-root-token"
 OPENBAO_ADDR="http://127.0.0.1:8200"
-OPENBAO_MOUNT_PATH="kv1"
+OPENBAO_MOUNT_PATH="kv"
 OPENBAO_KV_VERSION="1"
 STACK_NAME="smoke-openbao"
 SECRET_NAME="smoke_secret"
@@ -20,16 +20,16 @@ SECRET_VALUE="openbao-smoke-pass-v1"
 SECRET_VALUE_ROTATED="openbao-smoke-pass-v2"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-openbao-compose.yml"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
-EXIT_CODE=0
 # Cleanup trap
 cleanup() {
+    local status=$?
     echo -e "${RED}Running OpenBao KV v1 smoke test cleanup...${DEF}"
-    remove_stack "${STACK_NAME}"
+    remove_stack "${STACK_NAME}" || true
     docker secret rm "${SECRET_NAME}" 2>/dev/null || true
     docker stop "${OPENBAO_CONTAINER}" 2>/dev/null || true
     docker rm   "${OPENBAO_CONTAINER}" 2>/dev/null || true
-    remove_plugin
-    exit "${EXIT_CODE}"
+    remove_plugin || true
+    exit "${status}"
 }
 trap cleanup EXIT
 
@@ -37,7 +37,7 @@ trap cleanup EXIT
 info "Starting OpenBao dev container..."
 docker run -d \
     --name "${OPENBAO_CONTAINER}" \
-    -p 8200:8200 \
+    -p 127.0.0.1:8200:8200 \
     -e "BAO_DEV_ROOT_TOKEN_ID=${OPENBAO_ROOT_TOKEN}" \
     quay.io/openbao/openbao:latest server -dev
 
@@ -117,11 +117,6 @@ assert_no_sensitive_rotation_metadata_logs
 info "Verifying secret value matches expected password..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 60
 
-# Capture container ID now, before rotation, to verify in-place update
-info "Capturing running container ID before rotation..."
-APP_CONTAINER_ID=$(get_running_container_id "${STACK_NAME}" "app")
-success "Container to watch: ${APP_CONTAINER_ID:0:12}"
-
 # Rotate the password and verify
 info "Rotating secret in OpenBao KV v1..."
 docker exec "${OPENBAO_CONTAINER}" \
@@ -134,14 +129,14 @@ success "Secret rotated to: ${SECRET_VALUE_ROTATED}"
 info "Waiting for plugin rotation interval (15s)..."
 sleep 15
 
-info "Waiting for new container to start after rotation (10s)..."
+info "Waiting for service update after secret rotation (10s)..."
 sleep 10
 assert_no_sensitive_rotation_metadata_logs
 
 info "Logging service output after rotation..."
 log_stack "${STACK_NAME}" "app"
 
-info "Verifying rotated secret value (must update in-place, same container)..."
+info "Verifying rotated secret value..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 
 

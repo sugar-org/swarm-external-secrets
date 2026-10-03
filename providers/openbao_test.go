@@ -133,6 +133,56 @@ func TestOpenBaoProvider_BuildSecretPath(t *testing.T) {
 			want: "secret/database/mysql",
 		},
 		{
+			name:      "v1 relative data path keeps data folder",
+			mountPath: "secret",
+			kvVersion: "1",
+			req: secrets.Request{
+				SecretName:   "ignored",
+				SecretLabels: map[string]string{"openbao_path": "data/mysql"},
+			},
+			want: "secret/data/mysql",
+		},
+		{
+			name:      "v1 mount-qualified path strips mount and data segments",
+			mountPath: "secret",
+			kvVersion: "1",
+			req: secrets.Request{
+				SecretName:   "ignored",
+				SecretLabels: map[string]string{"openbao_path": "secret/data/mysql"},
+			},
+			want: "secret/mysql",
+		},
+		{
+			name:      "v1 relative data path keeps data folder on custom mount",
+			mountPath: "kv",
+			kvVersion: "1",
+			req: secrets.Request{
+				SecretName:   "ignored",
+				SecretLabels: map[string]string{"openbao_path": "data/mysql"},
+			},
+			want: "kv/data/mysql",
+		},
+		{
+			name:      "v1 mount-qualified path strips mount and data segments on custom mount",
+			mountPath: "kv",
+			kvVersion: "1",
+			req: secrets.Request{
+				SecretName:   "ignored",
+				SecretLabels: map[string]string{"openbao_path": "kv/data/mysql"},
+			},
+			want: "kv/mysql",
+		},
+		{
+			name:      "v2 relative data path normalization unchanged",
+			mountPath: "secret",
+			kvVersion: "2",
+			req: secrets.Request{
+				SecretName:   "ignored",
+				SecretLabels: map[string]string{"openbao_path": "data/mysql"},
+			},
+			want: "secret/data/mysql",
+		},
+		{
 			name:      "empty version keeps historical v2 behaviour",
 			mountPath: "secret",
 			kvVersion: "",
