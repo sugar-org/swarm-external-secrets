@@ -251,7 +251,8 @@ func (d *SecretsDriver) trackSecret(secretInfo *providers.SecretInfo, value []by
 	log.Tracef("Current provider %s tracking secret: %s at path: %s",
 		secretInfo.Provider, secretInfo.DockerSecretName, secretInfo.SecretPath)
 
-	// If already tracking, update service names and hash
+	// If already tracking, update service names and metadata (but not the
+	// change-detection baseline — that is advanced only by rotateSecret).
 	if existing, exists := d.secretTracker[secretInfo.DockerSecretName]; exists {
 		// Add service name if not already present
 		serviceName := secretInfo.ServiceNames[0]
@@ -259,7 +260,6 @@ func (d *SecretsDriver) trackSecret(secretInfo *providers.SecretInfo, value []by
 		if !serviceFound && serviceName != "" {
 			existing.ServiceNames = append(existing.ServiceNames, serviceName)
 		}
-		existing.LastHash = hash
 		existing.LastUpdated = time.Now()
 		existing.Labels = secretInfo.Labels
 	} else {
