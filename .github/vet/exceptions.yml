@@ -1,0 +1,11 @@
+description: |
+  xxhash v2.3.0 is the latest release. OpenSSF Scorecard marks it unmaintained,
+  and no newer version exists. The Infisical SDK pulls it in through
+  google.golang.org/api and OpenTelemetry. This expires so a later release
+  is reviewed again.
+exceptions:
+  - id: infisical-xxhash-v2.3.0
+    ecosystem: Go
+    name: github.com/cespare/xxhash/v2
+    version: "2.3.0"
+    expires: "2026-12-21T00:00:00Z"

@@ -119,6 +119,9 @@ build_plugin() {
 
     echo -e "${RED}Copy config to plugin directory${DEF}"
     cp "${REPO_ROOT}/config.json" "${REPO_ROOT}/plugin/"
+    if declare -F prepare_plugin_rootfs >/dev/null; then
+        prepare_plugin_rootfs
+    fi
 
     echo -e "${RED}Create the plugin${DEF}"
     docker plugin create "${PLUGIN_NAME}" "${REPO_ROOT}/plugin"

@@ -327,6 +327,41 @@
       "name": "OPENBAO_SKIP_VERIFY",
       "description": "Skip TLS certificate verification for OpenBao (true/false)",
       "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_TOKEN",
+      "description": "Infisical bearer/access token (optional if Universal Auth client credentials are set)",
+      "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_CLIENT_ID",
+      "description": "Infisical machine identity Client ID for Universal Auth",
+      "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_CLIENT_SECRET",
+      "description": "Infisical machine identity Client Secret for Universal Auth",
+      "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_PROJECT_ID",
+      "description": "Infisical project ID (required)",
+      "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_ENVIRONMENT",
+      "description": "Infisical environment slug (dev, staging, prod). Default: dev",
+      "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_SECRET_PATH",
+      "description": "Default Infisical folder path for secrets (default /)",
+      "settable": ["value"]
+    },
+    {
+      "name": "INFISICAL_SITE_URL",
+      "description": "Infisical site/API base URL (default https://app.infisical.com)",
+      "settable": ["value"]
     }
   ]
 }
