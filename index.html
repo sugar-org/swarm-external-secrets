@@ -12,7 +12,7 @@
       
       
       
-        <link rel="next" href="gcp/">
+        <link rel="next" href="infisical/">
       
       
         
@@ -555,6 +555,8 @@
       
         
       
+        
+      
     
     
     
@@ -596,6 +598,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="infisical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Infisical
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1060,7 +1090,7 @@
 <h3 id="swarm-external-secrets">Swarm External Secrets<a class="headerlink" href="#swarm-external-secrets" title="Permanent link">&para;</a></h3>
 <p><a href="https://scorecard.dev/viewer/?uri=github.com/sugar-org/swarm-external-secrets"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/sugar-org/swarm-external-secrets/badge" /></a> <img alt="Discord" src="https://img.shields.io/discord/1476983394977054740?logo=discord&amp;color=blue" /> <a href="https://discord.gg/4NYdBu7bZy"><img alt="Join our Discord" src="https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&amp;logoColor=white" /></a> <a href="https://deepwiki.com/sugar-org/swarm-external-secrets"><img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg" /></a></p>
 <hr />
-<p>A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, and OCI Vault.</p>
+<p>A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault, and Infisical.</p>
 <h3 id="updates">🚀 Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h3>
 <h4 id="google-summer-of-code-2026">🎓 Google Summer of Code 2026<a class="headerlink" href="#google-summer-of-code-2026" title="Permanent link">&para;</a></h4>
 <p>swarm-external-secrets is participating in Google Summer of Code 2026 incubated under the  organization <a href="http://opensciencelabs.org/">OpenScienceLabs</a>!</p>
@@ -1073,8 +1103,8 @@
 <h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Multi-Provider Support</strong>: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault</li>
-<li><strong>Multiple Auth Methods</strong>: Token, AppRole, and JWT for Vault and OpenBao, including client-token renewal</li>
+<li><strong>Multi-Provider Support</strong>: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault, Infisical</li>
+<li><strong>Multiple Auth Methods</strong>: Support for various authentication methods per provider</li>
 <li><strong>Automatic Secret Rotation</strong>: Monitor providers for changes and automatically update Docker secrets and services</li>
 <li><strong>Real-time Monitoring</strong>: Web dashboard with system metrics, health status, and performance tracking</li>
 <li><strong>Flexible Path Mapping</strong>: Customize secret paths and field extraction per provider</li>
@@ -1097,6 +1127,9 @@
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># OCI Vault</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"oci"</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># Infisical</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"infisical"</span>
 </code></pre></div>
 <p>For multi-instance usage (for example, Vault + OpenBao with separate plugin names in Swarm), see <a href="./docs/multi-provider.md"><code>docs/multi-provider.md</code></a>.</p>
 <h2 id="new-real-time-monitoring">New: Real-time Monitoring<a class="headerlink" href="#new-real-time-monitoring" title="Permanent link">&para;</a></h2>
@@ -1227,6 +1260,12 @@
 <td>OCI Vault</td>
 <td>🚧 Beta</td>
 <td>API Key, Instance Principal</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Infisical</td>
+<td>✅ Stable</td>
+<td>Universal Auth, Access Token</td>
 <td>✅</td>
 </tr>
 <tr>

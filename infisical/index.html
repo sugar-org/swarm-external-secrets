@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://sugar-org.github.io/swarm-external-secrets/jwt/">
+        <link rel="canonical" href="https://sugar-org.github.io/swarm-external-secrets/infisical/">
       
       
-        <link rel="prev" href="../gcp/">
+        <link rel="prev" href="..">
       
       
-        <link rel="next" href="../multi-provider/">
+        <link rel="next" href="../gcp/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Vault and OpenBao JWT - Swarm External Secrets</title>
+        <title>Infisical - Swarm External Secrets</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vault-and-openbao-jwt-authentication" class="md-skip">
+        <a href="#infisical" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Vault and OpenBao JWT
+              Infisical
             
           </span>
         </div>
@@ -346,10 +346,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../infisical/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Infisical
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -365,6 +392,159 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#site-url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Site URL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-universal-auth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example (Universal Auth)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-access-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example (access token)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secret-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secret labels
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secret labels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compose-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compose example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#machine-identity-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Machine identity setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smoke-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Smoke test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -402,37 +582,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Vault and OpenBao JWT
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../jwt/" class="md-nav__link">
         
   
   
@@ -448,98 +601,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#plugin-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Plugin configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#environment-jwt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment JWT
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#jwt-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        JWT file
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#jwt-role-and-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        JWT role and policy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#client-token-renewal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Client-token renewal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-smoke-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI smoke tests
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -714,22 +775,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#plugin-configuration" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Plugin configuration
+        Overview
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Plugin configuration">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#environment-jwt" class="md-nav__link">
+  <a href="#site-url" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment JWT
+        Site URL
       
     </span>
   </a>
@@ -737,10 +809,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#jwt-file" class="md-nav__link">
+  <a href="#example-universal-auth" class="md-nav__link">
     <span class="md-ellipsis">
       
-        JWT file
+        Example (Universal Auth)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-access-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example (access token)
       
     </span>
   </a>
@@ -753,10 +836,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#jwt-role-and-policy" class="md-nav__link">
+  <a href="#secret-labels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        JWT role and policy
+        Secret labels
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secret labels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compose-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compose example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#machine-identity-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Machine identity setup
       
     </span>
   </a>
@@ -764,10 +875,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#client-token-renewal" class="md-nav__link">
+  <a href="#rotation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Client-token renewal
+        Rotation
       
     </span>
   </a>
@@ -775,10 +886,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ci-smoke-tests" class="md-nav__link">
+  <a href="#smoke-test" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CI smoke tests
+        Smoke test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation notes
       
     </span>
   </a>
@@ -805,14 +927,16 @@
   
 
 
-<h1 id="vault-and-openbao-jwt-authentication">Vault and OpenBao JWT authentication<a class="headerlink" href="#vault-and-openbao-jwt-authentication" title="Permanent link">&para;</a></h1>
-<p>The plugin can log in to HashiCorp Vault and OpenBao with a signed JWT, then
-keep the <strong>issued client token</strong> alive. That client-token renewal is not the
-same as <a href="../rotation/">secret rotation</a>.</p>
-<p>OpenBao uses the same behavior with <code>OPENBAO_*</code> variables instead of <code>VAULT_*</code>.</p>
-<h2 id="plugin-configuration">Plugin configuration<a class="headerlink" href="#plugin-configuration" title="Permanent link">&para;</a></h2>
-<p>Set <code>VAULT_AUTH_METHOD=jwt</code> (or <code>OPENBAO_AUTH_METHOD=jwt</code>). You must also set a
-role name and provide a JWT from the environment <strong>or</strong> a file.</p>
+<h1 id="infisical">Infisical<a class="headerlink" href="#infisical" title="Permanent link">&para;</a></h1>
+<p>This document describes how to use <a href="https://infisical.com">Infisical</a> as a first-class secrets provider with Swarm External Secrets.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The Infisical provider fetches secret values from an Infisical project/environment (and optional folder path) using either:</p>
+<ol>
+<li><strong>Universal Auth</strong> (recommended for production) — machine identity <code>Client ID</code> + <code>Client Secret</code></li>
+<li><strong>Bearer access token</strong> — a pre-issued Infisical access token (<code>INFISICAL_TOKEN</code>)</li>
+</ol>
+<p>When a Docker service requests a secret, the plugin uses the official Infisical Go SDK to retrieve it and returns the plaintext value to Swarm. With rotation enabled, the plugin periodically re-reads the secret and cutovers Swarm secret versions when the value changes.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -823,152 +947,185 @@ role name and provide a JWT from the environment <strong>or</strong> a file.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>VAULT_AUTH_METHOD</code> / <code>OPENBAO_AUTH_METHOD</code></td>
-<td>Set to <code>jwt</code></td>
-<td><code>token</code></td>
-</tr>
-<tr>
-<td><code>VAULT_JWT_ROLE</code> / <code>OPENBAO_JWT_ROLE</code></td>
-<td>JWT/OIDC role name (required)</td>
+<td><code>INFISICAL_CLIENT_ID</code></td>
+<td>Machine identity Client ID (Universal Auth)</td>
 <td>—</td>
 </tr>
 <tr>
-<td><code>VAULT_JWT</code> / <code>OPENBAO_JWT</code></td>
-<td>Signed JWT string</td>
+<td><code>INFISICAL_CLIENT_SECRET</code></td>
+<td>Machine identity Client Secret (Universal Auth)</td>
 <td>—</td>
 </tr>
 <tr>
-<td><code>VAULT_JWT_FILE</code> / <code>OPENBAO_JWT_FILE</code></td>
-<td>Path to a file containing the JWT</td>
+<td><code>INFISICAL_TOKEN</code></td>
+<td>Pre-issued bearer/access token (optional alternative to Universal Auth)</td>
 <td>—</td>
 </tr>
 <tr>
-<td><code>VAULT_JWT_AUTH_PATH</code> / <code>OPENBAO_JWT_AUTH_PATH</code></td>
-<td>Auth mount path</td>
-<td><code>jwt</code></td>
+<td><code>INFISICAL_PROJECT_ID</code></td>
+<td>Infisical project ID (<strong>required</strong>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>INFISICAL_ENVIRONMENT</code></td>
+<td>Environment slug (<code>dev</code>, <code>staging</code>, <code>prod</code>, …)</td>
+<td><code>dev</code></td>
+</tr>
+<tr>
+<td><code>INFISICAL_SECRET_PATH</code></td>
+<td>Default folder path for secrets</td>
+<td><code>/</code></td>
+</tr>
+<tr>
+<td><code>INFISICAL_SITE_URL</code></td>
+<td>Infisical site/API base URL</td>
+<td><code>https://app.infisical.com</code></td>
 </tr>
 </tbody>
 </table>
-<p>Either <code>*_JWT</code> or <code>*_JWT_FILE</code> is required. If both are set, the <strong>file</strong> is
-used. The file is read again on every re-login, so you can rotate the identity
-JWT on disk without reconfiguring the plugin. A JWT stored in <code>*_JWT</code> is fixed
-until the next <code>docker plugin set</code>.</p>
-<p><code>*_JWT_FILE</code> is opened <strong>inside the plugin</strong>. The default plugin config
-bind-mounts host <code>/run/swarm-external-secrets</code> only, so the JWT file must live
-under that directory (same path on the host and in the plugin). Additional
-paths work only if you ship a custom plugin with extra mounts.</p>
-<h3 id="environment-jwt">Environment JWT<a class="headerlink" href="#environment-jwt" title="Permanent link">&para;</a></h3>
+<p>You must set either <code>INFISICAL_TOKEN</code> <strong>or</strong> both <code>INFISICAL_CLIENT_ID</code> and <code>INFISICAL_CLIENT_SECRET</code>.</p>
+<h3 id="site-url">Site URL<a class="headerlink" href="#site-url" title="Permanent link">&para;</a></h3>
+<p>Choose the correct base URL for your deployment:</p>
+<ul>
+<li>Infisical Cloud US: <code>https://app.infisical.com</code> (also <code>https://us.infisical.com</code>)</li>
+<li>Infisical Cloud EU: <code>https://eu.infisical.com</code></li>
+<li>Self-hosted: your Infisical origin (for example <code>https://infisical.example.com</code>)</li>
+</ul>
+<h3 id="example-universal-auth">Example (Universal Auth)<a class="headerlink" href="#example-universal-auth" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"https://vault.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">VAULT_AUTH_METHOD</span><span class="o">=</span><span class="s2">"jwt"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nv">VAULT_JWT_ROLE</span><span class="o">=</span><span class="s2">"swarm-external-secrets"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nv">VAULT_JWT</span><span class="o">=</span><span class="s2">"&lt;signed-jwt&gt;"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nv">VAULT_JWT_AUTH_PATH</span><span class="o">=</span><span class="s2">"jwt"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"infisical"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nv">INFISICAL_CLIENT_ID</span><span class="o">=</span><span class="s2">"..."</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nv">INFISICAL_CLIENT_SECRET</span><span class="o">=</span><span class="s2">"..."</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nv">INFISICAL_PROJECT_ID</span><span class="o">=</span><span class="s2">"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nv">INFISICAL_ENVIRONMENT</span><span class="o">=</span><span class="s2">"prod"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nv">INFISICAL_SECRET_PATH</span><span class="o">=</span><span class="s2">"/"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nv">ENABLE_ROTATION</span><span class="o">=</span><span class="s2">"true"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nv">ROTATION_INTERVAL</span><span class="o">=</span><span class="s2">"30s"</span>
 </code></pre></div>
-<p>OpenBao:</p>
+<h3 id="example-access-token">Example (access token)<a class="headerlink" href="#example-access-token" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"openbao"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nv">OPENBAO_ADDR</span><span class="o">=</span><span class="s2">"https://openbao.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nv">OPENBAO_AUTH_METHOD</span><span class="o">=</span><span class="s2">"jwt"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nv">OPENBAO_JWT_ROLE</span><span class="o">=</span><span class="s2">"swarm-external-secrets"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nv">OPENBAO_JWT</span><span class="o">=</span><span class="s2">"&lt;signed-jwt&gt;"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nv">OPENBAO_JWT_AUTH_PATH</span><span class="o">=</span><span class="s2">"jwt"</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"infisical"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nv">INFISICAL_TOKEN</span><span class="o">=</span><span class="s2">"eyJ..."</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nv">INFISICAL_PROJECT_ID</span><span class="o">=</span><span class="s2">"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nv">INFISICAL_ENVIRONMENT</span><span class="o">=</span><span class="s2">"dev"</span>
 </code></pre></div>
-<h3 id="jwt-file">JWT file<a class="headerlink" href="#jwt-file" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/run/swarm-external-secrets
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">0600</span><span class="w"> </span>./workload.jwt<span class="w"> </span>/run/swarm-external-secrets/workload.jwt
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>docker<span class="w"> </span>plugin<span class="w"> </span><span class="nb">set</span><span class="w"> </span>swarm-external-secrets:latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nv">SECRETS_PROVIDER</span><span class="o">=</span><span class="s2">"vault"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nv">VAULT_ADDR</span><span class="o">=</span><span class="s2">"https://vault.example.com:8200"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nv">VAULT_AUTH_METHOD</span><span class="o">=</span><span class="s2">"jwt"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nv">VAULT_JWT_ROLE</span><span class="o">=</span><span class="s2">"swarm-external-secrets"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nv">VAULT_JWT_FILE</span><span class="o">=</span><span class="s2">"/run/swarm-external-secrets/workload.jwt"</span>
-</code></pre></div>
-<h2 id="jwt-role-and-policy">JWT role and policy<a class="headerlink" href="#jwt-role-and-policy" title="Permanent link">&para;</a></h2>
-<p>Enable JWT auth and create a role whose policies can read your KV secrets.
-The issued token must also be allowed to renew itself:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="err">path</span><span class="w"> </span><span class="s2">"secret/data/*"</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"read"</span><span class="p">]</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">}</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="err">path</span><span class="w"> </span><span class="s2">"secret/metadata/*"</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"list"</span><span class="p">]</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">}</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="err">path</span><span class="w"> </span><span class="s2">"auth/token/renew-self"</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="na">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"update"</span><span class="p">]</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">}</span>
-</code></pre></div>
-<p>Current Vault and OpenBao JWT auth reject identity tokens that omit <strong>all</strong> of
-<code>iat</code>, <code>nbf</code>, and <code>exp</code>. Include at least one (typically <code>iat</code> and <code>exp</code>) and
-match <code>iss</code>, <code>sub</code>, and <code>aud</code> to the role (<code>bound_issuer</code>, <code>bound_subject</code>,
-<code>bound_audiences</code>).</p>
-<p>A full local setup used by CI is in <code>scripts/tests/smoke-test-vault-jwt.sh</code> and
-<code>scripts/tests/smoke-test-openbao-jwt.sh</code> in this repository.</p>
-<h2 id="client-token-renewal">Client-token renewal<a class="headerlink" href="#client-token-renewal" title="Permanent link">&para;</a></h2>
-<p>After a successful AppRole or JWT login, Vault/OpenBao returns a <strong>client
-token</strong> with a TTL. The plugin renews that token; it does not mint a new
-identity JWT.</p>
+<h2 id="secret-labels">Secret labels<a class="headerlink" href="#secret-labels" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Auth method</th>
-<th>Client-token renewal</th>
-<th>Re-login when renew fails</th>
+<th>Label</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>token</code></td>
-<td>No. A static <code>VAULT_TOKEN</code> / <code>OPENBAO_TOKEN</code> is used until it expires.</td>
-<td>No</td>
+<td><code>infisical_secret_name</code></td>
+<td>Infisical secret key (e.g. <code>MYSQL_PASSWORD</code>)</td>
 </tr>
 <tr>
-<td><code>approle</code></td>
-<td>Yes</td>
-<td>Yes (<code>role_id</code> / <code>secret_id</code>)</td>
+<td><code>infisical_field</code></td>
+<td>Optional JSON field to extract when the Infisical value is a JSON object (defaults to <code>value</code>)</td>
 </tr>
 <tr>
-<td><code>jwt</code></td>
-<td>Yes</td>
-<td>Yes (same JWT, or a freshly read <code>*_JWT_FILE</code>)</td>
+<td><code>infisical_project_id</code></td>
+<td>Optional per-secret project override</td>
+</tr>
+<tr>
+<td><code>infisical_environment</code></td>
+<td>Optional per-secret environment override</td>
+</tr>
+<tr>
+<td><code>infisical_secret_path</code></td>
+<td>Optional per-secret folder path override</td>
 </tr>
 </tbody>
 </table>
-<p>When the issued token is renewable and has a positive TTL, a background worker:</p>
+<p>If <code>infisical_secret_name</code> is omitted, the Docker secret name is uppercased (<code>mysql_password</code> → <code>MYSQL_PASSWORD</code>).</p>
+<h3 id="compose-example">Compose example<a class="headerlink" href="#compose-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">"3.8"</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">services</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">api</span><span class="p">:</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myorg/api:latest</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">secrets</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mysql_password</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nt">secrets</span><span class="p">:</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">mysql_password</span><span class="p">:</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">swarm-external-secrets:latest</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="nt">infisical_secret_name</span><span class="p">:</span><span class="w"> </span><span class="s">"MYSQL_PASSWORD"</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">      </span><span class="c1"># Optional overrides:</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">      </span><span class="c1"># infisical_environment: "prod"</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">      </span><span class="c1"># infisical_secret_path: "/database"</span>
+</code></pre></div>
+<h2 id="machine-identity-setup">Machine identity setup<a class="headerlink" href="#machine-identity-setup" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Waits until about <strong>two-thirds</strong> of the remaining lease TTL.</li>
-<li>Calls <code>auth/token/renew-self</code>.</li>
-<li>If renew fails (including when <strong>max TTL</strong> is reached), logs in again with
-   AppRole or JWT.</li>
-<li>If a secret read returns <code>401</code> or <code>403</code>, logs in again and retries the read.</li>
+<li>In Infisical, create a <strong>Machine Identity</strong> and enable <strong>Universal Auth</strong>.</li>
+<li>Generate a Client Secret for the identity.</li>
+<li>Add the identity to your project with a role that can read the secrets you need.</li>
+<li>Copy the Client ID, Client Secret, and Project ID into the plugin settings above.</li>
 </ol>
-<p>Retries after a failed renew use a 5s wait that doubles up to one minute.</p>
-<p>Look for these plugin log lines (<code>vault</code> or <code>openbao</code> depending on the
-provider). The re-auth warning is emitted at warn level; the two success lines
-are <strong>debug</strong> (<code>LOG_LEVEL=debug</code> or <code>6</code>):</p>
+<p>See Infisical's <a href="https://infisical.com/docs/documentation/platform/identities/universal-auth">Universal Auth</a> docs for details.</p>
+<h2 id="rotation">Rotation<a class="headerlink" href="#rotation" title="Permanent link">&para;</a></h2>
+<p>Rotation uses the same poll-based path as other providers:</p>
+<ol>
+<li>On first <code>Get</code>, the plugin tracks the secret hash.</li>
+<li>Every <code>ROTATION_INTERVAL</code>, it re-fetches from Infisical.</li>
+<li>On change, it creates a new Swarm secret version and updates referencing services.</li>
+</ol>
+<p>Universal Auth tokens are refreshed by the Infisical SDK (<code>AutoTokenRefresh</code>). A static <code>INFISICAL_TOKEN</code> is used as-is.</p>
+<h2 id="smoke-test">Smoke test<a class="headerlink" href="#smoke-test" title="Permanent link">&para;</a></h2>
+<p>End-to-end Swarm smoke coverage (fetch + rotation) lives in <code>scripts/tests/smoke-test-infisical.sh</code>.</p>
+<p>By default, this test starts real Infisical, PostgreSQL, Redis, and an HTTPS proxy in Docker Compose. It generates a temporary certificate, bootstraps an organization and project, and creates Universal Auth credentials at runtime. No cloud account or repository secrets are required, including on fork pull requests.</p>
+<p>Requires Docker Engine with Swarm and managed-plugin support, Docker Compose, OpenSSL, curl, and jq. Run on a disposable Docker host: the shared smoke helper replaces <code>swarm-external-secrets:latest</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>scripts/tests/smoke-test-infisical.sh
+</code></pre></div>
+<p>The HTTPS proxy binds to <code>127.0.0.1:8443</code>; override <code>INFISICAL_LOCAL_PORT</code> if needed. The generated certificate is trusted only by this test's curl calls and plugin rootfs, without disabling TLS verification. Cleanup removes the local deployment and temporary files.</p>
+<p>To test an existing deployment instead, set <code>INFISICAL_SMOKE_EXTERNAL=true</code> and provide:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INFISICAL_PROJECT_ID</code></td>
+<td>Project that the smoke identity can read/write</td>
+</tr>
+<tr>
+<td><code>INFISICAL_SMOKE_TOKEN</code></td>
+<td>Access/service token with secret CRUD <strong>or</strong></td>
+</tr>
+<tr>
+<td><code>INFISICAL_SMOKE_CLIENT_ID</code> / <code>INFISICAL_SMOKE_CLIENT_SECRET</code></td>
+<td>Universal Auth machine identity with secret CRUD</td>
+</tr>
+</tbody>
+</table>
+<p>Optional: <code>INFISICAL_ENVIRONMENT</code> (default <code>dev</code>), <code>INFISICAL_SECRET_PATH</code> (default <code>/</code>), <code>INFISICAL_SITE_URL</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">INFISICAL_SMOKE_EXTERNAL</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">INFISICAL_PROJECT_ID</span><span class="o">=</span><span class="s2">"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">INFISICAL_SMOKE_CLIENT_ID</span><span class="o">=</span><span class="s2">"..."</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">INFISICAL_SMOKE_CLIENT_SECRET</span><span class="o">=</span><span class="s2">"..."</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># optional: export INFISICAL_ENVIRONMENT=dev</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>bash<span class="w"> </span>scripts/tests/smoke-test-infisical.sh
+</code></pre></div>
+<p>The script seeds a unique secret, deploys a Swarm stack through the plugin, verifies the value, rotates the secret in Infisical, and verifies cutover. Cleanup deletes the seeded secret.</p>
+<h2 id="implementation-notes">Implementation notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>Successfully renewed vault token</code> (debug)</li>
-<li><code>Renewing vault token failed, attempting re-authentication</code> (warn)</li>
-<li><code>Successfully re-authenticated with vault</code> (debug)</li>
+<li>Uses the official Infisical Go SDK authentication helpers with a provider-owned HTTP client and synchronized token lifecycle.</li>
+<li>Universal Auth tokens are renewed before expiry on the next read, with reauthentication when renewal fails or maximum TTL is reached. Pre-issued bearer tokens are not renewed; replace them externally before expiry.</li>
+<li>Authentication and reads propagate cancellation and enforce a 30-second HTTP timeout. Closing the provider cancels authentication in progress.</li>
+<li>Reads use context-aware <code>net/http</code> requests to <code>GET /api/v3/secrets/raw/{secretName}</code>, rather than the SDK's unbounded retrieval path.</li>
+<li>Transient network failures, HTTP 429, and HTTP 500/502/503/504 responses get at most three total attempts with exponential backoff and jitter. Backoff, including <code>Retry-After</code>, is capped at five seconds and respects the caller's deadline. HTTP 400/401/403/404 responses are not retried.</li>
+<li>Secret path encoding for tracking: <code>{projectID}/{environment}[/{folders...}]/{secretName}</code></li>
 </ul>
-<div class="admonition warning">
-<p class="admonition-title">Static tokens do not auto-renew</p>
-<p><code>VAULT_AUTH_METHOD=token</code> (the default) never starts the renewal worker.
-Use AppRole or JWT when the plugin must outlive a short-lived client token.</p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Secret rotation is separate</p>
-<p><code>ENABLE_ROTATION</code> watches KV values and updates Swarm secrets. Token
-renewal keeps the plugin authenticated. See <a href="../rotation/">Secret rotation</a>.</p>
-</div>
-<h2 id="ci-smoke-tests">CI smoke tests<a class="headerlink" href="#ci-smoke-tests" title="Permanent link">&para;</a></h2>
-<p>The <code>smoke-test-jwt-renewal</code> job in <code>.github/workflows/smoke-tests.yml</code> runs
-the Vault and OpenBao JWT scripts with a 10s token TTL, 25s max TTL, and a 45s
-wait so CI asserts both renew-self and max-TTL re-login, then redeploys a
-stack to prove reads still work.</p>
 
 
 
