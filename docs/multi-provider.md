@@ -131,6 +131,7 @@ docker plugin set swarm-external-secrets:latest \
 | `OPENBAO_ADDR` | OpenBao server address | `http://localhost:8200` |
 | `OPENBAO_TOKEN` | OpenBao token for authentication | — |
 | `OPENBAO_MOUNT_PATH` | Mount path for KV engine | `secret` |
+| `OPENBAO_KV_VERSION` | KV engine version (`1` or `2`) | `2` |
 | `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `OPENBAO_ROLE_ID` | Role ID for AppRole authentication | — |
 | `OPENBAO_SECRET_ID` | Secret ID for AppRole authentication | — |
@@ -164,6 +165,7 @@ docker plugin set swarm-external-secrets:latest \
 
 - By default, OpenBao KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
 - If you set `OPENBAO_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
+- If your engine is KV v1, set `OPENBAO_KV_VERSION="1"`. Paths then omit the `/data/` segment: the default mount reads `secret/...`, and a custom mount such as `kv` reads `kv/...`. The default remains `2`, so existing v2 setups keep working unchanged.
 
 **Example with Custom Mount Path:**
 ```bash
@@ -172,6 +174,25 @@ docker plugin set swarm-external-secrets:latest \
     OPENBAO_ADDR="https://openbao.example.com:8200" \
     OPENBAO_TOKEN="ob_example-token" \
     OPENBAO_MOUNT_PATH="kv"
+```
+
+**Example with KV v1:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_TOKEN="ob_example-token" \
+    OPENBAO_KV_VERSION="1"
+```
+
+**Example with KV v1 on a custom mount:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_TOKEN="ob_example-token" \
+    OPENBAO_MOUNT_PATH="kv" \
+    OPENBAO_KV_VERSION="1"
 ```
 
 ---

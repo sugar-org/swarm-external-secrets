@@ -35,6 +35,10 @@ type Config struct {
 
 	PathLabel  string
 	FieldLabel string
+
+	// KVVersion selects the OpenBao KV engine version: "1" or "2".
+	// Empty means "2" for backward compatibility. Unused by the Vault provider.
+	KVVersion string
 }
 
 func ParseVaultConfig(config map[string]string) Config {
@@ -47,12 +51,30 @@ func ParseVaultConfig(config map[string]string) Config {
 }
 
 func ParseOpenBaoConfig(config map[string]string) Config {
-	return parseConfig(Config{
+	cfg := parseConfig(Config{
 		ProviderName: "openbao",
 		EnvPrefix:    "OPENBAO",
 		PathLabel:    "openbao_path",
 		FieldLabel:   "openbao_field",
 	}, config, "http://localhost:8200")
+	cfg.KVVersion = utils.GetConfigOrDefault(config, "OPENBAO_KV_VERSION", "2")
+	return cfg
+}
+
+// NormalizeOpenBaoKVVersion validates the OPENBAO_KV_VERSION setting. Only
+// "1" or "2" are accepted (surrounding whitespace ignored); empty means "2"
+// for backward compatibility. Anything else is rejected with a clear error.
+func NormalizeOpenBaoKVVersion(raw string) (string, error) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return "2", nil
+	}
+	switch v {
+	case "1", "2":
+		return v, nil
+	default:
+		return "", fmt.Errorf("unsupported OPENBAO_KV_VERSION %q: must be \"1\" or \"2\"", raw)
+	}
 }
 
 func parseConfig(base Config, config map[string]string, addressDefault string) Config {
