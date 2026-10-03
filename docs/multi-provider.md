@@ -530,3 +530,23 @@ secrets:
       vault_field: "password"
       secret_reuse: "true"   # reuse cached value, do not fetch again
 ```
+
+## Base64 Secret Decoding
+
+The `base64_decode` label controls whether the secret value fetched from the provider should be base64-decoded before being delivered to the container. This is useful for storing binary files (such as JKS or PKCS12 keystores, certificates, or archives) that are stored as base64-encoded strings in Vault or other secret management providers.
+
+**Default behaviour:** `false` (the secret value is passed to the container as-is).
+
+**With `base64_decode: "true"`:** The plugin base64-decodes the value using standard base64 decoding (`base64.StdEncoding`). If decoding fails, the secret request fails with an error and does not pass corrupted or raw data to the container.
+
+### Usage
+```yaml
+secrets:
+  kafka_client_keystore:
+    driver: swarm-external-secrets:latest
+    labels:
+      vault_path: "secrets"
+      vault_field: "KAFKA_CLIENT_KEYSTORE"
+      base64_decode: "true"
+```
+

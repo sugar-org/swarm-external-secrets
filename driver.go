@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"maps"
 	"os"
@@ -203,16 +205,57 @@ func (d *SecretsDriver) Get(req secrets.Request) secrets.Response {
 }
 
 func (d *SecretsDriver) transformSecret(ctx context.Context, secretInfo *providers.SecretInfo, value []byte) ([]byte, error) {
-	if d.transformer == nil {
-		return value, nil
+	if d.transformer != nil {
+		transformed, err := d.transformer.Transform(ctx, secretInfo, value)
+		if err != nil {
+			return nil, fmt.Errorf("transform secret value: %w", err)
+		}
+		value = transformed
 	}
 
-	transformed, err := d.transformer.Transform(ctx, secretInfo, value)
+	if shouldBase64Decode(secretInfo) {
+		decoded, err := decodeBase64Secret(value, secretInfo)
+		if err != nil {
+			return nil, err
+		}
+		return decoded, nil
+	}
+
+	return value, nil
+}
+
+func shouldBase64Decode(secretInfo *providers.SecretInfo) bool {
+	if secretInfo == nil || secretInfo.Labels == nil {
+		return false
+	}
+
+	val, ok := secretInfo.Labels["base64_decode"]
+	if !ok {
+		return false
+	}
+
+	return strings.EqualFold(strings.TrimSpace(val), "true")
+}
+
+func decodeBase64Secret(value []byte, secretInfo *providers.SecretInfo) ([]byte, error) {
+	trimmed := bytes.TrimSpace(value)
+	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(trimmed)))
+	n, err := base64.StdEncoding.Decode(decoded, trimmed)
 	if err != nil {
-		return nil, fmt.Errorf("transform secret value: %w", err)
+		secretName := "unknown"
+		secretField := "unknown"
+		if secretInfo != nil {
+			if secretInfo.DockerSecretName != "" {
+				secretName = secretInfo.DockerSecretName
+			}
+			if secretInfo.SecretField != "" {
+				secretField = secretInfo.SecretField
+			}
+		}
+		return nil, fmt.Errorf("failed to base64-decode secret %q (field %q): %w", secretName, secretField, err)
 	}
 
-	return transformed, nil
+	return decoded[:n], nil
 }
 
 // shouldNotReuse returns the value for secrets.Response.DoNotReuse.

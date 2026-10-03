@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/base64"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types/swarm"
+
+	"github.com/sugar-org/swarm-external-secrets/providers"
 )
 
 func TestBuildUpdatedSecretReferences(t *testing.T) {
@@ -114,5 +120,192 @@ func assertSecretReference(t *testing.T, gotRef, wantRef *swarm.SecretReference)
 	}
 	if gotRef.SecretName != wantRef.SecretName {
 		t.Fatalf("SecretName = %q, want %q", gotRef.SecretName, wantRef.SecretName)
+	}
+}
+
+func TestTransformSecret_Base64Decode(t *testing.T) {
+	binaryData := []byte{0x00, 0xFF, 0xFE, 0x80, 0x7F, 0x12, 0x34, 0x56}
+	validBase64Binary := base64.StdEncoding.EncodeToString(binaryData)
+	validBase64Text := base64.StdEncoding.EncodeToString([]byte("hello world"))
+
+	tests := []struct {
+		name        string
+		secretInfo  *providers.SecretInfo
+		input       []byte
+		want        []byte
+		wantErr     bool
+		errContains []string
+	}{
+		{
+			name: "label absent preserves raw value",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "test-secret",
+				SecretField:      "password",
+				Labels:           map[string]string{},
+			},
+			input:   []byte("not-decoded-value"),
+			want:    []byte("not-decoded-value"),
+			wantErr: false,
+		},
+		{
+			name: "label false preserves raw value",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "test-secret",
+				SecretField:      "password",
+				Labels: map[string]string{
+					"base64_decode": "false",
+				},
+			},
+			input:   []byte("not-decoded-value"),
+			want:    []byte("not-decoded-value"),
+			wantErr: false,
+		},
+		{
+			name: "label with 1 does not decode (strict boolean)",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "test-secret",
+				SecretField:      "password",
+				Labels: map[string]string{
+					"base64_decode": "1",
+				},
+			},
+			input:   []byte(validBase64Text),
+			want:    []byte(validBase64Text),
+			wantErr: false,
+		},
+		{
+			name: "label true decodes valid base64 text",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "test-secret",
+				SecretField:      "token",
+				Labels: map[string]string{
+					"base64_decode": "true",
+				},
+			},
+			input:   []byte(validBase64Text),
+			want:    []byte("hello world"),
+			wantErr: false,
+		},
+		{
+			name: "label TRUE (uppercase) decodes valid base64",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "test-secret",
+				SecretField:      "token",
+				Labels: map[string]string{
+					"base64_decode": "TRUE",
+				},
+			},
+			input:   []byte(validBase64Text),
+			want:    []byte("hello world"),
+			wantErr: false,
+		},
+		{
+			name: "label true trims surrounding whitespace and newlines",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "test-secret",
+				SecretField:      "token",
+				Labels: map[string]string{
+					"base64_decode": " true ",
+				},
+			},
+			input:   []byte("  " + validBase64Text + " \r\n"),
+			want:    []byte("hello world"),
+			wantErr: false,
+		},
+		{
+			name: "label true decodes binary non-UTF-8 bytes correctly without corruption",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "kafka-keystore",
+				SecretField:      "keystore.jks",
+				Labels: map[string]string{
+					"base64_decode": "true",
+				},
+			},
+			input:   []byte(validBase64Binary),
+			want:    binaryData,
+			wantErr: false,
+		},
+		{
+			name: "label true with empty value decodes to empty bytes without error",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "empty-secret",
+				SecretField:      "empty_field",
+				Labels: map[string]string{
+					"base64_decode": "true",
+				},
+			},
+			input:   []byte(""),
+			want:    []byte{},
+			wantErr: false,
+		},
+		{
+			name: "label true with whitespace-only value decodes to empty bytes without error",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "whitespace-secret",
+				SecretField:      "field",
+				Labels: map[string]string{
+					"base64_decode": "true",
+				},
+			},
+			input:   []byte("   \r\n\t  "),
+			want:    []byte{},
+			wantErr: false,
+		},
+		{
+			name: "label true with invalid base64 returns error with secret/field name but no secret bytes",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "my-secret",
+				SecretField:      "secret-key",
+				Labels: map[string]string{
+					"base64_decode": "true",
+				},
+			},
+			input:       []byte("super-secret-not-base64!@#$"),
+			wantErr:     true,
+			errContains: []string{"failed to base64-decode secret", `"my-secret"`, `"secret-key"`},
+		},
+		{
+			name:       "nil secretInfo preserves raw value",
+			secretInfo: nil,
+			input:      []byte("raw-bytes"),
+			want:       []byte("raw-bytes"),
+			wantErr:    false,
+		},
+		{
+			name: "nil labels in secretInfo preserves raw value",
+			secretInfo: &providers.SecretInfo{
+				DockerSecretName: "secret-without-labels",
+			},
+			input:   []byte("raw-bytes"),
+			want:    []byte("raw-bytes"),
+			wantErr: false,
+		},
+	}
+
+	driver := &SecretsDriver{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := driver.transformSecret(context.Background(), tt.secretInfo, tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("transformSecret() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				errMsg := err.Error()
+				for _, sub := range tt.errContains {
+					if !strings.Contains(errMsg, sub) {
+						t.Errorf("error %q should contain %q", errMsg, sub)
+					}
+				}
+				// Verify secret value is NEVER in error message
+				if strings.Contains(errMsg, string(tt.input)) {
+					t.Errorf("error %q leaked input secret value %q", errMsg, string(tt.input))
+				}
+				return
+			}
+			if !bytes.Equal(got, tt.want) {
+				t.Errorf("transformSecret() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
