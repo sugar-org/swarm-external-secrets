@@ -140,7 +140,9 @@ The script seeds a unique secret, deploys a Swarm stack through the plugin, veri
 
 ## Implementation notes
 
-- Uses the official Infisical Go SDK (`github.com/infisical/go-sdk`).
-- Universal Auth: `Auth().UniversalAuthLogin`; bearer token: `Auth().SetAccessToken`.
-- Read: `Secrets().Retrieve` (SDK `GET /api/v3/secrets/raw/{secretName}`).
+- Uses the official Infisical Go SDK authentication helpers with a provider-owned HTTP client and synchronized token lifecycle.
+- Universal Auth tokens are renewed before expiry on the next read, with reauthentication when renewal fails or maximum TTL is reached. Pre-issued bearer tokens are not renewed; replace them externally before expiry.
+- Authentication and reads propagate cancellation and enforce a 30-second HTTP timeout. Closing the provider cancels authentication in progress.
+- Reads use context-aware `net/http` requests to `GET /api/v3/secrets/raw/{secretName}`, rather than the SDK's unbounded retrieval path.
+- Transient network failures, HTTP 429, and HTTP 500/502/503/504 responses get at most three total attempts with exponential backoff and jitter. Backoff, including `Retry-After`, is capped at five seconds and respects the caller's deadline. HTTP 400/401/403/404 responses are not retried.
 - Secret path encoding for tracking: `{projectID}/{environment}[/{folders...}]/{secretName}`

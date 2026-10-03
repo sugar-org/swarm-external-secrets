@@ -16,6 +16,7 @@
 # Machine identity / token must be able to create, read, update, and delete
 # secrets in the target project/environment.
 
+set +x
 set -e
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"

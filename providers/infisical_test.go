@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/docker/go-plugins-helpers/secrets"
-	infisical "github.com/infisical/go-sdk"
 )
 
 func TestInfisicalProviderInitialize(t *testing.T) {
@@ -112,9 +111,7 @@ func TestInfisicalProviderGetSecretUniversalAuth(t *testing.T) {
 	defer server.Close()
 
 	p := infisicalProviderForServer(t, server.URL, "")
-	if _, err := p.client.Auth().UniversalAuthLogin("cid", "csecret"); err != nil {
-		t.Fatalf("UniversalAuthLogin() error = %v", err)
-	}
+	p.config.ClientID, p.config.ClientSecret = "cid", "csecret"
 	defer func() { _ = p.Close() }()
 
 	got, err := p.GetSecret(context.Background(), &SecretInfo{
@@ -244,14 +241,6 @@ func TestInfisicalProviderBuildSecretPath(t *testing.T) {
 func infisicalProviderForServer(t *testing.T, serverURL, token string) *InfisicalProvider {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	client := infisical.NewInfisicalClient(ctx, infisical.Config{
-		SiteUrl:          serverURL,
-		SilentMode:       true,
-		AutoTokenRefresh: infisical.BoolPtr(false),
-	})
-	if token != "" {
-		client.Auth().SetAccessToken(token)
-	}
 	return &InfisicalProvider{
 		config: &InfisicalConfig{
 			ProjectID:   "proj-1",
@@ -260,8 +249,9 @@ func infisicalProviderForServer(t *testing.T, serverURL, token string) *Infisica
 			SiteURL:     serverURL,
 			Token:       token,
 		},
-		client: client,
-		cancel: cancel,
+		lifecycle: ctx,
+		authGate:  make(chan struct{}, 1),
+		cancel:    cancel,
 	}
 }
 
@@ -270,41 +260,48 @@ func newInfisicalTestServer(t *testing.T, clientID, clientSecret string) *httpte
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/auth/universal-auth/login":
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				t.Errorf("read login body: %v", err)
-				http.Error(w, "bad body", http.StatusBadRequest)
-				return
-			}
-			var payload struct {
-				ClientID     string `json:"clientId"`
-				ClientSecret string `json:"clientSecret"`
-			}
-			if err := json.Unmarshal(body, &payload); err != nil {
-				http.Error(w, "bad json", http.StatusBadRequest)
-				return
-			}
-			if payload.ClientID != clientID || payload.ClientSecret != clientSecret {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"accessToken":"sdk-token","expiresIn":7200,"accessTokenMaxTTL":7200,"tokenType":"Bearer"}`))
-
+			handleInfisicalTestLogin(t, w, r, clientID, clientSecret)
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v3/secrets/raw/"):
-			if clientID == "" && r.Header.Get("Authorization") != "Bearer st.test" {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-			if clientID != "" && r.Header.Get("Authorization") != "Bearer sdk-token" {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"secret":{"secretValue":"secret-value"}}`))
-
+			handleInfisicalTestSecret(w, r, clientID)
 		default:
 			http.NotFound(w, r)
 		}
 	}))
+}
+
+func handleInfisicalTestLogin(t *testing.T, w http.ResponseWriter, r *http.Request, clientID, clientSecret string) {
+	t.Helper()
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Errorf("read login body: %v", err)
+		http.Error(w, "bad body", http.StatusBadRequest)
+		return
+	}
+	var payload struct {
+		ClientID     string `json:"clientId"`
+		ClientSecret string `json:"clientSecret"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+	if payload.ClientID != clientID || payload.ClientSecret != clientSecret {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"accessToken":"sdk-token","expiresIn":7200,"accessTokenMaxTTL":7200,"tokenType":"Bearer"}`))
+}
+
+func handleInfisicalTestSecret(w http.ResponseWriter, r *http.Request, clientID string) {
+	wantToken := "st.test"
+	if clientID != "" {
+		wantToken = "sdk-token"
+	}
+	if r.Header.Get("Authorization") != "Bearer "+wantToken {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"secret":{"secretValue":"secret-value"}}`))
 }

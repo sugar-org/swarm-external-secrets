@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,7 +16,8 @@ import (
 	"time"
 
 	"github.com/docker/go-plugins-helpers/secrets"
-	infisical "github.com/infisical/go-sdk"
+	"github.com/go-resty/resty/v2"
+	infisicalauth "github.com/infisical/go-sdk/packages/api/auth"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sugar-org/swarm-external-secrets/internal/utils"
@@ -28,6 +30,7 @@ const (
 	infisicalRetrieveTimeout = 30 * time.Second
 	infisicalMaxAttempts     = 3
 	infisicalRetryBase       = 200 * time.Millisecond
+	infisicalMaxBackoff      = 5 * time.Second
 	maxInfisicalBodyBytes    = 10 << 20 // 10 MiB
 )
 
@@ -38,9 +41,14 @@ var infisicalHTTPClient = &http.Client{Timeout: infisicalRetrieveTimeout}
 
 // InfisicalProvider implements SecretsProvider for Infisical.
 type InfisicalProvider struct {
-	config *InfisicalConfig
-	client infisical.InfisicalClientInterface
-	cancel context.CancelFunc
+	config      *InfisicalConfig
+	cancel      context.CancelFunc
+	lifecycle   context.Context
+	authGate    chan struct{}
+	accessToken string
+	expiresAt   time.Time
+	maxTTLAt    time.Time
+	tokenTTL    time.Duration
 }
 
 // InfisicalConfig holds Infisical API client settings.
@@ -83,22 +91,12 @@ func (p *InfisicalProvider) Initialize(config map[string]string) error {
 		SiteURL:      siteURL,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	client := infisical.NewInfisicalClient(ctx, infisical.Config{
-		SiteUrl:          siteURL,
-		AutoTokenRefresh: infisical.BoolPtr(token == ""),
-		SilentMode:       true,
-	})
-
-	if token != "" {
-		client.Auth().SetAccessToken(token)
-	} else if _, err := client.Auth().UniversalAuthLogin(clientID, clientSecret); err != nil {
-		cancel()
+	p.lifecycle, p.cancel = context.WithCancel(context.Background())
+	p.authGate = make(chan struct{}, 1)
+	if _, err := p.authenticationToken(p.lifecycle); err != nil {
+		p.cancel()
 		return fmt.Errorf("infisical universal auth: %w", err)
 	}
-
-	p.client = client
-	p.cancel = cancel
 
 	log.Infof("Successfully initialized Infisical provider (site: %s, project: %s, env: %s)",
 		p.config.SiteURL, p.config.ProjectID, p.config.Environment)
@@ -122,9 +120,6 @@ func (p *InfisicalProvider) GetSecret(ctx context.Context, secretInfo *SecretInf
 	log.Debugf("Reading secret from Infisical: %s (project=%s, env=%s, path=%s)",
 		secretName, projectID, environment, secretPath)
 
-	// The pinned SDK Retrieve call does not take a context and its HTTP client
-	// has no timeout, so a hung connection would outlive this call. Read with
-	// net/http so cancellation closes the request.
 	secretValue, err := p.retrieveSecret(ctx, projectID, environment, secretPath, secretName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve Infisical secret: %w", err)
@@ -157,7 +152,6 @@ func (p *InfisicalProvider) BuildSecretPath(req secrets.Request) string {
 // GetProviderName returns "infisical".
 func (p *InfisicalProvider) GetProviderName() string { return "infisical" }
 
-// Close stops the SDK token-refresh loop.
 func (p *InfisicalProvider) Close() error {
 	if p.cancel != nil {
 		p.cancel()
@@ -219,9 +213,66 @@ func normalizeInfisicalSecretPath(path string) string {
 	return path
 }
 
+func (p *InfisicalProvider) authenticationToken(ctx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, infisicalRetrieveTimeout)
+	defer cancel()
+	stop := context.AfterFunc(p.lifecycle, cancel)
+	defer stop()
+	select {
+	case p.authGate <- struct{}{}:
+		defer func() { <-p.authGate }()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if p.config.Token != "" {
+		return p.config.Token, nil
+	}
+	if p.accessToken != "" && time.Until(p.expiresAt) > 5*time.Second {
+		return p.accessToken, nil
+	}
+	client := resty.New().
+		SetBaseURL(strings.TrimSuffix(strings.TrimRight(p.config.SiteURL, "/"), "/api") + "/api").
+		SetTimeout(infisicalRetrieveTimeout).
+		OnBeforeRequest(func(_ *resty.Client, request *resty.Request) error {
+			request.SetContext(ctx)
+			return ctx.Err()
+		})
+	defer client.GetClient().CloseIdleConnections()
+	var credential infisicalauth.MachineIdentityAuthLoginResponse
+	var err error
+	renewed := false
+	if p.accessToken != "" && time.Until(p.maxTTLAt) > p.tokenTTL {
+		credential, err = infisicalauth.CallRenewAccessToken(client, infisicalauth.RenewAccessTokenRequest{AccessToken: p.accessToken})
+		renewed = err == nil
+	}
+	if !renewed {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		credential, err = infisicalauth.CallUniversalAuthLogin(client, infisicalauth.UniversalAuthLoginRequest{
+			ClientID: p.config.ClientID, ClientSecret: p.config.ClientSecret,
+		})
+	}
+	if err != nil {
+		return "", err
+	}
+	if credential.AccessToken == "" || credential.ExpiresIn <= 0 {
+		return "", fmt.Errorf("infisical authentication returned an invalid token")
+	}
+	p.accessToken = credential.AccessToken
+	p.tokenTTL = time.Duration(credential.ExpiresIn) * time.Second
+	p.expiresAt = time.Now().Add(p.tokenTTL)
+	if !renewed {
+		p.maxTTLAt = time.Now().Add(time.Duration(credential.AccessTokenMaxTTL) * time.Second)
+	}
+	return p.accessToken, nil
+}
+
 func (p *InfisicalProvider) retrieveSecret(ctx context.Context, projectID, environment, secretPath, secretName string) (string, error) {
-	var lastErr error
-	for attempt := 0; attempt < infisicalMaxAttempts; attempt++ {
+	for attempt := 0; ; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return "", err
 		}
@@ -229,7 +280,6 @@ func (p *InfisicalProvider) retrieveSecret(ctx context.Context, projectID, envir
 		if err == nil {
 			return value, nil
 		}
-		lastErr = err
 		if !retry || attempt == infisicalMaxAttempts-1 {
 			return "", err
 		}
@@ -241,13 +291,12 @@ func (p *InfisicalProvider) retrieveSecret(ctx context.Context, projectID, envir
 			return "", err
 		}
 	}
-	return "", lastErr
 }
 
 func (p *InfisicalProvider) retrieveSecretOnce(ctx context.Context, projectID, environment, secretPath, secretName string) (string, *time.Duration, bool, error) {
-	token := p.client.Auth().GetAccessToken()
-	if token == "" {
-		return "", nil, false, fmt.Errorf("infisical client is not authenticated")
+	token, err := p.authenticationToken(ctx)
+	if err != nil {
+		return "", nil, false, err
 	}
 	endpoint, err := infisicalRawSecretURL(p.config.SiteURL, secretName, projectID, environment, secretPath)
 	if err != nil {
@@ -264,17 +313,18 @@ func (p *InfisicalProvider) retrieveSecretOnce(ctx context.Context, projectID, e
 	// Site URL is restricted to https at Initialize. Tests point this client at a local server.
 	resp, err := infisicalHTTPClient.Do(req) // #nosec G704
 	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return "", nil, false, err
+		if ctx.Err() != nil {
+			return "", nil, false, ctx.Err()
 		}
-		return "", nil, true, err
+		var networkErr net.Error
+		return "", nil, errors.As(err, &networkErr), err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxInfisicalBodyBytes))
 	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return "", nil, false, err
+		if ctx.Err() != nil {
+			return "", nil, false, ctx.Err()
 		}
 		return "", nil, true, fmt.Errorf("failed to read Infisical response: %w", err)
 	}
@@ -354,15 +404,15 @@ func parseInfisicalRetryAfter(raw string) (time.Duration, bool) {
 	if err != nil || seconds < 0 {
 		return 0, false
 	}
+	if seconds >= int(infisicalMaxBackoff/time.Second) {
+		return infisicalMaxBackoff, true
+	}
 	return time.Duration(seconds) * time.Second, true
 }
 
 func infisicalJitter(attempt int) time.Duration {
-	shift := attempt
-	if shift > 3 {
-		shift = 3
-	}
-	ceiling := infisicalRetryBase << shift
+	shift := min(attempt, 3)
+	ceiling := min(infisicalRetryBase<<shift, infisicalMaxBackoff)
 	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(ceiling)+1))
 	if err != nil {
 		return ceiling / 2

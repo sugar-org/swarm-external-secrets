@@ -391,7 +391,7 @@ secrets:
       # infisical_secret_path: "/database"
 ```
 
-For multiple Infisical projects/environments, run separate plugin instances with different Universal Auth credentials or project IDs.
+One plugin instance can target multiple Infisical projects and environments using per-secret `infisical_project_id` and `infisical_environment` labels, provided its credentials can access those contexts. Use separate plugin instances only when credentials, isolation requirements, or fixed configuration must differ.
 
 
 ## Multiple Providers in the Same Swarm Cluster
