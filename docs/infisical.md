@@ -115,9 +115,17 @@ Universal Auth tokens are refreshed by the Infisical SDK (`AutoTokenRefresh`). A
 
 End-to-end Swarm smoke coverage (fetch + rotation) lives in `scripts/tests/smoke-test-infisical.sh`.
 
-This test talks to a **real Infisical project** (free cloud account is fine). There is no mock server.
+By default, this test starts real Infisical, PostgreSQL, Redis, and an HTTPS proxy in Docker Compose. It generates a temporary certificate, bootstraps an organization and project, and creates Universal Auth credentials at runtime. No cloud account or repository secrets are required, including on fork pull requests.
 
-Required:
+Requires Docker Engine with Swarm and managed-plugin support, Docker Compose, OpenSSL, curl, and jq. Run on a disposable Docker host: the shared smoke helper replaces `swarm-external-secrets:latest`.
+
+```bash
+bash scripts/tests/smoke-test-infisical.sh
+```
+
+The HTTPS proxy binds to `127.0.0.1:8443`; override `INFISICAL_LOCAL_PORT` if needed. The generated certificate is trusted only by this test's curl calls and plugin rootfs, without disabling TLS verification. Cleanup removes the local deployment and temporary files.
+
+To test an existing deployment instead, set `INFISICAL_SMOKE_EXTERNAL=true` and provide:
 
 | Variable | Description |
 |---|---|
@@ -128,6 +136,7 @@ Required:
 Optional: `INFISICAL_ENVIRONMENT` (default `dev`), `INFISICAL_SECRET_PATH` (default `/`), `INFISICAL_SITE_URL`.
 
 ```bash
+export INFISICAL_SMOKE_EXTERNAL=true
 export INFISICAL_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export INFISICAL_SMOKE_CLIENT_ID="..."
 export INFISICAL_SMOKE_CLIENT_SECRET="..."

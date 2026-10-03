@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Infisical smoke test — real Infisical account only (no mock server).
+# Infisical smoke test with a disposable local instance by default.
 #
-# Required env (free Infisical cloud / self-hosted project works):
+# External mode (INFISICAL_SMOKE_EXTERNAL=true) requires:
 #   INFISICAL_PROJECT_ID
 #   and either:
 #     INFISICAL_SMOKE_TOKEN
@@ -17,12 +17,17 @@
 # secrets in the target project/environment.
 
 set +x
-set -e
+set -eo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
 
 # shellcheck source=smoke-test-helper.sh
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
+source "${SCRIPT_DIR}/infisical-local.sh"
+
+prepare_plugin_rootfs() {
+    infisical_local_trust_plugin
+}
 
 export INFISICAL_SITE_URL="${INFISICAL_SITE_URL:-https://app.infisical.com}"
 export INFISICAL_ENVIRONMENT="${INFISICAL_ENVIRONMENT:-dev}"
@@ -38,7 +43,7 @@ SECRET_NAME="smoke_secret"
 COMPOSE_FILE="$(mktemp "${TMPDIR:-/tmp}/smoke-infisical-compose.XXXXXX").yml"
 mv "${COMPOSE_FILE%.yml}" "${COMPOSE_FILE}"
 
-RUN_ID="$(printf '%s_%s' "${GITHUB_RUN_ID:-local}" "${GITHUB_RUN_ATTEMPT:-1}" \
+RUN_ID="$(printf '%s_%s' "${GITHUB_RUN_ID:-local_$$}" "${GITHUB_RUN_ATTEMPT:-1}" \
     | tr -cd '[:alnum:]_' | tr '[:lower:]' '[:upper:]')"
 SECRET_KEY="SMOKE_TEST_PASSWORD_${RUN_ID}"
 SECRET_VALUE="infisical-smoke-pass-v1-${RUN_ID}"
@@ -60,12 +65,6 @@ infisical_require_creds() {
     die "Set INFISICAL_SMOKE_TOKEN, or INFISICAL_SMOKE_CLIENT_ID + INFISICAL_SMOKE_CLIENT_SECRET (free Infisical account)."
 }
 
-# Extract a JSON string field value (first match). Smoke values/tokens have no embedded quotes.
-infisical_json_string() {
-    local json="$1" key="$2"
-    printf '%s' "${json}" | sed -n "s/.*\"${key}\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" | head -1
-}
-
 infisical_login() {
     if [[ -n "${INFISICAL_SMOKE_TOKEN}" ]]; then
         INFISICAL_ACCESS_TOKEN="${INFISICAL_SMOKE_TOKEN}"
@@ -73,12 +72,15 @@ infisical_login() {
     fi
 
     local resp
-    resp="$(curl -fsS -X POST "${INFISICAL_SITE_URL}/api/v1/auth/universal-auth/login" \
+    resp="$(curl --max-time 30 -fsS -X POST "${INFISICAL_SITE_URL}/api/v1/auth/universal-auth/login" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -d "{\"clientId\":\"${INFISICAL_SMOKE_CLIENT_ID}\",\"clientSecret\":\"${INFISICAL_SMOKE_CLIENT_SECRET}\"}")"
 
-    INFISICAL_ACCESS_TOKEN="$(infisical_json_string "${resp}" "accessToken")"
+    INFISICAL_ACCESS_TOKEN="$(printf '%s' "${resp}" | jq -er '.accessToken')"
+    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+        printf '::add-mask::%s\n' "${INFISICAL_ACCESS_TOKEN}"
+    fi
     [[ -n "${INFISICAL_ACCESS_TOKEN}" ]] || die "Failed to obtain Infisical access token."
 }
 
@@ -87,13 +89,13 @@ infisical_api() {
     local path="$2"
     local body="${3:-}"
     if [[ -n "${body}" ]]; then
-        curl -fsS -X "${method}" "${INFISICAL_SITE_URL}${path}" \
+        curl --max-time 30 -fsS -X "${method}" "${INFISICAL_SITE_URL}${path}" \
             -H "Authorization: Bearer ${INFISICAL_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -d "${body}"
     else
-        curl -fsS -X "${method}" "${INFISICAL_SITE_URL}${path}" \
+        curl --max-time 30 -fsS -X "${method}" "${INFISICAL_SITE_URL}${path}" \
             -H "Authorization: Bearer ${INFISICAL_ACCESS_TOKEN}" \
             -H "Accept: application/json"
     fi
@@ -116,7 +118,7 @@ infisical_seed_secret() {
     local body status
     body="$(infisical_secret_body "${value}")"
 
-    status="$(curl -sS -o /dev/null -w '%{http_code}' \
+    status="$(curl --max-time 30 -sS -o /dev/null -w '%{http_code}' \
         -X GET "${INFISICAL_SITE_URL}/api/v4/secrets/${name}?projectId=${INFISICAL_PROJECT_ID}&environment=${INFISICAL_ENVIRONMENT}&secretPath=${INFISICAL_SECRET_PATH}&viewSecretValue=true" \
         -H "Authorization: Bearer ${INFISICAL_ACCESS_TOKEN}" \
         -H "Accept: application/json" || true)"
@@ -135,7 +137,7 @@ infisical_delete_secret() {
     local name="$1"
     local body
     body="$(infisical_secret_body)"
-    curl -fsS -X DELETE "${INFISICAL_SITE_URL}/api/v4/secrets/${name}" \
+    curl --max-time 30 -fsS -X DELETE "${INFISICAL_SITE_URL}/api/v4/secrets/${name}" \
         -H "Authorization: Bearer ${INFISICAL_ACCESS_TOKEN}" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
@@ -146,7 +148,7 @@ infisical_delete_secret() {
 infisical_wait_readable() {
     local value="$1" timeout="${2:-30}" elapsed=0
     local qs="projectId=${INFISICAL_PROJECT_ID}&environment=${INFISICAL_ENVIRONMENT}&secretPath=${INFISICAL_SECRET_PATH}&viewSecretValue=true"
-    until curl -fsS \
+    until curl --max-time 30 -fsS \
         -H "Authorization: Bearer ${INFISICAL_ACCESS_TOKEN}" \
         -H "Accept: application/json" \
         "${INFISICAL_SITE_URL}/api/v4/secrets/${SECRET_KEY}?${qs}" \
@@ -206,6 +208,7 @@ cleanup() {
     fi
     rm -f "${COMPOSE_FILE}"
     remove_plugin
+    infisical_local_stop
     # Preserve the first non-zero status (e.g. die/set -e), else EXIT_CODE.
     if [[ "${EXIT_CODE}" -eq 0 && "${ec}" -ne 0 ]]; then
         EXIT_CODE="${ec}"
@@ -214,6 +217,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [[ "${INFISICAL_SMOKE_EXTERNAL:-false}" != true ]]; then
+    infisical_local_start
+fi
 infisical_require_creds
 infisical_login
 info "Infisical smoke test against ${INFISICAL_SITE_URL} (project=${INFISICAL_PROJECT_ID}, env=${INFISICAL_ENVIRONMENT})."
