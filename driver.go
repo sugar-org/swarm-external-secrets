@@ -239,23 +239,15 @@ func shouldBase64Decode(secretInfo *providers.SecretInfo) bool {
 
 func decodeBase64Secret(value []byte, secretInfo *providers.SecretInfo) ([]byte, error) {
 	trimmed := bytes.TrimSpace(value)
-	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(trimmed)))
-	n, err := base64.StdEncoding.Decode(decoded, trimmed)
+	decoded, err := base64.StdEncoding.DecodeString(string(trimmed))
 	if err != nil {
-		secretName := "unknown"
-		secretField := "unknown"
-		if secretInfo != nil {
-			if secretInfo.DockerSecretName != "" {
-				secretName = secretInfo.DockerSecretName
-			}
-			if secretInfo.SecretField != "" {
-				secretField = secretInfo.SecretField
-			}
+		if secretInfo != nil && secretInfo.DockerSecretName != "" {
+			return nil, fmt.Errorf("failed to base64-decode secret %q: %w", secretInfo.DockerSecretName, err)
 		}
-		return nil, fmt.Errorf("failed to base64-decode secret %q (field %q): %w", secretName, secretField, err)
+		return nil, fmt.Errorf("failed to base64-decode secret: %w", err)
 	}
 
-	return decoded[:n], nil
+	return decoded, nil
 }
 
 // shouldNotReuse returns the value for secrets.Response.DoNotReuse.

@@ -533,7 +533,9 @@ secrets:
 
 ## Base64 Secret Decoding
 
-The `base64_decode` label controls whether the secret value fetched from the provider should be base64-decoded before being delivered to the container. This is useful for storing binary files (such as JKS or PKCS12 keystores, certificates, or archives) that are stored as base64-encoded strings in Vault or other secret management providers.
+The `base64_decode` label controls whether the secret value fetched from the provider should be base64-decoded before being delivered to the container. This feature was implemented for and verified with HashiCorp Vault to support binary files (such as JKS or PKCS12 keystores, certificates, or archives) stored as base64-encoded strings.
+
+> **Note:** This label has been implemented and verified specifically for HashiCorp Vault. It has not been tested with other providers.
 
 **Default behaviour:** `false` (the secret value is passed to the container as-is).
 
