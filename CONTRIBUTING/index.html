@@ -772,6 +772,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ai-assisted-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI-Assisted Contributions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-new-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1033,6 +1044,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ai-assisted-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI-Assisted Contributions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-new-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1132,6 +1154,7 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <li><a href="#running-tests">Running Tests</a></li>
 <li><a href="#linting">Linting</a></li>
 <li><a href="#submitting-a-pull-request">Submitting a Pull Request</a></li>
+<li><a href="#ai-assisted-contributions">AI-Assisted Contributions</a></li>
 <li><a href="#adding-a-new-provider">Adding a New Provider</a></li>
 <li><a href="#documentation">Documentation</a></li>
 <li><a href="#google-summer-of-code-2026">Google Summer of Code 2026</a></li>
@@ -1396,7 +1419,9 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <p>❌ <code>fixed stuff</code></p>
 </li>
 <li>
-<p><strong>Push your branch</strong> and open a Pull Request against <code>main</code>.</p>
+<p><strong>Review your diff, then push your branch</strong> and open a Pull Request against
+   <code>main</code>. If you used an AI tool, you must personally review and understand
+   the generated output before pushing.</p>
 </li>
 <li>
 <p>Fill in the PR template completely — include a description of the change, how it was tested, and any relevant issue numbers.</p>
@@ -1405,6 +1430,27 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
 <p>A maintainer will review your PR. Address feedback promptly.</p>
 </li>
 </ol>
+<hr />
+<h2 id="ai-assisted-contributions">AI-Assisted Contributions<a class="headerlink" href="#ai-assisted-contributions" title="Permanent link">&para;</a></h2>
+<p>AI tools may help with a contribution, but the human contributor is responsible
+for every submitted line. Before submitting an AI-assisted contribution:</p>
+<ul>
+<li>Review the complete diff and understand the purpose, design, and security
+  implications of every change.</li>
+<li>Run the relevant tests and checks, or explain in the pull request why a
+  check could not be run.</li>
+<li>Keep the change focused and confirm that it does not duplicate an existing
+  issue or pull request.</li>
+<li>Disclose substantial AI assistance in the pull request template.</li>
+<li>Be ready to explain the change and make requested revisions during review.</li>
+</ul>
+<p>AI agents must not autonomously push branches, open or merge pull requests,
+post issues or comments, submit reviews, or create releases. Do not give an AI
+agent credentials with repository write access. The full requirements for
+agents and AI-assisted work are in <a href="AGENTS.md"><code>AGENTS.md</code></a>.</p>
+<p>Maintainers may close contributions that are unreviewed, unexplained,
+duplicative, excessively broad, or generated and submitted without meaningful
+human involvement.</p>
 <hr />
 <h2 id="adding-a-new-provider">Adding a New Provider<a class="headerlink" href="#adding-a-new-provider" title="Permanent link">&para;</a></h2>
 <p>To add support for a new secret backend:</p>
