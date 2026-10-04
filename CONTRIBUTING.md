@@ -20,6 +20,7 @@ This project is a Docker Swarm secrets plugin that integrates with HashiCorp Vau
   - [Running Tests](#running-tests)
   - [Linting](#linting)
 - [Submitting a Pull Request](#submitting-a-pull-request)
+- [AI-Assisted Contributions](#ai-assisted-contributions)
 - [Adding a New Provider](#adding-a-new-provider)
 - [Documentation](#documentation)
 - [Google Summer of Code 2026](#google-summer-of-code-2026)
@@ -205,11 +206,38 @@ golangci-lint run ./... --timeout 10m
    - ✅ `fix: handle Vault token renewal race condition`
    - ❌ `fixed stuff`
 
-6. **Push your branch** and open a Pull Request against `main`.
+6. **Review your diff, then push your branch** and open a Pull Request against
+   `main`. If you used an AI tool, you must personally review and understand
+   the generated output before pushing.
 
 7. Fill in the PR template completely — include a description of the change, how it was tested, and any relevant issue numbers.
 
 8. A maintainer will review your PR. Address feedback promptly.
+
+---
+
+## AI-Assisted Contributions
+
+AI tools may help with a contribution, but the human contributor is responsible
+for every submitted line. Before submitting an AI-assisted contribution:
+
+- Review the complete diff and understand the purpose, design, and security
+  implications of every change.
+- Run the relevant tests and checks, or explain in the pull request why a
+  check could not be run.
+- Keep the change focused and confirm that it does not duplicate an existing
+  issue or pull request.
+- Disclose substantial AI assistance in the pull request template.
+- Be ready to explain the change and make requested revisions during review.
+
+AI agents must not autonomously push branches, open or merge pull requests,
+post issues or comments, submit reviews, or create releases. Do not give an AI
+agent credentials with repository write access. The full requirements for
+agents and AI-assisted work are in [`AGENTS.md`](AGENTS.md).
+
+Maintainers may close contributions that are unreviewed, unexplained,
+duplicative, excessively broad, or generated and submitted without meaningful
+human involvement.
 
 ---
 
