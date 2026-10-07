@@ -14,11 +14,11 @@ func BuildMountedKVv2SecretPath(mountPath, customPath, secretName string) string
 	return fmt.Sprintf("%s/data/%s", mountPath, strings.Trim(secretName, "/"))
 }
 
-// BuildMountedKVv1SecretPath builds a KV v1 secret path without the "/data/"
-// segment. A mount-qualified path (e.g. "secret/data/database/mysql") is
-// reduced to the secret relative to the mount with one leading "data/"
-// segment removed ("database/mysql"); a relative path (e.g. "data/mysql")
-// is kept as-is so a genuine "data/" folder is preserved.
+// BuildMountedKVv1SecretPath builds a KV v1 secret path without injecting
+// the "/data/" segment. A literal "data/" folder is preserved because it is
+// a valid secret name in KV v1 (e.g. "secret/data/mysql" reads secret
+// "data/mysql" under mount "secret"). Only the mount prefix is removed from
+// mount-qualified paths.
 func BuildMountedKVv1SecretPath(mountPath, customPath, secretName string) string {
 	mountPath = strings.Trim(mountPath, "/")
 	if customPath != "" {
@@ -29,14 +29,14 @@ func BuildMountedKVv1SecretPath(mountPath, customPath, secretName string) string
 }
 
 // NormalizeV1RelativePath normalizes a user-supplied path for a KV v1 mount.
-// Unlike NormalizeRelativePath (KV v2), it strips a leading "data/" segment
-// only after removing a mount prefix, so relative paths such as "data/mysql"
-// keep their "data/" folder.
+// Unlike NormalizeRelativePath (KV v2), it never strips a "data/" segment,
+// so relative paths such as "data/mysql" and mount-qualified paths such as
+// "secret/data/mysql" keep their literal "data/" folder. Only the mount
+// prefix is removed.
 func NormalizeV1RelativePath(mountPath, path string) string {
 	mountPath = strings.Trim(mountPath, "/")
 	path = strings.Trim(path, "/")
 	if rest, ok := strings.CutPrefix(path, mountPath+"/"); ok {
-		rest = strings.TrimPrefix(rest, "data/")
 		return strings.Trim(rest, "/")
 	}
 	return path

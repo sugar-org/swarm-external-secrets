@@ -36,18 +36,20 @@ type Config struct {
 	PathLabel  string
 	FieldLabel string
 
-	// KVVersion selects the OpenBao KV engine version: "1" or "2".
-	// Empty means "2" for backward compatibility. Unused by the Vault provider.
+	// KVVersion selects the KV engine version: "1" or "2".
+	// Empty means "2" for backward compatibility.
 	KVVersion string
 }
 
 func ParseVaultConfig(config map[string]string) Config {
-	return parseConfig(Config{
+	cfg := parseConfig(Config{
 		ProviderName: "vault",
 		EnvPrefix:    "VAULT",
 		PathLabel:    "vault_path",
 		FieldLabel:   "vault_field",
 	}, config, "")
+	cfg.KVVersion = utils.GetConfigOrDefault(config, "VAULT_KV_VERSION", "2")
+	return cfg
 }
 
 func ParseOpenBaoConfig(config map[string]string) Config {
@@ -61,10 +63,11 @@ func ParseOpenBaoConfig(config map[string]string) Config {
 	return cfg
 }
 
-// NormalizeOpenBaoKVVersion validates the OPENBAO_KV_VERSION setting. Only
-// "1" or "2" are accepted (surrounding whitespace ignored); empty means "2"
-// for backward compatibility. Anything else is rejected with a clear error.
-func NormalizeOpenBaoKVVersion(raw string) (string, error) {
+// normalizeKVVersion validates a KV engine version setting. Only "1" or "2"
+// are accepted (surrounding whitespace ignored); empty means "2" for
+// backward compatibility. Anything else is rejected with a clear error naming
+// the environment variable.
+func normalizeKVVersion(envName, raw string) (string, error) {
 	v := strings.TrimSpace(raw)
 	if v == "" {
 		return "2", nil
@@ -73,8 +76,22 @@ func NormalizeOpenBaoKVVersion(raw string) (string, error) {
 	case "1", "2":
 		return v, nil
 	default:
-		return "", fmt.Errorf("unsupported OPENBAO_KV_VERSION %q: must be \"1\" or \"2\"", raw)
+		return "", fmt.Errorf("unsupported %s %q: must be \"1\" or \"2\"", envName, raw)
 	}
+}
+
+// NormalizeOpenBaoKVVersion validates the OPENBAO_KV_VERSION setting. Only
+// "1" or "2" are accepted (surrounding whitespace ignored); empty means "2"
+// for backward compatibility. Anything else is rejected with a clear error.
+func NormalizeOpenBaoKVVersion(raw string) (string, error) {
+	return normalizeKVVersion("OPENBAO_KV_VERSION", raw)
+}
+
+// NormalizeVaultKVVersion validates the VAULT_KV_VERSION setting. Only "1" or
+// "2" are accepted (surrounding whitespace ignored); empty means "2" for
+// backward compatibility. Anything else is rejected with a clear error.
+func NormalizeVaultKVVersion(raw string) (string, error) {
+	return normalizeKVVersion("VAULT_KV_VERSION", raw)
 }
 
 func parseConfig(base Config, config map[string]string, addressDefault string) Config {
