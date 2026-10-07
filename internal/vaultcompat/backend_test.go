@@ -177,6 +177,56 @@ func TestBackend_GetSecretReauthenticatesOnAuthError(t *testing.T) {
 	}
 }
 
+func TestBackend_GetSecret_KVVersionExtraction(t *testing.T) {
+	// A KV v1 secret may legitimately contain both a top-level field and a
+	// nested "data" map. KV v1 must read the top-level field directly, while
+	// KV v2 (including empty version for backward compatibility) unwraps it.
+	v1Data := map[string]any{
+		"password": "current",
+		"data":     map[string]any{"password": "other"},
+	}
+	v2Data := map[string]any{
+		"data": map[string]any{"password": "other"},
+	}
+
+	tests := []struct {
+		name      string
+		kvVersion string
+		data      map[string]any
+		want      string
+	}{
+		{name: "v1 reads top-level field beside nested data", kvVersion: "1", data: v1Data, want: "current"},
+		{name: "v2 unwraps nested data", kvVersion: "2", data: v1Data, want: "other"},
+		{name: "empty version keeps v2 unwrapping", kvVersion: "", data: v1Data, want: "other"},
+		{name: "v2 nested-only response", kvVersion: "2", data: v2Data, want: "other"},
+		{name: "v1 flat response", kvVersion: "1", data: map[string]any{"password": "current"}, want: "current"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := &fakeVaultClient{
+				readResults: []fakeClientResult{
+					{secret: &vclient.Secret{Data: tt.data}},
+				},
+			}
+			backend := newTestBackend(t, client, &vclient.Auth{ClientToken: "token-1"})
+			backend.config.KVVersion = tt.kvVersion
+			defer func() { _ = backend.Close() }()
+
+			got, err := backend.GetSecret(context.Background(), &utils.SecretInfo{
+				SecretPath:  "secret/database",
+				SecretField: "password",
+			})
+			if err != nil {
+				t.Fatalf("GetSecret() error = %v", err)
+			}
+			if string(got) != tt.want {
+				t.Fatalf("GetSecret() = %q, want %q (KVVersion=%q)", got, tt.want, tt.kvVersion)
+			}
+		})
+	}
+}
+
 func TestBackend_TokenRenewalUpdatesToken(t *testing.T) {
 	client := &fakeVaultClient{
 		renewCalled: make(chan struct{}, 1),
