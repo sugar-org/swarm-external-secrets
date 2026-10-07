@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/docker/go-plugins-helpers/secrets"
 	log "github.com/sirupsen/logrus"
@@ -34,7 +37,47 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 
 // GetSecret retrieves a secret value from Vault.
 func (v *VaultProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
-	return v.backend.GetSecret(ctx, secretInfo)
+	val, err := v.backend.GetSecret(ctx, secretInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	if shouldBase64Decode(secretInfo) {
+		return decodeBase64Secret(val, secretInfo)
+	}
+
+	return val, nil
+}
+
+// shouldBase64Decode checks if the base64_decode label is explicitly set to true.
+func shouldBase64Decode(secretInfo *SecretInfo) bool {
+	if secretInfo == nil || secretInfo.Labels == nil {
+		return false
+	}
+
+	val, ok := secretInfo.Labels["base64_decode"]
+	if !ok {
+		return false
+	}
+
+	return strings.EqualFold(strings.TrimSpace(val), "true")
+}
+
+// decodeBase64Secret decodes a base64-encoded secret value into its raw bytes.
+func decodeBase64Secret(value []byte, secretInfo *SecretInfo) ([]byte, error) {
+	trimmed := bytes.TrimSpace(value)
+	decoded, err := base64.StdEncoding.DecodeString(string(trimmed))
+	if err != nil {
+		if secretInfo != nil && secretInfo.DockerSecretName != "" {
+			return nil, fmt.Errorf("failed to base64-decode secret %q: %w", secretInfo.DockerSecretName, err)
+		}
+		if secretInfo != nil && secretInfo.SecretField != "" {
+			return nil, fmt.Errorf("failed to base64-decode secret field %q: %w", secretInfo.SecretField, err)
+		}
+		return nil, fmt.Errorf("failed to base64-decode secret: %w", err)
+	}
+
+	return decoded, nil
 }
 
 // SupportsRotation indicates that Vault supports secret rotation monitoring.

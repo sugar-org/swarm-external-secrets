@@ -31,6 +31,7 @@ Please refer to the [docs](https://sugar-org.github.io/swarm-external-secrets/) 
 - **Multi-Provider Support**: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault, Infisical
 - **Multiple Auth Methods**: Support for various authentication methods per provider
 - **Automatic Secret Rotation**: Monitor providers for changes and automatically update Docker secrets and services
+- **Base64 Secret Decoding (HashiCorp Vault)**: Decode base64-encoded secrets (e.g. binary JKS/PKCS12 keystores) before delivery via `base64_decode: "true"` for HashiCorp Vault
 - **Real-time Monitoring**: Web dashboard with system metrics, health status, and performance tracking
 - **Flexible Path Mapping**: Customize secret paths and field extraction per provider
 - **Production Ready**: Includes proper error handling, logging, cleanup, and monitoring
@@ -146,6 +147,18 @@ docker plugin set swarm-external-secrets:latest \
          oci_secret_name: "my-database-password"
          oci_field: "password"
    ```
+
+   **Decoding Base64 Secrets with HashiCorp Vault (e.g., Binary Files / Keystores):**
+   ```yaml
+   secrets:
+     kafka_client_keystore:
+       driver: swarm-external-secrets:latest
+       labels:
+         vault_path: "secrets"
+         vault_field: "KAFKA_CLIENT_KEYSTORE"
+         base64_decode: "true"
+   ```
+
 
 4. Optional: enable plugin log sidecar (for `docker compose logs` visibility):
 

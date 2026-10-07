@@ -58,6 +58,23 @@ docker plugin set swarm-external-secrets:latest \
     VAULT_MOUNT_PATH="kv"
 ```
 
+#### Base64 Secret Decoding (HashiCorp Vault only)
+
+The `base64_decode` label controls whether a secret value fetched from Vault should be base64-decoded before being delivered to the container. This supports binary files (such as JKS or PKCS12 keystores, certificates, or archives) stored in Vault KV as base64-encoded strings.
+
+- **Default behaviour:** `false` (the secret value is passed to the container as-is).
+- **With `base64_decode: "true"`:** The Vault provider trims surrounding whitespace/newlines and decodes the value using standard base64 decoding (`base64.StdEncoding`). If decoding fails, the secret request fails with an error and does not pass corrupted or raw data to the container.
+
+```yaml
+secrets:
+  kafka_client_keystore:
+    driver: swarm-external-secrets:latest
+    labels:
+      vault_path: "secrets"
+      vault_field: "KAFKA_CLIENT_KEYSTORE"
+      base64_decode: "true"
+```
+
 ---
 
 ### 2. AWS Secrets Manager
@@ -477,6 +494,7 @@ secrets:
 ### HashiCorp Vault
 - Supports token, AppRole, and JWT authentication
 - JWT and AppRole client tokens are renewed at about two-thirds of TTL; static tokens are not (see [Vault and OpenBao JWT](jwt.md))
+- Supports automatic base64 decoding for binary secrets via the `base64_decode: "true"` label
 
 ### AWS Secrets Manager
 - Supports IAM roles, access keys, and profiles

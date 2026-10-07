@@ -1,7 +1,10 @@
 package providers
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -297,4 +300,134 @@ func emptyFile(t *testing.T) string {
 	}
 
 	return path
+}
+
+func TestVaultProvider_ShouldBase64Decode(t *testing.T) {
+	tests := []struct {
+		name string
+		info *SecretInfo
+		want bool
+	}{
+		{"nil secretInfo", nil, false},
+		{"nil labels", &SecretInfo{DockerSecretName: "test"}, false},
+		{"label absent", &SecretInfo{Labels: map[string]string{}}, false},
+		{"label false", &SecretInfo{Labels: map[string]string{"base64_decode": "false"}}, false},
+		{"label 1 strict", &SecretInfo{Labels: map[string]string{"base64_decode": "1"}}, false},
+		{"label true", &SecretInfo{Labels: map[string]string{"base64_decode": "true"}}, true},
+		{"label TRUE", &SecretInfo{Labels: map[string]string{"base64_decode": "TRUE"}}, true},
+		{"label trimmed true", &SecretInfo{Labels: map[string]string{"base64_decode": " true "}}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldBase64Decode(tt.info); got != tt.want {
+				t.Errorf("shouldBase64Decode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVaultProvider_DecodeBase64Secret_Success(t *testing.T) {
+	binaryData := []byte{0x00, 0xFF, 0xFE, 0x80, 0x7F, 0x12, 0x34, 0x56}
+	validBase64Binary := base64.StdEncoding.EncodeToString(binaryData)
+	validBase64Text := base64.StdEncoding.EncodeToString([]byte("hello world"))
+
+	tests := []struct {
+		name  string
+		input []byte
+		want  []byte
+	}{
+		{"valid text", []byte(validBase64Text), []byte("hello world")},
+		{"whitespace trimmed", []byte("  " + validBase64Text + " \r\n"), []byte("hello world")},
+		{"binary non-UTF8", []byte(validBase64Binary), binaryData},
+		{"empty value", []byte(""), []byte{}},
+		{"whitespace only", []byte("   \r\n\t  "), []byte{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := decodeBase64Secret(tt.input, nil)
+			if err != nil {
+				t.Fatalf("decodeBase64Secret() unexpected error = %v", err)
+			}
+			if !bytes.Equal(got, tt.want) {
+				t.Errorf("decodeBase64Secret() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVaultProvider_DecodeBase64Secret_Invalid(t *testing.T) {
+	secretInfo := &SecretInfo{DockerSecretName: "my-secret"}
+	input := []byte("super-secret-not-base64!@#$")
+
+	got, err := decodeBase64Secret(input, secretInfo)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if got != nil {
+		t.Errorf("expected nil value on error, got %v", got)
+	}
+
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, `"my-secret"`) {
+		t.Errorf("error %q should contain secret name %q", errMsg, `"my-secret"`)
+	}
+	if strings.Contains(errMsg, string(input)) {
+		t.Errorf("error %q leaked input secret value %q", errMsg, string(input))
+	}
+}
+
+func TestVaultProvider_GetSecret_Base64Decode(t *testing.T) {
+	binaryPayload := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02}
+	encodedPayload := base64.StdEncoding.EncodeToString(binaryPayload)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/secret/data/app/binary":
+			_, _ = w.Write([]byte(fmt.Sprintf(`{"data":{"data":{"keystore":"%s"}}}`, encodedPayload)))
+		default:
+			t.Fatalf("unexpected request path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	provider := &VaultProvider{}
+	if err := provider.Initialize(map[string]string{
+		"VAULT_ADDR":  server.URL,
+		"VAULT_TOKEN": "test-token",
+	}); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+	defer func() { _ = provider.Close() }()
+
+	info := &SecretInfo{
+		DockerSecretName: "test-keystore",
+		SecretPath:       "secret/data/app/binary",
+		SecretField:      "keystore",
+		Labels: map[string]string{
+			"base64_decode": "true",
+		},
+	}
+
+	got, err := provider.GetSecret(t.Context(), info)
+	if err != nil {
+		t.Fatalf("GetSecret() error = %v", err)
+	}
+	if !bytes.Equal(got, binaryPayload) {
+		t.Fatalf("GetSecret() = %v, want %v", got, binaryPayload)
+	}
+
+	infoRaw := &SecretInfo{
+		DockerSecretName: "test-keystore",
+		SecretPath:       "secret/data/app/binary",
+		SecretField:      "keystore",
+	}
+	gotRaw, err := provider.GetSecret(t.Context(), infoRaw)
+	if err != nil {
+		t.Fatalf("GetSecret() error = %v", err)
+	}
+	if string(gotRaw) != encodedPayload {
+		t.Fatalf("GetSecret() = %q, want %q", string(gotRaw), encodedPayload)
+	}
 }
