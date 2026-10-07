@@ -1,7 +1,10 @@
 package providers
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -297,4 +300,214 @@ func emptyFile(t *testing.T) string {
 	}
 
 	return path
+}
+
+func TestVaultProvider_Base64Decode(t *testing.T) {
+	binaryData := []byte{0x00, 0xFF, 0xFE, 0x80, 0x7F, 0x12, 0x34, 0x56}
+	validBase64Binary := base64.StdEncoding.EncodeToString(binaryData)
+	validBase64Text := base64.StdEncoding.EncodeToString([]byte("hello world"))
+
+	tests := []struct {
+		name        string
+		secretInfo  *SecretInfo
+		input       []byte
+		want        []byte
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "label absent preserves raw value",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "test-secret",
+				Labels:           map[string]string{},
+			},
+			input: []byte("not-decoded-value"),
+			want:  []byte("not-decoded-value"),
+		},
+		{
+			name: "label false preserves raw value",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "test-secret",
+				Labels:           map[string]string{"base64_decode": "false"},
+			},
+			input: []byte("not-decoded-value"),
+			want:  []byte("not-decoded-value"),
+		},
+		{
+			name: "label with 1 does not decode (strict boolean)",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "test-secret",
+				Labels:           map[string]string{"base64_decode": "1"},
+			},
+			input: []byte(validBase64Text),
+			want:  []byte(validBase64Text),
+		},
+		{
+			name: "label true decodes valid base64 text",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "test-secret",
+				Labels:           map[string]string{"base64_decode": "true"},
+			},
+			input: []byte(validBase64Text),
+			want:  []byte("hello world"),
+		},
+		{
+			name: "label TRUE (uppercase) decodes valid base64",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "test-secret",
+				Labels:           map[string]string{"base64_decode": "TRUE"},
+			},
+			input: []byte(validBase64Text),
+			want:  []byte("hello world"),
+		},
+		{
+			name: "label true trims surrounding whitespace and newlines",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "test-secret",
+				Labels:           map[string]string{"base64_decode": " true "},
+			},
+			input: []byte("  " + validBase64Text + " \r\n"),
+			want:  []byte("hello world"),
+		},
+		{
+			name: "label true decodes binary non-UTF-8 bytes correctly without corruption",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "kafka-keystore",
+				Labels:           map[string]string{"base64_decode": "true"},
+			},
+			input: []byte(validBase64Binary),
+			want:  binaryData,
+		},
+		{
+			name: "label true with empty value decodes to empty bytes without error",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "empty-secret",
+				Labels:           map[string]string{"base64_decode": "true"},
+			},
+			input: []byte(""),
+			want:  []byte{},
+		},
+		{
+			name: "label true with whitespace-only value decodes to empty bytes without error",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "whitespace-secret",
+				Labels:           map[string]string{"base64_decode": "true"},
+			},
+			input: []byte("   \r\n\t  "),
+			want:  []byte{},
+		},
+		{
+			name: "label true with invalid base64 returns error with secret name but no secret bytes",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "my-secret",
+				Labels:           map[string]string{"base64_decode": "true"},
+			},
+			input:       []byte("super-secret-not-base64!@#$"),
+			wantErr:     true,
+			errContains: `"my-secret"`,
+		},
+		{
+			name:       "nil secretInfo preserves raw value",
+			secretInfo: nil,
+			input:      []byte("raw-bytes"),
+			want:       []byte("raw-bytes"),
+		},
+		{
+			name: "nil labels in secretInfo preserves raw value",
+			secretInfo: &SecretInfo{
+				DockerSecretName: "secret-without-labels",
+			},
+			input: []byte("raw-bytes"),
+			want:  []byte("raw-bytes"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !shouldBase64Decode(tt.secretInfo) {
+				if tt.wantErr {
+					t.Fatalf("expected shouldBase64Decode to be true")
+				}
+				if !bytes.Equal(tt.input, tt.want) {
+					t.Errorf("got %v, want %v", tt.input, tt.want)
+				}
+				return
+			}
+
+			got, err := decodeBase64Secret(tt.input, tt.secretInfo)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				errMsg := err.Error()
+				if !strings.Contains(errMsg, tt.errContains) {
+					t.Errorf("error %q should contain %q", errMsg, tt.errContains)
+				}
+				if len(tt.input) > 0 && strings.Contains(errMsg, string(tt.input)) {
+					t.Errorf("error %q leaked input secret value %q", errMsg, string(tt.input))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !bytes.Equal(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVaultProvider_GetSecret_Base64Decode(t *testing.T) {
+	binaryPayload := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02}
+	encodedPayload := base64.StdEncoding.EncodeToString(binaryPayload)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/secret/data/app/binary":
+			_, _ = w.Write([]byte(fmt.Sprintf(`{"data":{"data":{"keystore":"%s"}}}`, encodedPayload)))
+		default:
+			t.Fatalf("unexpected request path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	provider := &VaultProvider{}
+	if err := provider.Initialize(map[string]string{
+		"VAULT_ADDR":  server.URL,
+		"VAULT_TOKEN": "test-token",
+	}); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+	defer func() { _ = provider.Close() }()
+
+	info := &SecretInfo{
+		DockerSecretName: "test-keystore",
+		SecretPath:       "secret/data/app/binary",
+		SecretField:      "keystore",
+		Labels: map[string]string{
+			"base64_decode": "true",
+		},
+	}
+
+	got, err := provider.GetSecret(t.Context(), info)
+	if err != nil {
+		t.Fatalf("GetSecret() error = %v", err)
+	}
+	if !bytes.Equal(got, binaryPayload) {
+		t.Fatalf("GetSecret() = %v, want %v", got, binaryPayload)
+	}
+
+	infoRaw := &SecretInfo{
+		DockerSecretName: "test-keystore",
+		SecretPath:       "secret/data/app/binary",
+		SecretField:      "keystore",
+	}
+	gotRaw, err := provider.GetSecret(t.Context(), infoRaw)
+	if err != nil {
+		t.Fatalf("GetSecret() error = %v", err)
+	}
+	if string(gotRaw) != encodedPayload {
+		t.Fatalf("GetSecret() = %q, want %q", string(gotRaw), encodedPayload)
+	}
 }
