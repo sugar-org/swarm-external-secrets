@@ -118,7 +118,7 @@ func (b *Backend) GetSecret(ctx context.Context, secretInfo *utils.SecretInfo) (
 		return nil, fmt.Errorf("secret not found at path: %s", secretInfo.SecretPath)
 	}
 
-	value, err := utils.ExtractSecretValueFromKV(secret.Data, secretInfo.SecretField)
+	value, err := utils.ExtractSecretValueFromKVWithVersion(secret.Data, secretInfo.SecretField, b.config.KVVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract secret value: %w", err)
 	}
