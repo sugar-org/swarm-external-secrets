@@ -405,7 +405,8 @@ func TestVaultProvider_DecodeBase64Secret_Invalid(t *testing.T) {
 	}
 }
 
-func TestVaultProvider_GetSecret_Base64Decode(t *testing.T) {
+func testBase64Decode(t *testing.T, initProvider func(serverURL string) SecretsProvider) {
+	t.Helper()
 	binaryPayload := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02}
 	encodedPayload := base64.StdEncoding.EncodeToString(binaryPayload)
 
@@ -419,13 +420,7 @@ func TestVaultProvider_GetSecret_Base64Decode(t *testing.T) {
 	}))
 	defer server.Close()
 
-	provider := &VaultProvider{}
-	if err := provider.Initialize(map[string]string{
-		"VAULT_ADDR":  server.URL,
-		"VAULT_TOKEN": "test-token",
-	}); err != nil {
-		t.Fatalf("Initialize() error = %v", err)
-	}
+	provider := initProvider(server.URL)
 	defer func() { _ = provider.Close() }()
 
 	info := &SecretInfo{
@@ -457,4 +452,20 @@ func TestVaultProvider_GetSecret_Base64Decode(t *testing.T) {
 	if string(gotRaw) != encodedPayload {
 		t.Fatalf("GetSecret() = %q, want %q", string(gotRaw), encodedPayload)
 	}
+}
+
+func TestVaultProvider_GetSecret_Base64Decode(t *testing.T) {
+	testBase64Decode(t, func(serverURL string) SecretsProvider {
+		provider := &VaultProvider{}
+		if err := provider.Initialize(map[string]string{
+			"VAULT_ADDR":  serverURL,
+			"VAULT_TOKEN": "test-token",
+		}); err != nil {
+			t.Fatalf("Initialize() error = %v", err)
+		}
+		if got := provider.GetProviderName(); got != "vault" {
+			t.Fatalf("GetProviderName() = %q, want vault", got)
+		}
+		return provider
+	})
 }
