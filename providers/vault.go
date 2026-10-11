@@ -42,15 +42,15 @@ func (v *VaultProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) (
 		return nil, err
 	}
 
-	if shouldBase64Decode(secretInfo) {
-		return decodeBase64Secret(val, secretInfo)
+	if v.shouldBase64Decode(secretInfo) {
+		return v.decodeBase64Secret(val, secretInfo)
 	}
 
 	return val, nil
 }
 
 // shouldBase64Decode checks if the base64_decode label is explicitly set to true.
-func shouldBase64Decode(secretInfo *SecretInfo) bool {
+func (v *VaultProvider) shouldBase64Decode(secretInfo *SecretInfo) bool {
 	if secretInfo == nil || secretInfo.Labels == nil {
 		return false
 	}
@@ -64,7 +64,7 @@ func shouldBase64Decode(secretInfo *SecretInfo) bool {
 }
 
 // decodeBase64Secret decodes a base64-encoded secret value into its raw bytes.
-func decodeBase64Secret(value []byte, secretInfo *SecretInfo) ([]byte, error) {
+func (v *VaultProvider) decodeBase64Secret(value []byte, secretInfo *SecretInfo) ([]byte, error) {
 	trimmed := bytes.TrimSpace(value)
 	decoded, err := base64.StdEncoding.DecodeString(string(trimmed))
 	if err != nil {
