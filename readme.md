@@ -149,6 +149,8 @@ docker plugin set swarm-external-secrets:latest \
    ```
 
    **Decoding Base64 Secrets with HashiCorp Vault / OpenBao (e.g., Binary Files / Keystores):**
+
+   *HashiCorp Vault:*
    ```yaml
    secrets:
      kafka_client_keystore:
@@ -156,6 +158,17 @@ docker plugin set swarm-external-secrets:latest \
        labels:
          vault_path: "secrets"
          vault_field: "KAFKA_CLIENT_KEYSTORE"
+         base64_decode: "true"
+   ```
+
+   *OpenBao:*
+   ```yaml
+   secrets:
+     kafka_client_keystore:
+       driver: swarm-external-secrets:latest
+       labels:
+         openbao_path: "secrets"
+         openbao_field: "KAFKA_CLIENT_KEYSTORE"
          base64_decode: "true"
    ```
 

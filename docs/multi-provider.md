@@ -65,6 +65,7 @@ The `base64_decode` label controls whether a secret value fetched from Vault or 
 - **Default behaviour:** `false` (the secret value is passed to the container as-is).
 - **With `base64_decode: "true"`:** The provider trims surrounding whitespace/newlines and decodes the value using standard base64 decoding (`base64.StdEncoding`). If decoding fails, the secret request fails with an error and does not pass corrupted or raw data to the container.
 
+**HashiCorp Vault:**
 ```yaml
 secrets:
   kafka_client_keystore:
@@ -72,6 +73,17 @@ secrets:
     labels:
       vault_path: "secrets"
       vault_field: "KAFKA_CLIENT_KEYSTORE"
+      base64_decode: "true"
+```
+
+**OpenBao:**
+```yaml
+secrets:
+  kafka_client_keystore:
+    driver: swarm-external-secrets:latest
+    labels:
+      openbao_path: "secrets"
+      openbao_field: "KAFKA_CLIENT_KEYSTORE"
       base64_decode: "true"
 ```
 
