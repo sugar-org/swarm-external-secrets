@@ -302,8 +302,7 @@ func emptyFile(t *testing.T) string {
 	return path
 }
 
-func TestVaultProvider_ShouldBase64Decode(t *testing.T) {
-	provider := &VaultProvider{}
+func TestShouldBase64Decode(t *testing.T) {
 	tests := []struct {
 		name string
 		info *SecretInfo
@@ -320,15 +319,14 @@ func TestVaultProvider_ShouldBase64Decode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := provider.shouldBase64Decode(tt.info); got != tt.want {
+			if got := shouldBase64Decode(tt.info); got != tt.want {
 				t.Errorf("shouldBase64Decode() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestVaultProvider_DecodeBase64Secret_Success(t *testing.T) {
-	provider := &VaultProvider{}
+func TestDecodeBase64Secret_Success(t *testing.T) {
 	binaryData := []byte{0x00, 0xFF, 0xFE, 0x80, 0x7F, 0x12, 0x34, 0x56}
 	validBase64Binary := base64.StdEncoding.EncodeToString(binaryData)
 	validBase64Text := base64.StdEncoding.EncodeToString([]byte("hello world"))
@@ -347,7 +345,7 @@ func TestVaultProvider_DecodeBase64Secret_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := provider.decodeBase64Secret(tt.input, &SecretInfo{})
+			got, err := decodeBase64Secret(tt.input, &SecretInfo{})
 			if err != nil {
 				t.Fatalf("decodeBase64Secret() unexpected error = %v", err)
 			}
@@ -358,8 +356,7 @@ func TestVaultProvider_DecodeBase64Secret_Success(t *testing.T) {
 	}
 }
 
-func TestVaultProvider_DecodeBase64Secret_Invalid(t *testing.T) {
-	provider := &VaultProvider{}
+func TestDecodeBase64Secret_Invalid(t *testing.T) {
 	input := []byte("super-secret-not-base64!@#$")
 
 	tests := []struct {
@@ -386,7 +383,7 @@ func TestVaultProvider_DecodeBase64Secret_Invalid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := provider.decodeBase64Secret(input, tt.info)
+			got, err := decodeBase64Secret(input, tt.info)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
