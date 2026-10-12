@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sugar-org/swarm-external-secrets/internal/kvpath"
+	"github.com/sugar-org/swarm-external-secrets/internal/utils"
 	"github.com/sugar-org/swarm-external-secrets/internal/vaultcompat"
 )
 
@@ -39,8 +40,8 @@ func (o *OpenBaoProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo)
 		return nil, err
 	}
 
-	if shouldBase64Decode(secretInfo) {
-		return decodeBase64Secret(val, secretInfo)
+	if utils.ShouldBase64Decode(secretInfo.Labels) {
+		return utils.DecodeBase64Secret(val, secretInfo.DockerSecretName, secretInfo.SecretField)
 	}
 
 	return val, nil
