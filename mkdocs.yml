@@ -66,7 +66,9 @@ nav:
   - index.md
   - Providers:
       - AWS SPIFFE/OIDC Authentication: aws-spiffe.md
+      - Infisical: infisical.md
       - GCP Secret Manager: gcp.md
+      - Vault and OpenBao JWT: jwt.md
   - Multi-Provider: multi-provider.md
   - Monitoring: monitoring.md
   - Rotation: rotation.md

@@ -15,9 +15,14 @@ The Vault Swarm Plugin supports multiple secrets providers, allowing you to use 
 | `VAULT_ADDR` | Vault server address | `http://localhost:8200` |
 | `VAULT_TOKEN` | Vault token for authentication | — |
 | `VAULT_MOUNT_PATH` | Mount path for KV engine | `secret` |
-| `VAULT_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
+| `VAULT_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `VAULT_ROLE_ID` | Role ID for AppRole authentication | — |
 | `VAULT_SECRET_ID` | Secret ID for AppRole authentication | — |
+| `VAULT_APPROLE_AUTH_PATH` | AppRole auth mount path | `approle` |
+| `VAULT_JWT_ROLE` | JWT auth role name | — |
+| `VAULT_JWT` | Signed JWT (or use `VAULT_JWT_FILE`) | — |
+| `VAULT_JWT_FILE` | Path inside the plugin to a JWT file | — |
+| `VAULT_JWT_AUTH_PATH` | JWT auth mount path | `jwt` |
 | `VAULT_SKIP_VERIFY` | Skip TLS verification (not recommended for production) | `false` |
 
 **Example:**
@@ -26,6 +31,17 @@ docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="vault" \
     VAULT_ADDR="https://vault.example.com:8200" \
     VAULT_TOKEN="hvs.example-token"
+```
+
+JWT authentication (client token is renewed; see [Vault and OpenBao JWT](jwt.md)):
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="https://vault.example.com:8200" \
+    VAULT_AUTH_METHOD="jwt" \
+    VAULT_JWT_ROLE="swarm-external-secrets" \
+    VAULT_JWT="<signed-jwt>"
 ```
 
 **Mount Path Behavior:**
@@ -136,9 +152,14 @@ docker plugin set swarm-external-secrets:latest \
 | `OPENBAO_ADDR` | OpenBao server address | `http://localhost:8200` |
 | `OPENBAO_TOKEN` | OpenBao token for authentication | — |
 | `OPENBAO_MOUNT_PATH` | Mount path for KV engine | `secret` |
-| `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`) | `token` |
+| `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `OPENBAO_ROLE_ID` | Role ID for AppRole authentication | — |
 | `OPENBAO_SECRET_ID` | Secret ID for AppRole authentication | — |
+| `OPENBAO_APPROLE_AUTH_PATH` | AppRole auth mount path | `approle` |
+| `OPENBAO_JWT_ROLE` | JWT auth role name | — |
+| `OPENBAO_JWT` | Signed JWT (or use `OPENBAO_JWT_FILE`) | — |
+| `OPENBAO_JWT_FILE` | Path inside the plugin to a JWT file | — |
+| `OPENBAO_JWT_AUTH_PATH` | JWT auth mount path | `jwt` |
 | `OPENBAO_SKIP_VERIFY` | Skip TLS verification (not recommended for production) | `false` |
 
 **Example:**
@@ -147,6 +168,17 @@ docker plugin set swarm-external-secrets:latest \
     SECRETS_PROVIDER="openbao" \
     OPENBAO_ADDR="https://openbao.example.com:8200" \
     OPENBAO_TOKEN="ob_example-token"
+```
+
+JWT authentication (client token is renewed; see [Vault and OpenBao JWT](jwt.md)):
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_AUTH_METHOD="jwt" \
+    OPENBAO_JWT_ROLE="swarm-external-secrets" \
+    OPENBAO_JWT="<signed-jwt>"
 ```
 
 **Mount Path Behavior:**
@@ -230,7 +262,54 @@ The plugin resolves which secret to fetch using the following logic:
 
 ---
 
-### 6. GCP Secret Manager (Placeholder)
+### 6. Infisical
+
+**Provider Type:** `infisical`
+
+**Environment Variables:**
+
+| Variable | Description | Default |
+|---|---|---|
+| `INFISICAL_CLIENT_ID` | Machine identity Client ID (Universal Auth) | — |
+| `INFISICAL_CLIENT_SECRET` | Machine identity Client Secret (Universal Auth) | — |
+| `INFISICAL_TOKEN` | Pre-issued bearer/access token (optional if Universal Auth is set) | — |
+| `INFISICAL_PROJECT_ID` | Infisical project ID (required) | — |
+| `INFISICAL_ENVIRONMENT` | Environment slug (`dev`, `staging`, `prod`, …) | `dev` |
+| `INFISICAL_SECRET_PATH` | Default folder path for secrets | `/` |
+| `INFISICAL_SITE_URL` | Infisical site/API base URL | `https://app.infisical.com` |
+
+**Authentication:**
+
+- **Universal Auth (production):** set `INFISICAL_CLIENT_ID` + `INFISICAL_CLIENT_SECRET` for a machine identity.
+- **Access token:** set `INFISICAL_TOKEN` to a pre-issued Infisical bearer token (useful for short-lived testing).
+
+**Example (Universal Auth):**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="infisical" \
+    INFISICAL_CLIENT_ID="..." \
+    INFISICAL_CLIENT_SECRET="..." \
+    INFISICAL_PROJECT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+    INFISICAL_ENVIRONMENT="prod" \
+    ENABLE_ROTATION="true" \
+    ROTATION_INTERVAL="30s"
+```
+
+**Secret Labels:**
+
+- `infisical_secret_name` — Infisical secret key (e.g. `MYSQL_PASSWORD`)
+- `infisical_field` — Optional JSON field to extract from the secret value (defaults to `value`)
+- `infisical_project_id` — Optional per-secret project override
+- `infisical_environment` — Optional per-secret environment override
+- `infisical_secret_path` — Optional per-secret folder path override
+
+If `infisical_secret_name` is omitted, the Docker secret name is uppercased (`mysql_password` → `MYSQL_PASSWORD`).
+
+See [`docs/infisical.md`](./infisical.md) for machine-identity setup and usage details.
+
+---
+
+### 7. GCP Secret Manager (Placeholder)
 
 **Provider Type:** `gcp`
 
@@ -322,6 +401,20 @@ secrets:
       oci_field: "password"
 ```
 
+### Infisical
+
+```yaml
+secrets:
+  mysql_password:
+    driver: swarm-external-secrets:latest
+    labels:
+      infisical_secret_name: "MYSQL_PASSWORD"
+      # infisical_secret_path: "/database"
+```
+
+One plugin instance can target multiple Infisical projects and environments using per-secret `infisical_project_id` and `infisical_environment` labels, provided its credentials can access those contexts. Use separate plugin instances only when credentials, isolation requirements, or fixed configuration must differ.
+
+
 ## Multiple Providers in the Same Swarm Cluster
 
 For production isolation, run one provider per plugin instance (unique plugin name) and reference each instance as a separate secret driver.
@@ -402,6 +495,10 @@ secrets:
 
 ## Provider-Specific Notes
 
+### HashiCorp Vault
+- Supports token, AppRole, and JWT authentication
+- JWT and AppRole client tokens are renewed at about two-thirds of TTL; static tokens are not (see [Vault and OpenBao JWT](jwt.md))
+
 ### AWS Secrets Manager
 - Supports IAM roles, access keys, profiles, and SPIFFE/OIDC federation
 - JSON secrets are parsed automatically
@@ -415,7 +512,8 @@ secrets:
 ### OpenBao
 - Fully compatible with Vault API
 - Use for Vault migration or open-source requirements
-- Supports all Vault authentication methods
+- Supports token, AppRole, and JWT authentication
+- JWT and AppRole client tokens are renewed at about two-thirds of TTL; static tokens are not (see [Vault and OpenBao JWT](jwt.md))
 
 ### OCI Vault
 - Supports API key and instance principal authentication
@@ -423,6 +521,12 @@ secrets:
 - Secrets can be referenced by name (`oci_secret_name`, requires a vault OCID) or by OCID (`oci_secret_ocid`)
 - The `oci_vault_ocid` label overrides the plugin-level `OCI_VAULT_OCID` per secret, allowing a single plugin instance to pull secrets from multiple vaults
 - Rotation is supported
+
+### Infisical
+- Uses the official Infisical Go SDK with Universal Auth or a bearer token
+- The SDK refreshes Universal Auth tokens; `INFISICAL_TOKEN` is used as-is
+- Supports per-secret overrides for project, environment, and folder path
+- Secret names default to the uppercased Docker secret name when `infisical_secret_name` is not set
 
 ### GCP Secret Manager
 - Currently a placeholder — will error on initialization

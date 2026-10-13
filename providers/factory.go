@@ -20,6 +20,8 @@ func CreateProvider(providerType string) (SecretsProvider, error) {
 		return &OpenBaoProvider{}, nil
 	case "oci", "oracle", "oci-vault":
 		return &OCIProvider{}, nil
+	case "infisical":
+		return &InfisicalProvider{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
 	}
@@ -34,6 +36,7 @@ func GetSupportedProviders() []string {
 		"azure",
 		"openbao",
 		"oci",
+		"infisical",
 	}
 }
 
@@ -77,6 +80,12 @@ func GetProviderInfo(providerType string) (map[string]string, error) {
 		info["description"] = "Oracle Cloud Infrastructure Vault"
 		info["auth_methods"] = "api_key, instance_principal"
 		info["env_vars"] = "OCI_REGION, OCI_TENANCY_OCID, OCI_USER_OCID, OCI_FINGERPRINT, OCI_PRIVATE_KEY, OCI_PRIVATE_KEY_PASSPHRASE, OCI_VAULT_OCID, OCI_AUTH_METHOD, OCI_ENDPOINT"
+
+	case "infisical":
+		info["name"] = "Infisical"
+		info["description"] = "Infisical secrets management platform"
+		info["auth_methods"] = "universal auth (machine identity), access token"
+		info["env_vars"] = "INFISICAL_TOKEN, INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET, INFISICAL_PROJECT_ID, INFISICAL_ENVIRONMENT, INFISICAL_SECRET_PATH, INFISICAL_SITE_URL"
 
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)

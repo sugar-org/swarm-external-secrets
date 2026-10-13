@@ -37,9 +37,12 @@ generate_local_jwt() {
     openssl genrsa -out "${JWT_WORKDIR}/jwt-private.pem" 2048 >/dev/null 2>&1
     openssl rsa -in "${JWT_WORKDIR}/jwt-private.pem" -pubout -out "${JWT_WORKDIR}/jwt-public.pem" >/dev/null 2>&1
 
-    local header payload unsigned signature
+    local header payload unsigned signature now exp
+    now="$(date +%s)"
+    exp="$((now + 3600))"
     header="$(printf '{"alg":"RS256","typ":"JWT"}' | base64url)"
-    payload="$(printf '{"iss":"swarm-external-secrets-local","sub":"swarm-external-secrets","aud":"vault"}' | base64url)"
+    # Vault/OpenBao JWT auth rejects tokens that omit iat, nbf, and exp.
+    payload="$(printf '{"iss":"swarm-external-secrets-local","sub":"swarm-external-secrets","aud":"vault","iat":%s,"nbf":%s,"exp":%s}' "${now}" "${now}" "${exp}" | base64url)"
     unsigned="${header}.${payload}"
     signature="$(printf '%s' "${unsigned}" | openssl dgst -sha256 -sign "${JWT_WORKDIR}/jwt-private.pem" -binary | base64url)"
     printf '%s.%s\n' "${unsigned}" "${signature}" > "${JWT_WORKDIR}/workload.jwt"
@@ -136,16 +139,9 @@ done
 success "Vault is ready."
 
 info "Applying policy to Vault..."
-docker cp "${POLICY_FILE}" "${VAULT_CONTAINER}:/tmp/admin.hcl"
-docker exec "${VAULT_CONTAINER}" sh -lc 'cat >>/tmp/admin.hcl <<EOF
-
-path "auth/token/renew-self" {
-  capabilities = ["update"]
-}
-EOF'
-docker exec "${VAULT_CONTAINER}" \
+write_jwt_smoke_policy "${VAULT_CONTAINER}" "${POLICY_FILE}" \
     env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault policy write smoke-policy /tmp/admin.hcl
+    vault policy write smoke-policy -
 success "Policy applied."
 
 info "Writing test secret to Vault..."
@@ -158,6 +154,7 @@ success "Secret written."
 
 info "Generating local JWT signing keys and signed JWT..."
 generate_local_jwt
+chmod 0644 "${JWT_WORKDIR}/jwt-public.pem"
 docker cp "${JWT_WORKDIR}/jwt-public.pem" "${VAULT_CONTAINER}:/tmp/jwt-public.pem"
 
 info "Configuring Vault JWT auth..."
@@ -181,17 +178,14 @@ docker exec "${VAULT_CONTAINER}" \
         max_ttl="${JWT_TOKEN_MAX_TTL}"
 success "Vault JWT auth configured."
 
-WORKLOAD_JWT="$(tr -d '\n' < "${JWT_WORKDIR}/workload.jwt")"
-
 info "Building plugin and configuring JWT auth..."
 build_plugin
 
-docker plugin set "${PLUGIN_NAME}" \
+configure_plugin_jwt "${JWT_WORKDIR}/workload.jwt" VAULT_JWT \
     SECRETS_PROVIDER="vault" \
     VAULT_ADDR="${VAULT_ADDR}" \
     VAULT_AUTH_METHOD="jwt" \
     VAULT_JWT_ROLE="${JWT_ROLE}" \
-    VAULT_JWT="${WORKLOAD_JWT}" \
     VAULT_JWT_AUTH_PATH="jwt" \
     VAULT_MOUNT_PATH="secret" \
     ENABLE_ROTATION="false" \

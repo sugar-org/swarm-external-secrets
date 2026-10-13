@@ -4,7 +4,7 @@
 ---
 
 
-A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, and OCI Vault.
+A Docker Swarm secrets plugin that integrates with multiple secret management providers including HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault, and Infisical.
 
 ### 🚀 Updates
 
@@ -22,13 +22,13 @@ For more information, check out [GSoC Contribution Guidelines](./CONTRIBUTING.md
 
 ## Documentation
 
-Please refer to the [docs](https://sugar-org.github.io/swarm-external-secrets/) for more information.
+Please refer to the [docs](https://sugar-org.github.io/swarm-external-secrets/) for more information. JWT login and Vault/OpenBao client-token renewal are in `docs/jwt.md`.
 
 ## Supported Providers
 
 ## Features
 
-- **Multi-Provider Support**: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault
+- **Multi-Provider Support**: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, OpenBao, OCI Vault, Infisical
 - **Multiple Auth Methods**: Support for various authentication methods per provider
 - **Automatic Secret Rotation**: Monitor providers for changes and automatically update Docker secrets and services
 - **Real-time Monitoring**: Web dashboard with system metrics, health status, and performance tracking
@@ -55,6 +55,9 @@ docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="openbao"
 
 # OCI Vault
 docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="oci"
+
+# Infisical
+docker plugin set swarm-external-secrets:latest SECRETS_PROVIDER="infisical"
 ```
 
 For multi-instance usage (for example, Vault + OpenBao with separate plugin names in Swarm), see [`docs/multi-provider.md`](./docs/multi-provider.md).
@@ -168,11 +171,12 @@ docker plugin set swarm-external-secrets:latest \
 
 | Provider | Status | Authentication | Rotation |
 |----------|--------|---------------|----------|
-| HashiCorp Vault | ✅ Stable | Token, AppRole | ✅ |
+| HashiCorp Vault | ✅ Stable | Token, AppRole, JWT | ✅ |
 | AWS Secrets Manager | ✅ Stable | IAM, Access Keys, SPIFFE/OIDC | ✅ |
 | Azure Key Vault | ✅ Stable | Service Principal, Access Token | ✅ |
-| OpenBao | ✅ Stable | Token, AppRole | ✅ |
+| OpenBao | ✅ Stable | Token, AppRole, JWT | ✅ |
 | OCI Vault | 🚧 Beta | API Key, Instance Principal | ✅ |
+| Infisical | ✅ Stable | Universal Auth, Access Token | ✅ |
 | GCP Secret Manager | 🚧 Placeholder | - | - |
 
 ## Quick Start Examples

@@ -1,0 +1,122 @@
+name: Publish Docker Plugin
+
+# Publishes the Docker plugin when a GitHub Release is published.
+# Manual dispatch can republish an existing tag (for example v1.2.0).
+# This does not auto-bump versions on pushes to main.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to build and publish (e.g. v1.2.0)
+        required: true
+        type: string
+
+concurrency:
+  group: publish-plugin-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish Docker Plugin
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Resolve tag
+        id: meta
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_TAG:-${INPUT_TAG:-}}"
+          # Docker tags are max 128 chars and may only contain [A-Za-z0-9_.-].
+          if [[ ${#TAG} -gt 128 ]] || [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9._-]+)*$ ]]; then
+            echo "::error::Tag '${TAG}' is not a Docker-compatible vX.Y.Z version"
+            exit 1
+          fi
+          if [ "${RELEASE_PRERELEASE}" = "true" ] || [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "owner=${OWNER_LC}" >> "$GITHUB_OUTPUT"
+          echo "ghcr=ghcr.io/${OWNER_LC}/swarm-external-secrets" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build plugin rootfs
+        run: |
+          set -euo pipefail
+          docker build -t swarm-external-secrets:release .
+          rm -rf ./plugin/rootfs
+          mkdir -p ./plugin/rootfs
+          docker create --name plugin-rootfs swarm-external-secrets:release
+          docker export plugin-rootfs | tar -x -C ./plugin/rootfs
+          docker rm plugin-rootfs
+          cp config.json ./plugin/
+
+      - name: Push plugin to registries
+        env:
+          VERSION: ${{ steps.meta.outputs.tag }}
+          GHCR: ${{ steps.meta.outputs.ghcr }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          push_plugin() {
+            local ref="$1"
+            echo "Creating ${ref}"
+            docker plugin create "${ref}" ./plugin
+            echo "Pushing ${ref}"
+            docker plugin push "${ref}"
+            docker plugin rm "${ref}"
+          }
+
+          push_plugin "${GHCR}:${VERSION}"
+          if [ "${PRERELEASE}" != "true" ]; then
+            push_plugin "${GHCR}:latest"
+          fi
+
+          if [ -n "${DOCKERHUB_USERNAME}" ] && [ -n "${DOCKERHUB_TOKEN}" ]; then
+            DHR="${DOCKERHUB_USERNAME}/swarm-external-secrets"
+            push_plugin "${DHR}:${VERSION}"
+            if [ "${PRERELEASE}" != "true" ]; then
+              push_plugin "${DHR}:latest"
+            fi
+          else
+            echo "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is not set; skipping Docker Hub publish"
+          fi

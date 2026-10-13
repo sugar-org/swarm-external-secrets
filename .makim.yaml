@@ -52,6 +52,19 @@ groups:
       smoke-test-awssm-spiffe:
         help: Run local Kumo or configured real-AWS SPIFFE/OIDC smoke test
         run: bash ./scripts/tests/smoke-test-awssm-spiffe.sh
+      smoke-test-infisical:
+        help: Run Infisical smoke test (requires real Infisical project credentials)
+        run: bash ./scripts/tests/smoke-test-infisical.sh
+  release:
+    tasks:
+      dry-run:
+        help: Preview the next semantic version from conventional commits on origin/main
+        run: ./scripts/cut-release.sh --dry-run
+
+      cut:
+        help: Create a GitHub release from conventional commits on origin/main (no CI)
+        run: ./scripts/cut-release.sh
+
   ci:
     # Aggregate tasks useful for CI pipelines
     tasks:
