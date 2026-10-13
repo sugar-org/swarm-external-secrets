@@ -76,6 +76,7 @@ docker plugin set swarm-external-secrets:latest \
 | `AWS_ROLE_ARN` | IAM role assumed in SPIFFE mode | — |
 | `AWS_JWT_AUDIENCE` | JWT-SVID audience | `swarm-external-secrets` |
 | `SPIFFE_ENDPOINT_SOCKET` | SPIRE Workload API socket URL inside the plugin | `unix:///run/host/spire/agent-sockets/api.sock` |
+| `AWS_ENDPOINT_URL` | Secrets Manager endpoint override, also used for KMS when `AWS_KMS_ENDPOINT` is unset (for emulators such as Kumo or floci) | — |
 | `AWS_STS_ENDPOINT_URL` | STS endpoint override for testing | — |
 
 **Example:**
