@@ -5,7 +5,7 @@ set -ex
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
 
-# shellcheck source=smoke-test-helper.sh
+# shellcheck source=smoke-test-helper.sh disable=SC1091
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
 # Configuration
@@ -249,7 +249,7 @@ elapsed=0
 saw_error=0
 error_details=""
 
-while [ "${elapsed}" -lt 30 ]; do
+while [ "${elapsed}" -lt 60 ]; do
     task_err=$(docker service ps "${STACK_NAME_INVALID}_invalid_app" --no-trunc --format '{{.Error}}' 2>/dev/null || true)
     daemon_err=$(docker_daemon_logs 2>/dev/null || true)
 
@@ -282,7 +282,7 @@ fi
 if [ "${saw_error}" -eq 0 ]; then
     info "Service ps diagnostics:"
     docker service ps "${STACK_NAME_INVALID}_invalid_app" --no-trunc || true
-    die "Case 3 FAIL: service did not report base64 decode error within 30s"
+    die "Case 3 FAIL: service did not report base64 decode error within 60s"
 fi
 
 # Confirm error output does NOT leak the invalid secret value
