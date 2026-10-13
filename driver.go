@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-plugins-helpers/secrets"
@@ -93,11 +94,16 @@ func NewDriver() (*SecretsDriver, error) {
 	// Create context for monitoring
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 
+	var kmsCredentials aws.CredentialsProvider
+	if awsProvider, ok := provider.(*providers.AWSProvider); ok {
+		kmsCredentials = awsProvider.SPIFFECredentials()
+	}
+
 	driver := &SecretsDriver{
 		provider:      provider,
 		config:        config,
 		dockerClient:  dockerClient,
-		transformer:   secrettransform.NewAWSKMSTransformer(settings),
+		transformer:   secrettransform.NewAWSKMSTransformer(settings, kmsCredentials),
 		secretTracker: make(map[string]*providers.SecretInfo),
 		monitorCtx:    monitorCtx,
 		monitorCancel: monitorCancel,

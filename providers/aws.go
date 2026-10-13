@@ -76,9 +76,10 @@ func (p *spiffeCredentialsProvider) Retrieve(ctx context.Context) (aws.Credentia
 
 // AWSProvider implements the SecretsProvider interface for AWS Secrets Manager
 type AWSProvider struct {
-	client      *secretsmanager.Client
-	config      *AWSConfig
-	tokenSource *spiffesource.TokenSource
+	client            *secretsmanager.Client
+	config            *AWSConfig
+	tokenSource       *spiffesource.TokenSource
+	spiffeCredentials aws.CredentialsProvider
 }
 
 // AWSConfig holds the configuration for the AWS Secrets Manager client
@@ -189,6 +190,12 @@ func (a *AWSProvider) GetProviderName() string {
 	return "aws"
 }
 
+// SPIFFECredentials returns the assumed-role credentials when AWS_AUTH_METHOD=spiffe,
+// and nil otherwise.
+func (a *AWSProvider) SPIFFECredentials() aws.CredentialsProvider {
+	return a.spiffeCredentials
+}
+
 // Close performs cleanup for the AWS provider
 func (a *AWSProvider) Close() error {
 	if a.tokenSource != nil {
@@ -219,6 +226,7 @@ func (a *AWSProvider) loadAWSConfig(ctx context.Context) (aws.Config, error) {
 		if err != nil {
 			return aws.Config{}, err
 		}
+		a.spiffeCredentials = credentialProvider
 		cfg.Credentials = credentialProvider
 		return cfg, nil
 	}

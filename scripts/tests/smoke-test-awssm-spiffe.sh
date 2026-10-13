@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-# Kumo emulates STS and Secrets Manager but does not validate the JWT signature
-# or IAM trust policy. This test proves the managed-plugin socket mount, SPIRE
-# attestation, JWT retrieval, STS exchange, secret read, and rotation.
+# Kumo emulates STS, Secrets Manager, and KMS but does not validate the JWT
+# signature or IAM trust policy. This test proves the managed-plugin socket
+# mount, SPIRE attestation, JWT retrieval, STS exchange, secret read, KMS
+# decryption with the assumed role, and rotation.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
@@ -262,10 +263,27 @@ docker exec "${SPIRE_SERVER_CONTAINER}" \
     -spiffeID spiffe://example.org/swarm-external-secrets \
     -selector unix:uid:0 >/dev/null
 
+# smoke-awssm-compose.yml sets kms_decrypt=true, so the plugin's KMS client must
+# reuse the SPIFFE-assumed role credentials to read these values.
+KMS_KEY_ID="$(aws_cmd kms create-key \
+    --region "${AWS_REGION}" \
+    --query 'KeyMetadata.KeyId' \
+    --output text)"
+
+encrypt_with_kms() {
+    aws_cmd kms encrypt \
+        --region "${AWS_REGION}" \
+        --key-id "${KMS_KEY_ID}" \
+        --plaintext "$1" \
+        --cli-binary-format raw-in-base64-out \
+        --query 'CiphertextBlob' \
+        --output text
+}
+
 aws_cmd secretsmanager create-secret \
     --region "${AWS_REGION}" \
     --name "${SECRET_PATH}" \
-    --secret-string "{\"${SECRET_FIELD}\":\"${SECRET_VALUE}\"}" >/dev/null
+    --secret-string "{\"${SECRET_FIELD}\":\"$(encrypt_with_kms "${SECRET_VALUE}")\"}" >/dev/null
 
 info "Building and configuring the managed plugin for SPIFFE authentication..."
 build_plugin
@@ -290,7 +308,7 @@ verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE}" 90
 aws_cmd secretsmanager update-secret \
     --region "${AWS_REGION}" \
     --secret-id "${SECRET_PATH}" \
-    --secret-string "{\"${SECRET_FIELD}\":\"${SECRET_VALUE_ROTATED}\"}" >/dev/null
+    --secret-string "{\"${SECRET_FIELD}\":\"$(encrypt_with_kms "${SECRET_VALUE_ROTATED}")\"}" >/dev/null
 
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
 assert_no_sensitive_rotation_metadata_logs
