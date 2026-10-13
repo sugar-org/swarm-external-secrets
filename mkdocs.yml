@@ -53,14 +53,12 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - tables
   - toc:
       permalink: true
-
-extra_javascript:
-  - https://unpkg.com/mermaid@11/dist/mermaid.min.js
 
 nav:
   - index.md
