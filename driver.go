@@ -34,6 +34,7 @@ type SecretsDriver struct {
 	monitorCancel context.CancelFunc
 	monitor       *monitoring.Monitor
 	webInterface  *monitoring.WebInterface
+	webhookServer *providers.WebhookServer
 }
 
 // SecretsConfig holds the configuration for the multi-provider driver
@@ -44,6 +45,9 @@ type SecretsConfig struct {
 	EnableMonitoring bool
 	MonitoringPort   int
 	Settings         map[string]string
+	UseWebhook       bool
+	WebhookPort      int
+	WebhookSecret    string
 }
 
 // NewDriver creates a new Driver instance with multi-provider support
@@ -69,6 +73,9 @@ func NewDriver() (*SecretsDriver, error) {
 		EnableMonitoring: utils.GetEnvOrDefault("ENABLE_MONITORING", "true") == "true",
 		MonitoringPort:   utils.ParseIntOrDefault(utils.GetEnvOrDefault("MONITORING_PORT", "8080")),
 		Settings:         settings,
+		UseWebhook:       utils.GetEnvOrDefault("USE_WEBHOOK", "false") == "true",
+		WebhookPort:      utils.ParseIntOrDefault(utils.GetEnvOrDefault("WEBHOOK_PORT", "9095")),
+		WebhookSecret:    os.Getenv("WEBHOOK_SECRET"),
 	}
 
 	// Create the appropriate provider
@@ -116,9 +123,24 @@ func NewDriver() (*SecretsDriver, error) {
 		}
 	}
 
-	// Start monitoring if rotation is enabled and provider supports it
-	if config.EnableRotation && provider.SupportsRotation() {
-		log.Infof("Starting secret rotation monitoring with interval: %v", config.RotationInterval)
+	// Start webhook or ticker reconciliation if rotation is enabled and the provider supports it.
+	if config.EnableRotation && provider.SupportsRotation() && config.UseWebhook && config.ProviderType == "vault" {
+		log.Printf("USE_WEBHOOK=true detected for Vault provider; starting webhook server on port %d", config.WebhookPort)
+		webhookCfg := &providers.WebhookConfig{
+			Port:          config.WebhookPort,
+			WebhookSecret: config.WebhookSecret,
+		}
+		driver.webhookServer = providers.NewWebhookServer(webhookCfg, driver.ReconcileSecret)
+		go func() {
+			if err := driver.webhookServer.Start(); err != nil {
+				log.Errorf("Webhook server failed: %v", err)
+			}
+		}()
+	} else if config.EnableRotation && provider.SupportsRotation() {
+		if config.UseWebhook && config.ProviderType != "vault" {
+			log.Printf("USE_WEBHOOK=true is ignored for provider %s; falling back to ticker", config.ProviderType)
+		}
+		log.Printf("Starting secret rotation monitoring with interval: %v", config.RotationInterval)
 		go driver.startMonitoring()
 	} else if config.EnableRotation {
 		log.Warnf("Secret rotation is enabled but provider %s does not support rotation", config.ProviderType)
@@ -238,6 +260,37 @@ func (d *SecretsDriver) shouldNotReuse(req secrets.Request) bool {
 	}
 
 	return false
+}
+
+// ReconcileSecret is used by the webhook path to reconcile tracked secrets
+// without waiting for the ticker interval.
+func (d *SecretsDriver) ReconcileSecret(secretName string) error {
+	d.trackerMutex.RLock()
+	secretInfo, exists := d.secretTracker[secretName]
+	if !exists {
+		for trackedName, trackedSecret := range d.secretTracker {
+			if strings.HasSuffix(trackedSecret.SecretPath, "/"+secretName) {
+				secretName = trackedName
+				secretInfo = trackedSecret
+				exists = true
+				break
+			}
+		}
+	}
+	d.trackerMutex.RUnlock()
+
+	if !exists {
+		log.Printf("webhook: secret %q is not currently tracked, skipping", secretName)
+		return nil
+	}
+
+	if !d.hasSecretChanged(secretInfo) {
+		log.Debugf("webhook: secret %q is already up to date", secretName)
+		return nil
+	}
+
+	d.handleSecretRotationResult(secretName, secretInfo)
+	return nil
 }
 
 // trackSecret adds or updates a secret in the tracking system
@@ -582,6 +635,12 @@ func (d *SecretsDriver) Stop() error {
 	if d.webInterface != nil {
 		if err := d.webInterface.Stop(); err != nil {
 			log.Warnf("Error stopping web interface: %v", err)
+		}
+	}
+
+	if d.webhookServer != nil {
+		if err := d.webhookServer.Stop(); err != nil {
+			log.Warnf("Error stopping webhook server: %v", err)
 		}
 	}
 

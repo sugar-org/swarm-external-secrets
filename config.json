@@ -84,6 +84,16 @@
       "settable": ["value"]
     },
     {
+      "name": "VAULT_ENABLE_ROTATION",
+      "description": "Enable automatic secret rotation (true/false)",
+      "settable": ["value"]
+    },
+    {
+      "name": "VAULT_ROTATION_INTERVAL",
+      "description": "Secret rotation check interval (e.g., 5m, 1h)",
+      "settable": ["value"]
+    },
+    {
       "name": "SECRETS_PROVIDER",
       "description": "Secrets provider type (e.g., vault, aws, azure, openbao, oci)",
       "settable": ["value"]
@@ -134,11 +144,6 @@
       "settable": ["value"]
     },
     {
-      "name": "OPENBAO_AUTH_METHOD",
-      "description": "OpenBao authentication method",
-      "settable": ["value"]
-    },
-    {
       "name": "OPENBAO_TOKEN",
       "description": "OpenBao authentication token",
       "settable": ["value"]
@@ -155,7 +160,7 @@
     },
     {
       "name": "ROTATION_INTERVAL",
-      "description": "Secret rotation check interval (e.g., 5m, 1h)",
+      "description": "OpenBao secret rotation check interval (e.g., 5m, 1h)",
       "settable": ["value"]
     },
     {
@@ -306,6 +311,21 @@
     {
       "name": "LOG_LEVEL",
       "description": "Log level (debug, info, warn, error), default info",
+      "settable": ["value"]
+    },
+    {
+      "name": "USE_WEBHOOK",
+      "description": "Enable webhook-based secret sync for Vault provider (true/false, default false). When true, the plugin listens for HCP Vault Secrets push events instead of polling. Only effective with SECRETS_PROVIDER=vault.",
+      "settable": ["value"]
+    },
+    {
+      "name": "WEBHOOK_PORT",
+      "description": "Port for the webhook HTTP listener (default 9095). Only used when USE_WEBHOOK=true.",
+      "settable": ["value"]
+    },
+    {
+      "name": "WEBHOOK_SECRET",
+      "description": "HMAC shared secret for validating HCP Vault Secrets webhook signatures (X-HCP-Webhook-Signature). Optional but recommended. Only used when USE_WEBHOOK=true.",
       "settable": ["value"]
     },
     {
