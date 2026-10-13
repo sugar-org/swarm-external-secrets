@@ -216,20 +216,27 @@ If the secrets use a customer-managed KMS key, also grant the minimum required
 ## Mount the Workload API socket
 
 The plugin manifest contains a read-only, settable mount named
-`spire-agent-socket`. By default it mounts only the host SPIRE socket directory,
-`/run/spire/agent-sockets`, at `/run/host`. The default plugin endpoint is:
+`spire-agent-socket`. Its compatibility default mounts host `/run` at
+`/run/host`, so existing non-SPIFFE installations do not require a SPIRE
+directory. With the standard host socket, the default plugin endpoint is:
 
 ```text
-unix:///run/host/api.sock
+unix:///run/host/spire/agent-sockets/api.sock
 ```
 
-If the SPIRE Agent uses a different socket directory, override the source before
-enabling the plugin. The mount destination and endpoint remain unchanged:
+For least exposure, repoint the mount to the exact socket directory before
+enabling the plugin. The mount destination remains `/run/host`:
 
 ```bash
 docker plugin disable swarm-external-secrets:latest --force
 docker plugin set swarm-external-secrets:latest \
-  spire-agent-socket.source=/custom/spire/agent-sockets
+  spire-agent-socket.source=/run/spire/agent-sockets
+```
+
+After narrowing the source, configure the endpoint as:
+
+```text
+unix:///run/host/api.sock
 ```
 
 The source path must exist on every Docker daemon host. It is a host path, not
@@ -260,7 +267,7 @@ SPIFFE mode. The plugin rejects mixed authentication modes.
 | `AWS_AUTH_METHOD` | Yes for this mode | Empty (AWS SDK default chain) |
 | `AWS_ROLE_ARN` | Yes | — |
 | `AWS_JWT_AUDIENCE` | No | `swarm-external-secrets` |
-| `SPIFFE_ENDPOINT_SOCKET` | No | `unix:///run/host/api.sock` |
+| `SPIFFE_ENDPOINT_SOCKET` | No | `unix:///run/host/spire/agent-sockets/api.sock` |
 | `AWS_REGION` | No | `us-east-1` |
 | `AWS_STS_ENDPOINT_URL` | No | AWS STS |
 | `AWS_ENDPOINT_URL` | No | AWS Secrets Manager |

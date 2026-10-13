@@ -22,7 +22,7 @@ const (
 	awsAuthMethodSPIFFE    = "spiffe"
 	awsAuthMethodStatic    = "static"
 	defaultAWSJWTAudience  = "swarm-external-secrets"
-	defaultSPIFFEEndpoint  = "unix:///run/host/api.sock"
+	defaultSPIFFEEndpoint  = "unix:///run/host/spire/agent-sockets/api.sock"
 	awsRoleSessionName     = "swarm-external-secrets"
 	awsConfigLoadTimeout   = 30 * time.Second
 	spiffeCredentialSource = "SPIFFEWebIdentity" // #nosec G101 -- AWS SDK source label, not a credential.

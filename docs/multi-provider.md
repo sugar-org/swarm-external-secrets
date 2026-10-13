@@ -75,7 +75,7 @@ docker plugin set swarm-external-secrets:latest \
 | `AWS_AUTH_METHOD` | Authentication mode (`static`, `spiffe`, or empty for the SDK default chain) | — |
 | `AWS_ROLE_ARN` | IAM role assumed in SPIFFE mode | — |
 | `AWS_JWT_AUDIENCE` | JWT-SVID audience | `swarm-external-secrets` |
-| `SPIFFE_ENDPOINT_SOCKET` | SPIRE Workload API socket URL inside the plugin | `unix:///run/host/api.sock` |
+| `SPIFFE_ENDPOINT_SOCKET` | SPIRE Workload API socket URL inside the plugin | `unix:///run/host/spire/agent-sockets/api.sock` |
 | `AWS_STS_ENDPOINT_URL` | STS endpoint override for testing | — |
 
 **Example:**

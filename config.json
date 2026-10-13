@@ -28,7 +28,7 @@
     },
     {
       "name": "spire-agent-socket",
-      "source": "/run/spire/agent-sockets",
+      "source": "/run",
       "destination": "/run/host",
       "type": "bind",
       "options": ["bind", "rbind", "ro"],
