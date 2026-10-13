@@ -14,10 +14,14 @@ type fakeFetcher struct {
 	audience       string
 	closed         bool
 	waitForContext bool
+	started        chan struct{}
 }
 
 func (f *fakeFetcher) FetchJWTSVID(ctx context.Context, audience string) (string, error) {
 	f.audience = audience
+	if f.started != nil {
+		close(f.started)
+	}
 	if f.waitForContext {
 		<-ctx.Done()
 		return "", ctx.Err()
@@ -52,6 +56,12 @@ func TestNew_Validation(t *testing.T) {
 			wantErr:    "SPIFFE_ENDPOINT_SOCKET must be a unix socket URL",
 		},
 		{
+			name:       "socket URL with host component",
+			socketAddr: "unix://run/spire/agent-sockets/api.sock",
+			audience:   "swarm-external-secrets",
+			wantErr:    "must use unix:///absolute/path form with no host",
+		},
+		{
 			name:       "missing audience",
 			socketAddr: "unix:///run/spire/agent-sockets/api.sock",
 			wantErr:    "JWT-SVID audience is required",
@@ -81,7 +91,7 @@ func TestNew_Validation(t *testing.T) {
 	}
 }
 
-func TestTokenSource_GetIdentityToken(t *testing.T) {
+func TestTokenSource_FetchIdentityToken(t *testing.T) {
 	t.Parallel()
 
 	fetcher := &fakeFetcher{token: "signed-jwt-svid"}
@@ -99,7 +109,7 @@ func TestTokenSource_GetIdentityToken(t *testing.T) {
 	}
 }
 
-func TestTokenSource_GetIdentityToken_RetriesClientCreation(t *testing.T) {
+func TestTokenSource_FetchIdentityToken_RetriesClientCreation(t *testing.T) {
 	t.Parallel()
 
 	fetcher := &fakeFetcher{token: "signed-jwt-svid"}
@@ -124,7 +134,7 @@ func TestTokenSource_GetIdentityToken_RetriesClientCreation(t *testing.T) {
 	}
 }
 
-func TestTokenSource_GetIdentityToken_Timeout(t *testing.T) {
+func TestTokenSource_FetchIdentityToken_Timeout(t *testing.T) {
 	t.Parallel()
 
 	source := newTestSource(&fakeFetcher{waitForContext: true})
@@ -165,6 +175,36 @@ func TestTokenSource_Close(t *testing.T) {
 	if _, err := source.FetchIdentityToken(t.Context()); err == nil || !strings.Contains(err.Error(), "closed") {
 		t.Fatalf("FetchIdentityToken() after Close() error = %v, want closed", err)
 	}
+}
+
+func TestTokenSource_CloseDoesNotWaitForInFlightFetch(t *testing.T) {
+	t.Parallel()
+
+	fetcher := &fakeFetcher{waitForContext: true, started: make(chan struct{})}
+	source := newTestSource(fetcher)
+	source.timeout = time.Minute
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = source.FetchIdentityToken(ctx)
+	}()
+	<-fetcher.started
+
+	closed := make(chan error, 1)
+	go func() { closed <- source.Close() }()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatalf("Close() error = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Close() blocked on an in-flight FetchIdentityToken call")
+	}
+
+	cancel()
+	<-done
 }
 
 func newTestSource(fetcher tokenFetcher) *TokenSource {

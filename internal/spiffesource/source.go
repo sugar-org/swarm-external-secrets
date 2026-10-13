@@ -73,14 +73,17 @@ func (s *TokenSource) FetchIdentityToken(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("failed to connect to SPIFFE Workload API: %w", err)
 	}
 
+	// Do not hold the lock across the Workload API call, or Close blocks until
+	// the fetch times out.
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	fetcher, closed := s.fetcher, s.closed
+	s.mu.RUnlock()
 
-	if s.closed {
+	if closed {
 		return nil, fmt.Errorf("SPIFFE token source is closed")
 	}
 
-	token, err := s.fetcher.FetchJWTSVID(ctx, s.audience)
+	token, err := fetcher.FetchJWTSVID(ctx, s.audience)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWT-SVID: %w", err)
 	}
@@ -140,6 +143,9 @@ func validateSocketAddr(socketAddr string) error {
 	}
 	if endpoint.Scheme != "unix" || endpoint.Path == "" {
 		return fmt.Errorf("SPIFFE_ENDPOINT_SOCKET must be a unix socket URL")
+	}
+	if endpoint.Host != "" {
+		return fmt.Errorf("SPIFFE_ENDPOINT_SOCKET %q must use unix:///absolute/path form with no host", socketAddr)
 	}
 	return nil
 }
