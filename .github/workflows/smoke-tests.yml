@@ -43,6 +43,9 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    strategy:
+      matrix:
+        provider: [vault, openbao]
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -55,8 +58,8 @@ jobs:
       - name: Init Docker Swarm
         run: docker swarm init
 
-      - name: Run base64 decode smoke test
-        run: bash scripts/tests/smoke-test-base64-decode.sh
+      - name: Run base64 decode smoke test for ${{ matrix.provider }}
+        run: bash scripts/tests/smoke-test-base64-decode.sh ${{ matrix.provider }}
 
   smoke-test-infisical:
     runs-on: ubuntu-latest

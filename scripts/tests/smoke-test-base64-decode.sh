@@ -9,13 +9,43 @@ REPO_ROOT="$(realpath -- "${SCRIPT_DIR}/../..")"
 source "${SCRIPT_DIR}/smoke-test-helper.sh"
 
 # Configuration
-VAULT_CONTAINER="smoke-vault-b64"
-VAULT_ROOT_TOKEN="smoke-root-token"
-VAULT_ADDR="http://127.0.0.1:8200"
+PROVIDER="${1:-${PROVIDER:-vault}}"
+
+case "${PROVIDER}" in
+    vault)
+        CONTAINER_IMAGE="hashicorp/vault:latest"
+        CONTAINER_NAME="smoke-vault-b64"
+        DEV_ROOT_TOKEN_ENV="VAULT_DEV_ROOT_TOKEN_ID"
+        CLI_BIN="vault"
+        CLI_ADDR_ENV="VAULT_ADDR"
+        CLI_TOKEN_ENV="VAULT_TOKEN"
+        LABEL_PATH="vault_path"
+        LABEL_FIELD="vault_field"
+        ;;
+    openbao)
+        CONTAINER_IMAGE="quay.io/openbao/openbao:latest"
+        CONTAINER_NAME="smoke-openbao-b64"
+        DEV_ROOT_TOKEN_ENV="BAO_DEV_ROOT_TOKEN_ID"
+        CLI_BIN="bao"
+        CLI_ADDR_ENV="BAO_ADDR"
+        CLI_TOKEN_ENV="BAO_TOKEN"
+        LABEL_PATH="openbao_path"
+        LABEL_FIELD="openbao_field"
+        ;;
+    *)
+        echo "Unsupported provider '${PROVIDER}'. Supported providers: vault, openbao" >&2
+        exit 1
+        ;;
+esac
+
+ROOT_TOKEN="smoke-root-token"
+SERVER_ADDR="http://127.0.0.1:8200"
 POLICY_FILE="${REPO_ROOT}/vault_conf/admin.hcl"
 
-STACK_NAME="smoke-vault-b64"
-STACK_NAME_INVALID="smoke-vault-b64-inv"
+STACK_NAME="smoke-${PROVIDER}-b64"
+STACK_NAME_INVALID="smoke-${PROVIDER}-b64-inv"
+NETWORK_NAME="smoke-network-${PROVIDER}"
+NETWORK_NAME_INVALID="smoke-network-inv-${PROVIDER}"
 SECRET_PATH="database/credentials"
 
 RAW_VALUE="hello-base64"
@@ -34,15 +64,15 @@ cleanup() {
     if [[ "${EXIT_CODE}" -ne 0 ]]; then
         rc="${EXIT_CODE}"
     fi
-    echo -e "${RED}Running base64 decode smoke test cleanup...${DEF}"
+    echo -e "${RED}Running base64 decode smoke test cleanup for ${PROVIDER}...${DEF}"
     remove_stack "${STACK_NAME_INVALID}" 2>/dev/null || true
     remove_stack "${STACK_NAME}" 2>/dev/null || true
     docker secret rm "${STACK_NAME}_secret_b64_decoded" 2>/dev/null || true
     docker secret rm "${STACK_NAME}_secret_b64_plain" 2>/dev/null || true
     docker secret rm "${STACK_NAME}_secret_b64_ws" 2>/dev/null || true
     docker secret rm "${STACK_NAME_INVALID}_secret_b64_invalid" 2>/dev/null || true
-    docker stop "${VAULT_CONTAINER}" 2>/dev/null || true
-    docker rm   "${VAULT_CONTAINER}" 2>/dev/null || true
+    docker stop "${CONTAINER_NAME}" 2>/dev/null || true
+    docker rm   "${CONTAINER_NAME}" 2>/dev/null || true
     remove_plugin
     if [[ -n "${TEST_DIR:-}" && -d "${TEST_DIR}" ]]; then
         rm -rf "${TEST_DIR}"
@@ -51,66 +81,77 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Start HashiCorp Vault dev container
-info "Starting HashiCorp Vault dev container..."
+# Start dev container
+info "Starting ${PROVIDER} dev container..."
 docker run -d \
-    --name "${VAULT_CONTAINER}" \
+    --name "${CONTAINER_NAME}" \
     -p 8200:8200 \
-    -e "VAULT_DEV_ROOT_TOKEN_ID=${VAULT_ROOT_TOKEN}" \
-    hashicorp/vault:latest server -dev
+    -e "${DEV_ROOT_TOKEN_ENV}=${ROOT_TOKEN}" \
+    "${CONTAINER_IMAGE}" server -dev
 
-# Wait for Vault to be ready
-info "Waiting for Vault to be ready..."
+# Wait for provider to be ready
+info "Waiting for ${PROVIDER} to be ready..."
 elapsed=0
-until docker exec "${VAULT_CONTAINER}" \
-        vault status -address="${VAULT_ADDR}" &>/dev/null; do
+until docker exec "${CONTAINER_NAME}" \
+        "${CLI_BIN}" status -address="${SERVER_ADDR}" >/dev/null 2>&1; do
     sleep 2
     elapsed=$((elapsed + 2))
-    [[ "${elapsed}" -lt 30 ]] || die "Vault did not become ready within 30s."
+    [[ "${elapsed}" -lt 30 ]] || die "${PROVIDER} did not become ready within 30s."
 done
-success "Vault is ready."
+success "${PROVIDER} is ready."
 
 # Apply policy from vault_conf/admin.hcl
-info "Applying policy to Vault..."
-docker cp "${POLICY_FILE}" "${VAULT_CONTAINER}:/tmp/admin.hcl"
-docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault policy write smoke-policy /tmp/admin.hcl
+info "Applying policy to ${PROVIDER}..."
+docker cp "${POLICY_FILE}" "${CONTAINER_NAME}:/tmp/admin.hcl"
+docker exec "${CONTAINER_NAME}" \
+    env "${CLI_ADDR_ENV}=${SERVER_ADDR}" "${CLI_TOKEN_ENV}=${ROOT_TOKEN}" \
+    "${CLI_BIN}" policy write smoke-policy /tmp/admin.hcl
 success "Policy applied."
 
-# Write test secrets to Vault
-info "Writing test secrets to Vault..."
-docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault kv put \
+# Write test secrets
+info "Writing test secrets to ${PROVIDER}..."
+docker exec "${CONTAINER_NAME}" \
+    env "${CLI_ADDR_ENV}=${SERVER_ADDR}" "${CLI_TOKEN_ENV}=${ROOT_TOKEN}" \
+    "${CLI_BIN}" kv put \
     "secret/${SECRET_PATH}" \
     "payload=${BASE64_VALUE}" \
     "whitespace_payload=  ${BASE64_VALUE}  " \
     "invalid_payload=${INVALID_VALUE}"
 success "Secrets written to secret/${SECRET_PATH}."
 
-# Get auth token from Vault
-info "Getting auth token from Vault..."
-VAULT_TOKEN=$(docker exec "${VAULT_CONTAINER}" \
-    env VAULT_ADDR="${VAULT_ADDR}" VAULT_TOKEN="${VAULT_ROOT_TOKEN}" \
-    vault token create \
+# Get auth token from provider
+info "Getting auth token from ${PROVIDER}..."
+AUTH_TOKEN=$(docker exec "${CONTAINER_NAME}" \
+    env "${CLI_ADDR_ENV}=${SERVER_ADDR}" "${CLI_TOKEN_ENV}=${ROOT_TOKEN}" \
+    "${CLI_BIN}" token create \
         -policy="smoke-policy" \
         -field=token)
 success "Got auth token."
 
-# Build plugin and set Vault configuration
-info "Building plugin and configuring Vault provider..."
+# Build plugin and set provider configuration
+info "Building plugin and configuring ${PROVIDER} provider..."
 build_plugin
 
-docker plugin set "${PLUGIN_NAME}" \
-    SECRETS_PROVIDER="vault" \
-    VAULT_ADDR="${VAULT_ADDR}" \
-    VAULT_AUTH_METHOD="token" \
-    VAULT_TOKEN="${VAULT_TOKEN}" \
-    VAULT_MOUNT_PATH="secret" \
-    ENABLE_ROTATION="false" \
-    ENABLE_MONITORING="false"
-success "Plugin configured with Vault token."
+if [[ "${PROVIDER}" == "vault" ]]; then
+    docker plugin set "${PLUGIN_NAME}" \
+        SECRETS_PROVIDER="vault" \
+        VAULT_ADDR="${SERVER_ADDR}" \
+        VAULT_AUTH_METHOD="token" \
+        VAULT_TOKEN="${AUTH_TOKEN}" \
+        VAULT_MOUNT_PATH="secret" \
+        ENABLE_ROTATION="false" \
+        ENABLE_MONITORING="false"
+elif [[ "${PROVIDER}" == "openbao" ]]; then
+    docker plugin set "${PLUGIN_NAME}" \
+        SECRETS_PROVIDER="openbao" \
+        OPENBAO_ADDR="${SERVER_ADDR}" \
+        OPENBAO_AUTH_METHOD="token" \
+        OPENBAO_TOKEN="${AUTH_TOKEN}" \
+        OPENBAO_MOUNT_PATH="secret" \
+        ENABLE_ROTATION="false" \
+        ENABLE_MONITORING="false"
+fi
+success "Plugin configured with ${PROVIDER} token."
 
 # Enable plugin
 info "Enabling plugin..."
@@ -138,30 +179,30 @@ services:
       restart_policy:
         condition: any
     networks:
-      - smoke-network
+      - ${NETWORK_NAME}
 
 secrets:
   secret_b64_decoded:
     driver: ${PLUGIN_NAME}
     labels:
-      vault_path: "${SECRET_PATH}"
-      vault_field: "payload"
+      ${LABEL_PATH}: "${SECRET_PATH}"
+      ${LABEL_FIELD}: "payload"
       base64_decode: "true"
   secret_b64_plain:
     driver: ${PLUGIN_NAME}
     labels:
-      vault_path: "${SECRET_PATH}"
-      vault_field: "payload"
+      ${LABEL_PATH}: "${SECRET_PATH}"
+      ${LABEL_FIELD}: "payload"
       base64_decode: "false"
   secret_b64_ws:
     driver: ${PLUGIN_NAME}
     labels:
-      vault_path: "${SECRET_PATH}"
-      vault_field: "whitespace_payload"
+      ${LABEL_PATH}: "${SECRET_PATH}"
+      ${LABEL_FIELD}: "whitespace_payload"
       base64_decode: "true"
 
 networks:
-  smoke-network:
+  ${NETWORK_NAME}:
     driver: overlay
 EOF
 
@@ -225,18 +266,18 @@ services:
       restart_policy:
         condition: none
     networks:
-      - smoke-network-inv
+      - ${NETWORK_NAME_INVALID}
 
 secrets:
   secret_b64_invalid:
     driver: ${PLUGIN_NAME}
     labels:
-      vault_path: "${SECRET_PATH}"
-      vault_field: "invalid_payload"
+      ${LABEL_PATH}: "${SECRET_PATH}"
+      ${LABEL_FIELD}: "invalid_payload"
       base64_decode: "true"
 
 networks:
-  smoke-network-inv:
+  ${NETWORK_NAME_INVALID}:
     driver: overlay
 EOF
 
@@ -297,4 +338,4 @@ success "Case 3 PASS: invalid base64 secret failed clearly without leaking secre
 info "Removing invalid test stack..."
 remove_stack "${STACK_NAME_INVALID}"
 
-success "All base64 decode smoke tests PASSED"
+success "All base64 decode smoke tests PASSED for ${PROVIDER}"
