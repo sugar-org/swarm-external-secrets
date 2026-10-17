@@ -1,10 +1,84 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types/swarm"
 )
+
+func TestFindActiveSecret(t *testing.T) {
+	secrets := []swarm.Secret{
+		{ID: "old-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api-1771066350000000000"}}},
+		{ID: "other-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api-prod-1771066350000000001"}}},
+	}
+	services := []swarm.Service{{
+		Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "target-service"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{
+			Secrets: []*swarm.SecretReference{{SecretID: "old-id", SecretName: "api-1771066350000000000"}},
+		}}},
+	}}
+
+	got, err := findActiveSecret(secrets, services, "api", []string{"target-service"})
+	if err != nil {
+		t.Fatalf("findActiveSecret() error = %v", err)
+	}
+	if got == nil || got.ID != "old-id" {
+		t.Fatalf("findActiveSecret() = %#v, want secret old-id", got)
+	}
+}
+
+func TestFindActiveSecretPrefersReferencedVersionOverOrphan(t *testing.T) {
+	secrets := []swarm.Secret{
+		{ID: "orphan-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api"}}},
+		{ID: "active-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api-1771066350000000000"}}},
+	}
+	services := []swarm.Service{{
+		Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "target-service"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{
+			Secrets: []*swarm.SecretReference{{SecretID: "active-id"}},
+		}}},
+	}}
+
+	got, err := findActiveSecret(secrets, services, "api", []string{"target-service"})
+	if err != nil {
+		t.Fatalf("findActiveSecret() error = %v", err)
+	}
+	if got == nil || got.ID != "active-id" {
+		t.Fatalf("findActiveSecret() = %#v, want secret active-id", got)
+	}
+}
+
+func TestFindActiveSecretRejectsAmbiguousMatches(t *testing.T) {
+	secrets := []swarm.Secret{
+		{ID: "first-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api-1771066350000000000"}}},
+		{ID: "second-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api-1771066350000000001"}}},
+	}
+	services := []swarm.Service{
+		{Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "first-service"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{Secrets: []*swarm.SecretReference{{SecretID: "first-id"}}}}}},
+		{Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "second-service"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{Secrets: []*swarm.SecretReference{{SecretID: "second-id"}}}}}},
+	}
+
+	got, err := findActiveSecret(secrets, services, "api", []string{"first-service", "second-service"})
+	if got != nil {
+		t.Fatalf("findActiveSecret() = %#v, want nil", got)
+	}
+	if err == nil || !strings.Contains(err.Error(), "multiple active versions") {
+		t.Fatalf("findActiveSecret() error = %v, want multiple active versions", err)
+	}
+}
+
+func TestFindActiveSecretRejectsUnreferencedCandidate(t *testing.T) {
+	secrets := []swarm.Secret{{
+		ID: "orphan-id", Spec: swarm.SecretSpec{Annotations: swarm.Annotations{Name: "api-1771066350000000000"}},
+	}}
+
+	got, err := findActiveSecret(secrets, nil, "api", []string{"target-service"})
+	if got != nil {
+		t.Fatalf("findActiveSecret() = %#v, want nil", got)
+	}
+	if err == nil || !strings.Contains(err.Error(), "no active version") {
+		t.Fatalf("findActiveSecret() error = %v, want no active version", err)
+	}
+}
 
 func TestBuildUpdatedSecretReferences(t *testing.T) {
 	tests := []struct {

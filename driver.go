@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -385,7 +386,7 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 	}
 
 	// Update Docker secret (this now handles service updates internally)
-	if err := d.updateDockerSecret(secretInfo.DockerSecretName, newValue); err != nil {
+	if err := d.updateDockerSecret(secretInfo, newValue); err != nil {
 		return fmt.Errorf("failed to update docker secret: %v", err)
 	}
 
@@ -400,9 +401,10 @@ func (d *SecretsDriver) rotateSecret(secretInfo *providers.SecretInfo) error {
 }
 
 // updateDockerSecret creates a new version of the Docker secret
-func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) error {
+func (d *SecretsDriver) updateDockerSecret(secretInfo *providers.SecretInfo, newValue []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	secretName := secretInfo.DockerSecretName
 
 	// List existing secrets to find the one to update
 	secrets, err := d.dockerClient.SecretList(ctx, swarm.SecretListOptions{})
@@ -410,16 +412,14 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 		return fmt.Errorf("failed to list secrets: %v", err)
 	}
 
-	var existingSecret *swarm.Secret
-	for _, secret := range secrets {
-		if secret.Spec.Name == secretName {
-			existingSecret = &secret
-			break
-		}
+	services, err := d.dockerClient.ServiceList(ctx, swarm.ServiceListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list services while finding secret %s: %v", secretName, err)
 	}
 
-	if existingSecret == nil {
-		return fmt.Errorf("secret %s not found", secretName)
+	existingSecret, err := findActiveSecret(secrets, services, secretName, secretInfo.ServiceNames)
+	if err != nil {
+		return err
 	}
 
 	// Generate a unique name for the new secret version
@@ -458,6 +458,49 @@ func (d *SecretsDriver) updateDockerSecret(secretName string, newValue []byte) e
 	}
 
 	return nil
+}
+
+func findActiveSecret(
+	secrets []swarm.Secret,
+	services []swarm.Service,
+	secretName string,
+	serviceNames []string,
+) (*swarm.Secret, error) {
+	prefix := secretName + "-"
+	candidates := make(map[string]*swarm.Secret)
+	for i := range secrets {
+		if secrets[i].Spec.Name == secretName {
+			candidates[secrets[i].ID] = &secrets[i]
+			continue
+		}
+		suffix, found := strings.CutPrefix(secrets[i].Spec.Name, prefix)
+		version, err := strconv.ParseInt(suffix, 10, 64)
+		if !found || err != nil || version <= 0 || strconv.FormatInt(version, 10) != suffix {
+			continue
+		}
+		candidates[secrets[i].ID] = &secrets[i]
+	}
+
+	var active *swarm.Secret
+	for _, service := range services {
+		if !slices.Contains(serviceNames, service.Spec.Name) || service.Spec.TaskTemplate.ContainerSpec == nil {
+			continue
+		}
+		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
+			if ref == nil || candidates[ref.SecretID] == nil {
+				continue
+			}
+			if active != nil && active.ID != ref.SecretID {
+				return nil, fmt.Errorf("multiple active versions found for secret %s", secretName)
+			}
+			active = candidates[ref.SecretID]
+		}
+	}
+
+	if active != nil {
+		return active, nil
+	}
+	return nil, fmt.Errorf("no active version found for secret %s", secretName)
 }
 
 // updateServicesSecretReference updates all services to use the new secret version
@@ -500,9 +543,9 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID
 
 	if len(updatedServices) > 0 {
 		log.Infof("Updated services to use new secret %s: %v", newSecretName, updatedServices)
+		return nil
 	}
-
-	return nil
+	return fmt.Errorf("no services reference secret %s", oldSecretName)
 }
 
 func buildUpdatedSecretReferences(
