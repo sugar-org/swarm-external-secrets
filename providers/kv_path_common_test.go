@@ -15,6 +15,18 @@ type secretPathBuilder interface {
 	BuildSecretPath(secrets.Request) string
 }
 
+// pathTestConfig builds the minimal provider configuration BuildSecretPath
+// reads: the path label, the mount path and the KV version. The remaining
+// config fields do not affect path construction, so one config shape can drive
+// both providers.
+func pathTestConfig(pathLabel, mountPath, kvVersion string) vaultcompat.Config {
+	return vaultcompat.Config{
+		PathLabel: pathLabel,
+		MountPath: mountPath,
+		KVVersion: kvVersion,
+	}
+}
+
 // kvPathCase is one BuildSecretPath expectation. customPath holds the value of
 // the provider's path label (vault_path / openbao_path); an empty value leaves
 // the label unset. The runner injects the provider-specific label key, so a
@@ -56,17 +68,62 @@ var sharedKVPathCases = []kvPathCase{
 }
 
 // runSharedKVPathCases exercises the shared path matrix against one provider.
-// labelKey is the provider's path label ("vault_path" / "openbao_path").
-func runSharedKVPathCases(t *testing.T, labelKey string, newProvider func(mountPath, kvVersion string) secretPathBuilder) {
+// labelKey is the provider's path label ("vault_path" / "openbao_path");
+// newProvider turns a config into the provider under test.
+func runSharedKVPathCases(t *testing.T, labelKey string, newProvider func(vaultcompat.Config) secretPathBuilder) {
 	t.Helper()
 
 	for _, tt := range sharedKVPathCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newProvider(tt.mountPath, tt.kvVersion)
+			p := newProvider(pathTestConfig(labelKey, tt.mountPath, tt.kvVersion))
 			req := secrets.Request{SecretName: tt.secretName, ServiceName: tt.serviceName}
 			if tt.customPath != "" {
 				req.SecretLabels = map[string]string{labelKey: tt.customPath}
 			}
+			if got := p.BuildSecretPath(req); got != tt.want {
+				t.Fatalf("BuildSecretPath() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// runSharedKVVersionConfigDrivenPath asserts that a provider's config parser and
+// version normalizer drive path construction end to end: unset -> v2, "1" -> v1,
+// "2" -> v2.
+func runSharedKVVersionConfigDrivenPath(
+	t *testing.T,
+	envKey string,
+	parse func(map[string]string) vaultcompat.Config,
+	normalize func(string) (string, error),
+	newProvider func(vaultcompat.Config) secretPathBuilder,
+) {
+	t.Helper()
+
+	tests := []struct {
+		name    string
+		version string // "" means unset
+		want    string
+	}{
+		{name: "default/unset is v2", version: "", want: "secret/data/my-service/db-password"},
+		{name: "1 is v1", version: "1", want: "secret/my-service/db-password"},
+		{name: "2 is v2", version: "2", want: "secret/data/my-service/db-password"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pluginConfig := map[string]string{}
+			if tt.version != "" {
+				pluginConfig[envKey] = tt.version
+			}
+			cfg := parse(pluginConfig)
+			kvVersion, err := normalize(cfg.KVVersion)
+			if err != nil {
+				t.Fatalf("normalize(%q) error = %v", cfg.KVVersion, err)
+			}
+			cfg.KVVersion = kvVersion
+
+			p := newProvider(cfg)
+			req := secrets.Request{SecretName: "db-password", ServiceName: "my-service"}
 			if got := p.BuildSecretPath(req); got != tt.want {
 				t.Fatalf("BuildSecretPath() = %q, want %q", got, tt.want)
 			}

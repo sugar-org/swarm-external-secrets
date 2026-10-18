@@ -303,23 +303,16 @@ func emptyFile(t *testing.T) string {
 	return path
 }
 
-func newVaultProviderForPathTest(mountPath, kvVersion string) secretPathBuilder {
-	return &VaultProvider{
-		config: vaultcompat.Config{
-			ProviderName: "vault",
-			EnvPrefix:    "VAULT",
-			MountPath:    mountPath,
-			PathLabel:    vaultPathLabel,
-			FieldLabel:   "vault_field",
-			KVVersion:    kvVersion,
-		},
-	}
+// vaultProviderFromConfig adapts a config into the provider under test, so the
+// shared path helpers can drive Vault without a provider-specific signature.
+func vaultProviderFromConfig(cfg vaultcompat.Config) secretPathBuilder {
+	return &VaultProvider{config: cfg}
 }
 
 // TestVaultProvider_BuildSecretPath runs the shared KV v1/v2 path matrix with
 // the Vault path label.
 func TestVaultProvider_BuildSecretPath(t *testing.T) {
-	runSharedKVPathCases(t, vaultPathLabel, newVaultProviderForPathTest)
+	runSharedKVPathCases(t, vaultPathLabel, vaultProviderFromConfig)
 }
 
 // TestVaultProvider_Initialize_RejectsUnsupportedKVVersion keeps the
@@ -342,34 +335,8 @@ func TestNormalizeVaultKVVersion(t *testing.T) {
 // config-driven check: ParseVaultConfig + NormalizeVaultKVVersion drive path
 // construction end to end (unset -> v2, "1" -> v1, "2" -> v2).
 func TestVaultProvider_BuildSecretPathThroughConfig(t *testing.T) {
-	tests := []struct {
-		name    string
-		version string // "" means unset
-		want    string
-	}{
-		{name: "default/unset is v2", version: "", want: "secret/data/my-service/db-password"},
-		{name: "1 is v1", version: "1", want: "secret/my-service/db-password"},
-		{name: "2 is v2", version: "2", want: "secret/data/my-service/db-password"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pluginConfig := map[string]string{}
-			if tt.version != "" {
-				pluginConfig["VAULT_KV_VERSION"] = tt.version
-			}
-			cfg := vaultcompat.ParseVaultConfig(pluginConfig)
-			kvVersion, err := vaultcompat.NormalizeVaultKVVersion(cfg.KVVersion)
-			if err != nil {
-				t.Fatalf("NormalizeVaultKVVersion(%q) error = %v", cfg.KVVersion, err)
-			}
-			cfg.KVVersion = kvVersion
-
-			p := &VaultProvider{config: cfg}
-			req := secrets.Request{SecretName: "db-password", ServiceName: "my-service"}
-			if got := p.BuildSecretPath(req); got != tt.want {
-				t.Fatalf("BuildSecretPath() = %q, want %q", got, tt.want)
-			}
-		})
-	}
+	runSharedKVVersionConfigDrivenPath(t, "VAULT_KV_VERSION",
+		vaultcompat.ParseVaultConfig,
+		vaultcompat.NormalizeVaultKVVersion,
+		vaultProviderFromConfig)
 }
