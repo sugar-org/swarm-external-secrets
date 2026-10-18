@@ -16,6 +16,8 @@ import (
 	"github.com/sugar-org/swarm-external-secrets/internal/vaultcompat"
 )
 
+const vaultPathLabel = "vault_path"
+
 func TestVaultProvider_AuthenticateWithJWT(t *testing.T) {
 	var loginRequest struct {
 		Role string `json:"role"`
@@ -61,8 +63,8 @@ func TestVaultProvider_AuthenticateWithJWT(t *testing.T) {
 	req := secrets.Request{
 		SecretName: "fallback",
 		SecretLabels: map[string]string{
-			"vault_path":  "database/mysql",
-			"vault_field": "password",
+			vaultPathLabel: "database/mysql",
+			"vault_field":  "password",
 		},
 	}
 
@@ -144,8 +146,8 @@ func TestVaultProvider_RenewsJWTToken(t *testing.T) {
 	req := secrets.Request{
 		SecretName: "fallback",
 		SecretLabels: map[string]string{
-			"vault_path":  "database/mysql",
-			"vault_field": "password",
+			vaultPathLabel: "database/mysql",
+			"vault_field":  "password",
 		},
 	}
 	got, err := provider.GetSecret(t.Context(), &SecretInfo{
@@ -301,158 +303,73 @@ func emptyFile(t *testing.T) string {
 	return path
 }
 
-func newVaultProviderForPathTest(mountPath, kvVersion string) *VaultProvider {
+func newVaultProviderForPathTest(mountPath, kvVersion string) secretPathBuilder {
 	return &VaultProvider{
 		config: vaultcompat.Config{
 			ProviderName: "vault",
 			EnvPrefix:    "VAULT",
 			MountPath:    mountPath,
-			PathLabel:    "vault_path",
+			PathLabel:    vaultPathLabel,
 			FieldLabel:   "vault_field",
 			KVVersion:    kvVersion,
 		},
 	}
 }
 
+// TestVaultProvider_BuildSecretPath runs the shared KV v1/v2 path matrix with
+// the Vault path label.
 func TestVaultProvider_BuildSecretPath(t *testing.T) {
+	runSharedKVPathCases(t, vaultPathLabel, newVaultProviderForPathTest)
+}
+
+// TestVaultProvider_Initialize_RejectsUnsupportedKVVersion keeps the
+// Vault-specific contract: Initialize names VAULT_KV_VERSION when it fails.
+func TestVaultProvider_Initialize_RejectsUnsupportedKVVersion(t *testing.T) {
+	runUnsupportedKVVersionRejection(t, "VAULT_KV_VERSION", func(config map[string]string) error {
+		return (&VaultProvider{}).Initialize(config)
+	})
+}
+
+func TestParseVaultConfig_KVVersionDefault(t *testing.T) {
+	runKVVersionConfigDefaults(t, "VAULT_KV_VERSION", vaultcompat.ParseVaultConfig)
+}
+
+func TestNormalizeVaultKVVersion(t *testing.T) {
+	runKVVersionNormalizationCases(t, vaultcompat.NormalizeVaultKVVersion)
+}
+
+// TestVaultProvider_BuildSecretPathThroughConfig mirrors the OpenBao
+// config-driven check: ParseVaultConfig + NormalizeVaultKVVersion drive path
+// construction end to end (unset -> v2, "1" -> v1, "2" -> v2).
+func TestVaultProvider_BuildSecretPathThroughConfig(t *testing.T) {
 	tests := []struct {
-		name      string
-		mountPath string
-		kvVersion string
-		req       secrets.Request
-		want      string
+		name    string
+		version string // "" means unset
+		want    string
 	}{
-		{
-			name:      "v2 default mount service fallback",
-			mountPath: "secret",
-			kvVersion: "2",
-			req:       secrets.Request{SecretName: "db-password", ServiceName: "my-service"},
-			want:      "secret/data/my-service/db-password",
-		},
-		{
-			name:      "v1 default mount service fallback",
-			mountPath: "secret",
-			kvVersion: "1",
-			req:       secrets.Request{SecretName: "db-password", ServiceName: "my-service"},
-			want:      "secret/my-service/db-password",
-		},
-		{
-			name:      "v2 explicit vault_path",
-			mountPath: "secret",
-			kvVersion: "2",
-			req: secrets.Request{
-				SecretName:   "ignored",
-				SecretLabels: map[string]string{"vault_path": "database/mysql"},
-			},
-			want: "secret/data/database/mysql",
-		},
-		{
-			name:      "v1 explicit vault_path",
-			mountPath: "secret",
-			kvVersion: "1",
-			req: secrets.Request{
-				SecretName:   "ignored",
-				SecretLabels: map[string]string{"vault_path": "database/mysql"},
-			},
-			want: "secret/database/mysql",
-		},
-		{
-			name:      "v1 relative data path keeps data folder",
-			mountPath: "secret",
-			kvVersion: "1",
-			req: secrets.Request{
-				SecretName:   "ignored",
-				SecretLabels: map[string]string{"vault_path": "data/mysql"},
-			},
-			want: "secret/data/mysql",
-		},
-		{
-			name:      "v1 mount-qualified path preserves literal data folder",
-			mountPath: "secret",
-			kvVersion: "1",
-			req: secrets.Request{
-				SecretName:   "ignored",
-				SecretLabels: map[string]string{"vault_path": "secret/data/mysql"},
-			},
-			want: "secret/data/mysql",
-		},
-		{
-			name:      "v1 mount-qualified path preserves literal data folder on custom mount",
-			mountPath: "kv",
-			kvVersion: "1",
-			req: secrets.Request{
-				SecretName:   "ignored",
-				SecretLabels: map[string]string{"vault_path": "kv/data/mysql"},
-			},
-			want: "kv/data/mysql",
-		},
-		{
-			name:      "empty version keeps historical v2 behaviour",
-			mountPath: "secret",
-			kvVersion: "",
-			req:       secrets.Request{SecretName: "db-password", ServiceName: "my-service"},
-			want:      "secret/data/my-service/db-password",
-		},
+		{name: "default/unset is v2", version: "", want: "secret/data/my-service/db-password"},
+		{name: "1 is v1", version: "1", want: "secret/my-service/db-password"},
+		{name: "2 is v2", version: "2", want: "secret/data/my-service/db-password"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newVaultProviderForPathTest(tt.mountPath, tt.kvVersion)
-			if got := p.BuildSecretPath(tt.req); got != tt.want {
+			pluginConfig := map[string]string{}
+			if tt.version != "" {
+				pluginConfig["VAULT_KV_VERSION"] = tt.version
+			}
+			cfg := vaultcompat.ParseVaultConfig(pluginConfig)
+			kvVersion, err := vaultcompat.NormalizeVaultKVVersion(cfg.KVVersion)
+			if err != nil {
+				t.Fatalf("NormalizeVaultKVVersion(%q) error = %v", cfg.KVVersion, err)
+			}
+			cfg.KVVersion = kvVersion
+
+			p := &VaultProvider{config: cfg}
+			req := secrets.Request{SecretName: "db-password", ServiceName: "my-service"}
+			if got := p.BuildSecretPath(req); got != tt.want {
 				t.Fatalf("BuildSecretPath() = %q, want %q", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestVaultProvider_Initialize_RejectsUnsupportedKVVersion(t *testing.T) {
-	for _, bad := range []string{"3", "v1", "v2", "V1", "0", "foo", "v", "12"} {
-		t.Run("kv="+bad, func(t *testing.T) {
-			p := &VaultProvider{}
-			err := p.Initialize(map[string]string{"VAULT_KV_VERSION": bad})
-			if err == nil {
-				t.Fatal("Initialize() error = nil, want error for unsupported KV version")
-			}
-			if !strings.Contains(err.Error(), "VAULT_KV_VERSION") {
-				t.Fatalf("Initialize() error = %q, want it to name VAULT_KV_VERSION", err.Error())
-			}
-		})
-	}
-}
-
-func TestParseVaultConfig_KVVersionDefault(t *testing.T) {
-	cfg := vaultcompat.ParseVaultConfig(map[string]string{})
-	if cfg.KVVersion != "2" {
-		t.Fatalf("KVVersion = %q, want %q (backward-compatible default)", cfg.KVVersion, "2")
-	}
-
-	cfg = vaultcompat.ParseVaultConfig(map[string]string{"VAULT_KV_VERSION": "1"})
-	if cfg.KVVersion != "1" {
-		t.Fatalf("KVVersion = %q, want %q", cfg.KVVersion, "1")
-	}
-
-	if cfg.MountPath != "secret" {
-		t.Fatalf("MountPath = %q, want %q", cfg.MountPath, "secret")
-	}
-}
-
-func TestNormalizeVaultKVVersion(t *testing.T) {
-	valid := map[string]string{
-		"1":   "1",
-		"2":   "2",
-		" 1 ": "1",
-		" 2 ": "2",
-		"":    "2",
-	}
-	for raw, want := range valid {
-		if got, err := vaultcompat.NormalizeVaultKVVersion(raw); err != nil || got != want {
-			t.Fatalf("NormalizeVaultKVVersion(%q) = %q, %v; want %q, nil", raw, got, err, want)
-		}
-	}
-
-	for _, bad := range []string{"3", "v1", "v2", "V1", "foo", "12", "v"} {
-		if got, err := vaultcompat.NormalizeVaultKVVersion(bad); err == nil {
-			t.Fatalf("NormalizeVaultKVVersion(%q) = %q, nil; want error", bad, got)
-		}
 	}
 }
