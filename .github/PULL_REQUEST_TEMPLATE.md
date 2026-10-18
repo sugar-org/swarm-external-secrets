@@ -29,5 +29,20 @@ ex: - [x] Refactor
 - Related Issue #
 - Closes #
 
+## Contributor attestation
 
-## Was this PR authored or co-authored using generative AI tooling?
+<!-- Check every applicable item before requesting review. -->
+
+- [ ] I reviewed this complete diff and understand the changes I am submitting.
+- [ ] I ran the relevant tests and checks, or explained below why they were not run.
+- [ ] This PR is focused on one problem and does not knowingly duplicate existing work.
+
+### AI assistance
+
+<!-- Select exactly one option. Substantial AI use must be described below. -->
+
+- [ ] No generative AI was used to produce this contribution.
+- [ ] Generative AI was used and I reviewed, understand, and take responsibility for all output.
+
+<!-- If AI was used, identify the tool/model and summarize how it was used. -->
+AI assistance disclosure:
