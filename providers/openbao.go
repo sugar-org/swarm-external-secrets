@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sugar-org/swarm-external-secrets/internal/kvpath"
+	"github.com/sugar-org/swarm-external-secrets/internal/utils"
 	"github.com/sugar-org/swarm-external-secrets/internal/vaultcompat"
 )
 
@@ -40,7 +41,16 @@ func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 
 // GetSecret retrieves a secret value from OpenBao.
 func (o *OpenBaoProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
-	return o.backend.GetSecret(ctx, secretInfo)
+	val, err := o.backend.GetSecret(ctx, secretInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	if utils.ShouldBase64Decode(secretInfo.Labels) {
+		return utils.DecodeBase64Secret(val, secretInfo.DockerSecretName, secretInfo.SecretField)
+	}
+
+	return val, nil
 }
 
 // SupportsRotation indicates that OpenBao supports secret rotation monitoring.

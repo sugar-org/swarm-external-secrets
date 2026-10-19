@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sugar-org/swarm-external-secrets/internal/kvpath"
+	"github.com/sugar-org/swarm-external-secrets/internal/utils"
 	"github.com/sugar-org/swarm-external-secrets/internal/vaultcompat"
 )
 
@@ -40,7 +41,16 @@ func (v *VaultProvider) Initialize(config map[string]string) error {
 
 // GetSecret retrieves a secret value from Vault.
 func (v *VaultProvider) GetSecret(ctx context.Context, secretInfo *SecretInfo) ([]byte, error) {
-	return v.backend.GetSecret(ctx, secretInfo)
+	val, err := v.backend.GetSecret(ctx, secretInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	if utils.ShouldBase64Decode(secretInfo.Labels) {
+		return utils.DecodeBase64Secret(val, secretInfo.DockerSecretName, secretInfo.SecretField)
+	}
+
+	return val, nil
 }
 
 // SupportsRotation indicates that Vault supports secret rotation monitoring.
