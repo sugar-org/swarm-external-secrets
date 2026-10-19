@@ -12,7 +12,11 @@ import (
 	"time"
 
 	"github.com/docker/go-plugins-helpers/secrets"
+
+	"github.com/sugar-org/swarm-external-secrets/internal/vaultcompat"
 )
+
+const vaultPathLabel = "vault_path"
 
 func TestVaultProvider_AuthenticateWithJWT(t *testing.T) {
 	var loginRequest struct {
@@ -59,8 +63,8 @@ func TestVaultProvider_AuthenticateWithJWT(t *testing.T) {
 	req := secrets.Request{
 		SecretName: "fallback",
 		SecretLabels: map[string]string{
-			"vault_path":  "database/mysql",
-			"vault_field": "password",
+			vaultPathLabel: "database/mysql",
+			"vault_field":  "password",
 		},
 	}
 
@@ -142,8 +146,8 @@ func TestVaultProvider_RenewsJWTToken(t *testing.T) {
 	req := secrets.Request{
 		SecretName: "fallback",
 		SecretLabels: map[string]string{
-			"vault_path":  "database/mysql",
-			"vault_field": "password",
+			vaultPathLabel: "database/mysql",
+			"vault_field":  "password",
 		},
 	}
 	got, err := provider.GetSecret(t.Context(), &SecretInfo{
@@ -297,4 +301,42 @@ func emptyFile(t *testing.T) string {
 	}
 
 	return path
+}
+
+// vaultProviderFromConfig adapts a config into the provider under test, so the
+// shared path helpers can drive Vault without a provider-specific signature.
+func vaultProviderFromConfig(cfg vaultcompat.Config) secretPathBuilder {
+	return &VaultProvider{config: cfg}
+}
+
+// TestVaultProvider_BuildSecretPath runs the shared KV v1/v2 path matrix with
+// the Vault path label.
+func TestVaultProvider_BuildSecretPath(t *testing.T) {
+	runSharedKVPathCases(t, vaultPathLabel, vaultProviderFromConfig)
+}
+
+// TestVaultProvider_Initialize_RejectsUnsupportedKVVersion keeps the
+// Vault-specific contract: Initialize names VAULT_KV_VERSION when it fails.
+func TestVaultProvider_Initialize_RejectsUnsupportedKVVersion(t *testing.T) {
+	runUnsupportedKVVersionRejection(t, "VAULT_KV_VERSION", func(config map[string]string) error {
+		return (&VaultProvider{}).Initialize(config)
+	})
+}
+
+func TestParseVaultConfig_KVVersionDefault(t *testing.T) {
+	runKVVersionConfigDefaults(t, "VAULT_KV_VERSION", vaultcompat.ParseVaultConfig)
+}
+
+func TestNormalizeVaultKVVersion(t *testing.T) {
+	runKVVersionNormalizationCases(t, vaultcompat.NormalizeVaultKVVersion)
+}
+
+// TestVaultProvider_BuildSecretPathThroughConfig mirrors the OpenBao
+// config-driven check: ParseVaultConfig + NormalizeVaultKVVersion drive path
+// construction end to end (unset -> v2, "1" -> v1, "2" -> v2).
+func TestVaultProvider_BuildSecretPathThroughConfig(t *testing.T) {
+	runSharedKVVersionConfigDrivenPath(t, "VAULT_KV_VERSION",
+		vaultcompat.ParseVaultConfig,
+		vaultcompat.NormalizeVaultKVVersion,
+		vaultProviderFromConfig)
 }
