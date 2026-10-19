@@ -22,6 +22,12 @@ type OpenBaoProvider struct {
 func (o *OpenBaoProvider) Initialize(config map[string]string) error {
 	cfg := vaultcompat.ParseOpenBaoConfig(config)
 
+	kvVersion, err := vaultcompat.NormalizeOpenBaoKVVersion(cfg.KVVersion)
+	if err != nil {
+		return err
+	}
+	cfg.KVVersion = kvVersion
+
 	backend, err := vaultcompat.New(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to authenticate with OpenBao: %v", err)
@@ -48,8 +54,16 @@ func (o *OpenBaoProvider) GetSecretFieldLabel() string {
 }
 
 // BuildSecretPath constructs the OpenBao secret path based on request labels and service information.
+//
+// KV v2 paths use the "<mount>/data/<secret-path>" form while KV v1 paths use
+// "<mount>/<secret-path>". The version comes from OPENBAO_KV_VERSION ("1" or
+// "2", default "2"); an empty version also means v2 so configs built without
+// Initialize keep the historical behaviour.
 func (o *OpenBaoProvider) BuildSecretPath(req secrets.Request) string {
 	if customPath, exists := req.SecretLabels[o.config.PathLabel]; exists && customPath != "" {
+		if o.config.KVVersion == "1" {
+			return kvpath.BuildMountedKVv1SecretPath(o.config.MountPath, customPath, "")
+		}
 		return kvpath.BuildMountedKVv2SecretPath(o.config.MountPath, customPath, "")
 	}
 
@@ -58,6 +72,9 @@ func (o *OpenBaoProvider) BuildSecretPath(req secrets.Request) string {
 		secretName = path.Join(req.ServiceName, req.SecretName)
 	}
 
+	if o.config.KVVersion == "1" {
+		return kvpath.BuildMountedKVv1SecretPath(o.config.MountPath, "", secretName)
+	}
 	return kvpath.BuildMountedKVv2SecretPath(o.config.MountPath, "", secretName)
 }
 

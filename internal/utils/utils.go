@@ -94,9 +94,20 @@ func ExtractSecretValueFromMap(data map[string]interface{}, field string) ([]byt
 // ExtractSecretValueFromKV unwraps a KV v2 nested "data" key (if present)
 // and then extracts the field value from the resulting map.
 func ExtractSecretValueFromKV(data map[string]interface{}, field string) ([]byte, error) {
-	if nested, ok := data["data"]; ok {
-		if m, ok := nested.(map[string]interface{}); ok {
-			data = m
+	return ExtractSecretValueFromKVWithVersion(data, field, "2")
+}
+
+// ExtractSecretValueFromKVWithVersion extracts a field for a given KV version.
+// KV v1 responses carry fields at the top level, so a literal "data" entry is
+// a valid secret value and must never be unwrapped. KV v2 responses nest
+// values under "data", which is unwrapped when present. Empty version means
+// v2 for backward compatibility.
+func ExtractSecretValueFromKVWithVersion(data map[string]interface{}, field, kvVersion string) ([]byte, error) {
+	if kvVersion != "1" {
+		if nested, ok := data["data"]; ok {
+			if m, ok := nested.(map[string]interface{}); ok {
+				data = m
+			}
 		}
 	}
 	return ExtractSecretValueFromMap(data, field)

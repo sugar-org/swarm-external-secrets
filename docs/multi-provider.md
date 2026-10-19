@@ -15,6 +15,7 @@ The Vault Swarm Plugin supports multiple secrets providers, allowing you to use 
 | `VAULT_ADDR` | Vault server address | `http://localhost:8200` |
 | `VAULT_TOKEN` | Vault token for authentication | — |
 | `VAULT_MOUNT_PATH` | Mount path for KV engine | `secret` |
+| `VAULT_KV_VERSION` | KV engine version (`1` or `2`) | `2` |
 | `VAULT_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `VAULT_ROLE_ID` | Role ID for AppRole authentication | — |
 | `VAULT_SECRET_ID` | Secret ID for AppRole authentication | — |
@@ -48,6 +49,7 @@ docker plugin set swarm-external-secrets:latest \
 
 - By default, Vault KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
 - If you set `VAULT_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
+- If your engine is KV v1, set `VAULT_KV_VERSION="1"`. Paths then use the `<mount>/...` form without injecting `/data/`: the default mount reads `secret/...`, and a custom mount such as `kv` reads `kv/...`. The default remains `2`, so existing v2 setups keep working unchanged. A literal `data/` folder in the secret name is preserved for KV v1 (for example, `vault_path: secret/data/mysql` reads secret `data/mysql` under mount `secret`), since `data/` is a valid path segment in KV v1.
 
 **Example with Custom Mount Path:**
 ```bash
@@ -56,6 +58,25 @@ docker plugin set swarm-external-secrets:latest \
     VAULT_ADDR="https://vault.example.com:8200" \
     VAULT_TOKEN="hvs.example-token" \
     VAULT_MOUNT_PATH="kv"
+```
+
+**Example with KV v1:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="https://vault.example.com:8200" \
+    VAULT_TOKEN="hvs.example-token" \
+    VAULT_KV_VERSION="1"
+```
+
+**Example with KV v1 on a custom mount:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="vault" \
+    VAULT_ADDR="https://vault.example.com:8200" \
+    VAULT_TOKEN="hvs.example-token" \
+    VAULT_MOUNT_PATH="kv" \
+    VAULT_KV_VERSION="1"
 ```
 
 ---
@@ -131,6 +152,7 @@ docker plugin set swarm-external-secrets:latest \
 | `OPENBAO_ADDR` | OpenBao server address | `http://localhost:8200` |
 | `OPENBAO_TOKEN` | OpenBao token for authentication | — |
 | `OPENBAO_MOUNT_PATH` | Mount path for KV engine | `secret` |
+| `OPENBAO_KV_VERSION` | KV engine version (`1` or `2`) | `2` |
 | `OPENBAO_AUTH_METHOD` | Authentication method (`token`, `approle`, `jwt`) | `token` |
 | `OPENBAO_ROLE_ID` | Role ID for AppRole authentication | — |
 | `OPENBAO_SECRET_ID` | Secret ID for AppRole authentication | — |
@@ -164,6 +186,7 @@ docker plugin set swarm-external-secrets:latest \
 
 - By default, OpenBao KV v2 secrets are read from the `secret` mount, so tracked paths use the `secret/data/...` form.
 - If you set `OPENBAO_MOUNT_PATH` to a custom mount such as `kv`, `prod`, or `dev`, the plugin uses that mount consistently for secret reads and rotation tracking, for example `kv/data/...`.
+- If your engine is KV v1, set `OPENBAO_KV_VERSION="1"`. Paths then use the `<mount>/...` form without injecting `/data/`: the default mount reads `secret/...`, and a custom mount such as `kv` reads `kv/...`. The default remains `2`, so existing v2 setups keep working unchanged. A literal `data/` folder in the secret name is preserved for KV v1 (for example, `openbao_path: secret/data/mysql` reads secret `data/mysql` under mount `secret`), since `data/` is a valid path segment in KV v1.
 
 **Example with Custom Mount Path:**
 ```bash
@@ -172,6 +195,25 @@ docker plugin set swarm-external-secrets:latest \
     OPENBAO_ADDR="https://openbao.example.com:8200" \
     OPENBAO_TOKEN="ob_example-token" \
     OPENBAO_MOUNT_PATH="kv"
+```
+
+**Example with KV v1:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_TOKEN="ob_example-token" \
+    OPENBAO_KV_VERSION="1"
+```
+
+**Example with KV v1 on a custom mount:**
+```bash
+docker plugin set swarm-external-secrets:latest \
+    SECRETS_PROVIDER="openbao" \
+    OPENBAO_ADDR="https://openbao.example.com:8200" \
+    OPENBAO_TOKEN="ob_example-token" \
+    OPENBAO_MOUNT_PATH="kv" \
+    OPENBAO_KV_VERSION="1"
 ```
 
 ---
