@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  app:
+    image: busybox:latest
+    command: ["sh", "-c", "test -s /run/secrets/aws_spiffe_real && sleep 300"]
+    secrets:
+      - aws_spiffe_real
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
+
+secrets:
+  aws_spiffe_real:
+    driver: swarm-external-secrets:latest
+    labels:
+      aws_secret_name: "${AWS_SECRET_ID}"
+      aws_field: "${AWS_SECRET_FIELD}"

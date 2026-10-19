@@ -49,7 +49,11 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - tables
@@ -59,6 +63,7 @@ markdown_extensions:
 nav:
   - index.md
   - Providers:
+      - AWS SPIFFE/OIDC Authentication: aws-spiffe.md
       - Infisical: infisical.md
       - GCP Secret Manager: gcp.md
       - Vault and OpenBao JWT: jwt.md

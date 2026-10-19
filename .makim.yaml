@@ -49,6 +49,9 @@ groups:
       smoke-test-openbao:
         help: Run OpenBao smoke test to validate plugin end-to-end
         run: bash ./scripts/tests/smoke-test-openbao.sh
+      smoke-test-awssm-spiffe:
+        help: Run local Kumo or configured real-AWS SPIFFE/OIDC smoke test
+        run: bash ./scripts/tests/smoke-test-awssm-spiffe.sh
       smoke-test-infisical:
         help: Run Infisical smoke test (requires real Infisical project credentials)
         run: bash ./scripts/tests/smoke-test-infisical.sh

@@ -25,6 +25,14 @@
       "destination": "/run/swarm-external-secrets",
       "type": "bind",
       "options": ["bind", "rbind", "rshared"]
+    },
+    {
+      "name": "spire-agent-socket",
+      "source": "/run",
+      "destination": "/run/host",
+      "type": "bind",
+      "options": ["bind", "rbind", "ro"],
+      "settable": ["source"]
     }
   ],
   "env": [
@@ -191,6 +199,36 @@
     {
       "name": "AWS_KMS_ENDPOINT",
       "description": "AWS KMS endpoint URL (optional override, e.g. for LocalStack)",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_PROFILE",
+      "description": "AWS shared configuration profile",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_AUTH_METHOD",
+      "description": "AWS authentication method (static or spiffe; empty uses the default SDK chain)",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_ROLE_ARN",
+      "description": "IAM role ARN for SPIFFE web identity authentication",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_JWT_AUDIENCE",
+      "description": "JWT-SVID audience for AWS authentication",
+      "settable": ["value"]
+    },
+    {
+      "name": "SPIFFE_ENDPOINT_SOCKET",
+      "description": "SPIFFE Workload API Unix socket URL",
+      "settable": ["value"]
+    },
+    {
+      "name": "AWS_STS_ENDPOINT_URL",
+      "description": "AWS STS endpoint URL override (e.g. for testing)",
       "settable": ["value"]
     },
     {

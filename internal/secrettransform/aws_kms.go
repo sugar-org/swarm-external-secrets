@@ -19,22 +19,25 @@ import (
 
 // AWSKMSTransformer decrypts provider values when a secret opts in with labels.
 type AWSKMSTransformer struct {
-	settings map[string]string
-	mu       sync.Mutex
-	client   kmsDecryptAPI
+	settings    map[string]string
+	credentials aws.CredentialsProvider
+	mu          sync.Mutex
+	client      kmsDecryptAPI
 }
 
 type kmsDecryptAPI interface {
 	Decrypt(ctx context.Context, params *kms.DecryptInput, optFns ...func(*kms.Options)) (*kms.DecryptOutput, error)
 }
 
-// NewAWSKMSTransformer creates a lazy AWS KMS transformer.
-func NewAWSKMSTransformer(settings map[string]string) *AWSKMSTransformer {
+// NewAWSKMSTransformer creates a lazy AWS KMS transformer. When credentials is
+// non-nil, KMS calls use it instead of the settings-based credential chain.
+func NewAWSKMSTransformer(settings map[string]string, credentials aws.CredentialsProvider) *AWSKMSTransformer {
 	copied := make(map[string]string, len(settings))
 	maps.Copy(copied, settings)
 
 	return &AWSKMSTransformer{
-		settings: copied,
+		settings:    copied,
+		credentials: credentials,
 	}
 }
 
@@ -110,6 +113,11 @@ func (t *AWSKMSTransformer) loadAWSConfig(ctx context.Context) (aws.Config, erro
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return aws.Config{}, err
+	}
+
+	if t.credentials != nil {
+		cfg.Credentials = t.credentials
+		return cfg, nil
 	}
 
 	accessKey := setting(t.settings, "AWS_ACCESS_KEY_ID")

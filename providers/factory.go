@@ -54,8 +54,8 @@ func GetProviderInfo(providerType string) (map[string]string, error) {
 	case "aws", "aws-secrets-manager":
 		info["name"] = "AWS Secrets Manager"
 		info["description"] = "Amazon Web Services Secrets Manager"
-		info["auth_methods"] = "IAM roles, access keys, profiles"
-		info["env_vars"] = "AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_PROFILE"
+		info["auth_methods"] = "IAM roles, access keys, profiles, SPIFFE/OIDC federation"
+		info["env_vars"] = "AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_PROFILE, AWS_AUTH_METHOD, AWS_ROLE_ARN, AWS_JWT_AUDIENCE, SPIFFE_ENDPOINT_SOCKET, AWS_ENDPOINT_URL, AWS_STS_ENDPOINT_URL"
 
 	case "gcp", "gcp-secret-manager", "google":
 		info["name"] = "GCP Secret Manager"

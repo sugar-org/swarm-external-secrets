@@ -93,6 +93,12 @@ docker plugin set swarm-external-secrets:latest \
 | `AWS_ACCESS_KEY_ID` | AWS access key | — |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key | — |
 | `AWS_PROFILE` | AWS profile name | — |
+| `AWS_AUTH_METHOD` | Authentication mode (`static`, `spiffe`, or empty for the SDK default chain) | — |
+| `AWS_ROLE_ARN` | IAM role assumed in SPIFFE mode | — |
+| `AWS_JWT_AUDIENCE` | JWT-SVID audience | `swarm-external-secrets` |
+| `SPIFFE_ENDPOINT_SOCKET` | SPIRE Workload API socket URL inside the plugin | `unix:///run/host/spire/agent-sockets/api.sock` |
+| `AWS_ENDPOINT_URL` | Secrets Manager endpoint override, also used for KMS when `AWS_KMS_ENDPOINT` is unset (for emulators such as Kumo or floci) | — |
+| `AWS_STS_ENDPOINT_URL` | STS endpoint override for testing | — |
 
 **Example:**
 ```bash
@@ -102,6 +108,22 @@ docker plugin set swarm-external-secrets:latest \
     AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
     AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 ```
+
+**SPIFFE/OIDC Example:**
+
+```bash
+docker plugin set swarm-external-secrets:latest \
+    spire-agent-socket.source=/run/spire/agent-sockets \
+    SECRETS_PROVIDER="aws" \
+    AWS_REGION="us-west-2" \
+    AWS_AUTH_METHOD="spiffe" \
+    AWS_ROLE_ARN="arn:aws:iam::123456789012:role/swarm-external-secrets" \
+    AWS_JWT_AUDIENCE="123456789012" \
+    SPIFFE_ENDPOINT_SOCKET="unix:///run/host/api.sock"
+```
+
+See [AWS Secrets Manager with SPIFFE/OIDC](aws-spiffe.md) for SPIRE workload
+attestation, socket mounting, OIDC discovery, and IAM trust policy setup.
 
 **Secret Labels:**
 
@@ -521,7 +543,7 @@ secrets:
 - JWT and AppRole client tokens are renewed at about two-thirds of TTL; static tokens are not (see [Vault and OpenBao JWT](jwt.md))
 
 ### AWS Secrets Manager
-- Supports IAM roles, access keys, and profiles
+- Supports IAM roles, access keys, profiles, and SPIFFE/OIDC federation
 - JSON secrets are parsed automatically
 - Rotation is supported with native AWS rotation
 

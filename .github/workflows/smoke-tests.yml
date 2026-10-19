@@ -104,6 +104,27 @@ jobs:
       - name: Run smoke test for awssm
         run: bash scripts/tests/smoke-test-awssm.sh
 
+  smoke-test-awssm-spiffe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Init Docker Swarm
+        run: docker swarm init
+
+      # The smoke test starts Kumo and SPIRE itself. The aws CLI and jq are
+      # preinstalled on ubuntu-latest runners.
+      - name: Run SPIFFE/OIDC smoke test for awssm
+        run: bash scripts/tests/smoke-test-awssm-spiffe.sh
+
   smoke-test-jwt-renewal:
     runs-on: ubuntu-latest
     permissions:
