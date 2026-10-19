@@ -46,9 +46,9 @@ without protecting the code.
 
 ## Restrict credentials and automation
 
-- Give coding agents read-only credentials. Never expose a personal access
-  token, deploy key, or GitHub App credential with repository write access to
-  an agent environment.
+- Prefer coding-agent credentials scoped to repository read access and the
+  pull request write access needed for reviews authorized by
+  [`AGENTS.md`](../AGENTS.md). Do not grant repository content write access.
 - Keep workflow permissions at the minimum required level. Review any workflow
   that grants `contents: write`, `pull-requests: write`, or uses
   `pull_request_target`.

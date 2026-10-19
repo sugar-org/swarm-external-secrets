@@ -18,16 +18,29 @@ submitted under their account. Before submission, they must be able to:
 Submitting AI output that the contributor has not reviewed or does not
 understand is not permitted.
 
-## No autonomous repository actions
+## Pull request reviews and remote actions
 
-AI models and automated agents must not perform remote write operations. They
-must not run `git push`, create or merge pull requests, create releases, post
-issues or comments, submit reviews, or invoke tools that perform an equivalent
-remote action.
+Any AI coding agent may post PR review comments on behalf of a contributor or
+maintainer when that person asks the agent to review a specific pull request
+or publish an existing review. This includes review summaries posted as PR
+comments, inline review comments, and replies in review threads. The request
+authorizes publishing through that person's configured authentication without
+a separate confirmation step. The contributor or maintainer remains
+responsible for review content posted under their account. Avoid posting
+duplicate comments when the findings are already present.
 
-Do not provide an agent with a personal access token, deploy key, GitHub App
-credential, or other credential that can write to this repository. Read-only
-repository access is sufficient for analysis and local development.
+Use a comment review by default. Submit an approving or changes-requested
+review only when the user explicitly requests that review state.
+
+Other remote write operations remain prohibited. Agents must not run
+`git push`, create or merge pull requests, create releases, post issues or
+comments unrelated to an authorized PR review, or invoke equivalent remote
+actions.
+
+Agents may use configured authentication to publish authorized reviews. Prefer
+credentials scoped to repository read access and pull request review writes.
+Review access does not authorize repository content writes or other remote
+actions.
 
 ## Mandatory review checkpoint
 
@@ -41,8 +54,10 @@ the agent must:
 4. explicitly ask the human to review the changes.
 
 The agent must wait for the human to confirm that they reviewed the changes.
-Approval to edit, test, stage, or commit does not authorize an agent to push
-or make any remote repository change.
+This checkpoint applies to code and documentation contributions; authorized
+PR reviews follow the publishing permission above. Approval to edit, test,
+stage, or commit does not authorize an agent to push or perform other remote
+write operations.
 
 ## Submission quality
 

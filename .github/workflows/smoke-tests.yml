@@ -22,7 +22,8 @@ jobs:
       contents: read
     strategy:
       matrix:
-        provider: [vault, openbao]
+        # v1 variants run scripts/tests/smoke-test-{vault,openbao}-kv1.sh.
+        provider: [vault, openbao, vault-kv1, openbao-kv1]
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

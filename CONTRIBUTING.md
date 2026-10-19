@@ -230,10 +230,13 @@ for every submitted line. Before submitting an AI-assisted contribution:
 - Disclose substantial AI assistance in the pull request template.
 - Be ready to explain the change and make requested revisions during review.
 
-AI agents must not autonomously push branches, open or merge pull requests,
-post issues or comments, submit reviews, or create releases. Do not give an AI
-agent credentials with repository write access. The full requirements for
-agents and AI-assisted work are in [`AGENTS.md`](AGENTS.md).
+Any AI coding agent may post PR review comments on behalf of a contributor or
+maintainer who requests the review, including review summaries, inline comments,
+and review-thread replies, under the authorization rules in
+[`AGENTS.md`](AGENTS.md). That person remains responsible for the review content.
+Agents must not push branches, open or merge pull requests, post issues or
+unrelated comments, or create releases. The full requirements for agents,
+review credentials, and AI-assisted work are in `AGENTS.md`.
 
 Maintainers may close contributions that are unreviewed, unexplained,
 duplicative, excessively broad, or generated and submitted without meaningful
@@ -285,7 +288,7 @@ GSoC is a program centered on mentorship, learning, and authentic engagement wit
 * **Authentic Contribution:** We expect all contributions , from proposal writing to final code to be the result of your own learning and critical thinking. While AI can be a supportive tool for debugging or boilerplate, it must not be the "author" of your work.
 * **Zero-Value Submissions:** Simply feeding a prompt to an AI and posting the output (whether as a code change, documentation update, or issue comment) is considered low-value and will be rejected. Contributions must include value added through your own technical competency and understanding of the project context.
 * **Human-in-the-Loop:** If you use generative AI as an aid, you must fully understand every change you submit. You are expected to explain the rationale behind your technical decisions during code reviews. If you cannot explain why a specific approach was taken, the contribution will not be accepted.
-* **Prohibition of Automated Agents:** The use of automated AI agents, bots, or scripts to submit issues or pull requests is strictly forbidden. Any account found using such tools to interact with the repository may be blocked and reported to the GSoC program administrators.
+* **Prohibition of Automated Submissions:** The use of automated AI agents, bots, or scripts to submit issues or pull requests is strictly forbidden. AI agents may post PR review comments on behalf of a contributor or maintainer who requests the review, as authorized by [`AGENTS.md`](AGENTS.md). Accounts using automated tools for prohibited submissions may be blocked and reported to the GSoC program administrators.
 * **Disclosure:** If AI was used significantly to assist in a contribution (e.g., to refactor a complex function), please disclose this in your pull request description. Transparency helps mentors provide better guidance.
 * **Reviewer Capacity:** Our mentors have limited bandwidth. To protect their capacity for human-to-human mentorship, we reserve the right to rigorously reject contributions that appear to be high-volume, AI-generated, or lack human verification.
 
