@@ -28,6 +28,7 @@ type rotationDockerClient struct {
 	rollbackContextFresh bool
 	cleanupContextFresh  bool
 	mutateOnFailure      bool
+	applyOnFailure       bool
 }
 
 func (c *rotationDockerClient) SecretList(context.Context, swarm.SecretListOptions) ([]swarm.Secret, error) {
@@ -87,6 +88,12 @@ func (c *rotationDockerClient) ServiceUpdate(ctx context.Context, id string, ver
 			service.Version.Index++
 			c.services["first-id"] = cloneTestService(service)
 		}
+		if c.applyOnFailure {
+			service := c.services[id]
+			service.Spec = spec
+			service.Version.Index++
+			c.services[id] = cloneTestService(service)
+		}
 		return swarm.ServiceUpdateResponse{}, context.DeadlineExceeded
 	}
 	if c.pendingRollback && id == "first-id" {
@@ -122,6 +129,7 @@ func TestUpdateDockerSecretRollsBackPartialServiceUpdateAndRetries(t *testing.T)
 		serviceOrder:    []string{"first-id", "second-id"},
 		failServiceID:   "second-id",
 		mutateOnFailure: true,
+		applyOnFailure:  true,
 	}
 	driver := &SecretsDriver{dockerClient: client}
 	secretInfo := &providers.SecretInfo{DockerSecretName: "api", ServiceNames: []string{"first-service", "second-service"}}
@@ -130,6 +138,10 @@ func TestUpdateDockerSecretRollsBackPartialServiceUpdateAndRetries(t *testing.T)
 		t.Fatal("first updateDockerSecret() error = nil, want injected service failure")
 	}
 	assertTestServiceSecret(t, client.services["first-id"], "old-id")
+	assertTestServiceSecret(t, client.services["second-id"], "old-id")
+	if _, exists := client.services["second-id"].Spec.Labels["vault.secret.rotated"]; exists {
+		t.Fatal("failed service retained the attempted rotation label after rollback")
+	}
 	assertTestServiceLabelsPreserved(t, client.services["first-id"], "concurrent-marker")
 	if got := client.services["first-id"].Spec.TaskTemplate.ContainerSpec.Image; got != "operator:v2" {
 		t.Fatalf("service image after rollback = %q, want concurrent operator update", got)

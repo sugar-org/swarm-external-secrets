@@ -555,13 +555,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID
 		if needsUpdate {
 			originalRotationLabel, hadRotationLabel := service.Spec.Labels["vault.secret.rotated"]
 			appliedRotationLabel, err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets)
-			if err != nil {
-				if rollbackErr := d.rollbackServiceUpdates(updatedServices); rollbackErr != nil {
-					return fmt.Errorf("%w; failed to roll back partial service updates: %v", err, rollbackErr)
-				}
-				return err
-			}
-			updatedServices = append(updatedServices, serviceRollback{
+			rollback := serviceRollback{
 				id:                    service.ID,
 				name:                  service.Spec.Name,
 				originalSecrets:       cloneMatchingSecretReferences(containerSpec.Secrets, oldSecretName, oldSecretID),
@@ -569,7 +563,14 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID
 				hadRotationLabel:      hadRotationLabel,
 				appliedRotationLabel:  appliedRotationLabel,
 				newSecretID:           newSecretID,
-			})
+			}
+			if err != nil {
+				if rollbackErr := d.rollbackServiceUpdates(append(updatedServices, rollback)); rollbackErr != nil {
+					return fmt.Errorf("%w; failed to roll back partial service updates: %v", err, rollbackErr)
+				}
+				return err
+			}
+			updatedServices = append(updatedServices, rollback)
 		}
 	}
 
@@ -775,7 +776,7 @@ func (d *SecretsDriver) applyServiceSecretUpdate(
 
 	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, swarm.ServiceUpdateOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
+		return rotationLabel, fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
 	}
 
 	if len(updateResponse.Warnings) > 0 {
