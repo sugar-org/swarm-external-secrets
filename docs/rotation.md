@@ -22,6 +22,13 @@ not renewed.
    - Services using the secret are automatically updated to trigger redeployment
    - The old secret version is removed
 
+Service updates are applied as one rotation operation. If a later service update
+fails, services already changed by that attempt are restored using their current
+Docker service versions, the new secret is removed, and the rotation is retried
+on a later monitoring interval. The tracked hash advances only after every
+service update succeeds. If rollback or cleanup also fails, the plugin logs the
+error for operator recovery without exposing secret values.
+
 ## Configuration
 
 The following environment variables control the rotation behavior:

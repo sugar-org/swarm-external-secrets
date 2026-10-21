@@ -26,6 +26,7 @@ SECRET_PATH="smoke-test-secret"
 SECRET_FIELD="password"
 SECRET_VALUE="azure-smoke-pass-v1"
 SECRET_VALUE_ROTATED="azure-smoke-pass-v2"
+SECRET_VALUE_ROTATED_AGAIN="azure-smoke-pass-v3"
 COMPOSE_FILE="${SCRIPT_DIR}/smoke-azure-compose.yml"
 
 # Helper to run curl against the floci-az Key Vault REST API.
@@ -139,5 +140,18 @@ log_stack "${STACK_NAME}" "app"
 
 info "Verifying rotated secret value..."
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED}" 180
+
+# Regression check for issue #28: the second rotation must find the versioned
+# Docker secret created by the first rotation.
+info "Rotating the versioned secret again with an additional JSON field..."
+curl -sf -X PUT \
+    -H "Authorization: Bearer fake-token" \
+    -H "Content-Type: application/json" \
+    "${AZURE_ENDPOINT}/devstoreaccount1-keyvault/secrets/${SECRET_PATH}?api-version=7.6" \
+    -d "{\"value\": \"{\\\"${SECRET_FIELD}\\\":\\\"${SECRET_VALUE_ROTATED_AGAIN}\\\",\\\"metadata\\\":\\\"synthetic\\\"}\"}"
+
+info "Waiting for the second plugin rotation interval (15s)..."
+assert_no_sensitive_rotation_metadata_logs
+verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED_AGAIN}" 180
 
 success "Azure Key Vault smoke test PASSED"
