@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -27,7 +28,7 @@ import (
 type SecretsDriver struct {
 	provider      providers.SecretsProvider
 	config        *SecretsConfig
-	dockerClient  *dockerclient.Client
+	dockerClient  dockerClient
 	transformer   secrettransform.Transformer      // aws kms service which decrypts ciphertexts
 	secretTracker map[string]*providers.SecretInfo // key: docker secret name
 	trackerMutex  sync.RWMutex
@@ -35,6 +36,15 @@ type SecretsDriver struct {
 	monitorCancel context.CancelFunc
 	monitor       *monitoring.Monitor
 	webInterface  *monitoring.WebInterface
+}
+
+type dockerClient interface {
+	SecretList(context.Context, swarm.SecretListOptions) ([]swarm.Secret, error)
+	ServiceList(context.Context, swarm.ServiceListOptions) ([]swarm.Service, error)
+	SecretCreate(context.Context, swarm.SecretSpec) (swarm.SecretCreateResponse, error)
+	SecretRemove(context.Context, string) error
+	ServiceUpdate(context.Context, string, swarm.Version, swarm.ServiceSpec, swarm.ServiceUpdateOptions) (swarm.ServiceUpdateResponse, error)
+	Close() error
 }
 
 // SecretsConfig holds the configuration for the multi-provider driver
@@ -405,6 +415,9 @@ func (d *SecretsDriver) updateDockerSecret(secretInfo *providers.SecretInfo, new
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	secretName := secretInfo.DockerSecretName
+	d.trackerMutex.RLock()
+	serviceNames := slices.Clone(secretInfo.ServiceNames)
+	d.trackerMutex.RUnlock()
 
 	// List existing secrets to find the one to update
 	secrets, err := d.dockerClient.SecretList(ctx, swarm.SecretListOptions{})
@@ -417,7 +430,7 @@ func (d *SecretsDriver) updateDockerSecret(secretInfo *providers.SecretInfo, new
 		return fmt.Errorf("failed to list services while finding secret %s: %v", secretName, err)
 	}
 
-	existingSecret, err := findActiveSecret(secrets, services, secretName, secretInfo.ServiceNames)
+	existingSecret, err := findActiveSecret(secrets, services, secretName, serviceNames)
 	if err != nil {
 		return err
 	}
@@ -445,19 +458,25 @@ func (d *SecretsDriver) updateDockerSecret(secretInfo *providers.SecretInfo, new
 	// Update all services that use this secret to point to the new version
 	if err := d.updateServicesSecretReference(secretName, existingSecret.ID, newSecretName, createResponse.ID); err != nil {
 		// try to remove the new secret since service update failed
-		if cleanupErr := d.dockerClient.SecretRemove(ctx, createResponse.ID); cleanupErr != nil {
+		if cleanupErr := d.removeDockerSecret(createResponse.ID); cleanupErr != nil {
 			log.Warnf("failed to remove new secret %s after service update error: %v", createResponse.ID, cleanupErr)
 		}
 		return fmt.Errorf("failed to update services to use new secret: %v", err)
 	}
 
 	// Remove the old secret only after services are updated
-	if err := d.dockerClient.SecretRemove(ctx, existingSecret.ID); err != nil {
+	if err := d.removeDockerSecret(existingSecret.ID); err != nil {
 		log.Warnf("Failed to remove old secret version %s: %v", existingSecret.ID, err)
 		// Don't return error as the new secret was created and services updated successfully
 	}
 
 	return nil
+}
+
+func (d *SecretsDriver) removeDockerSecret(secretID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return d.dockerClient.SecretRemove(ctx, secretID)
 }
 
 func findActiveSecret(
@@ -514,7 +533,7 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID
 		return fmt.Errorf("failed to list services: %v", err)
 	}
 
-	var updatedServices []string
+	var updatedServices []serviceRollback
 
 	for _, service := range services {
 		// Check if service uses this secret and update the reference.
@@ -534,18 +553,171 @@ func (d *SecretsDriver) updateServicesSecretReference(oldSecretName, oldSecretID
 			updatedSecrets,
 		)
 		if needsUpdate {
-			if err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets); err != nil {
+			originalRotationLabel, hadRotationLabel := service.Spec.Labels["vault.secret.rotated"]
+			appliedRotationLabel, err := d.applyServiceSecretUpdate(ctx, service, updatedSecrets)
+			if err != nil {
+				if rollbackErr := d.rollbackServiceUpdates(updatedServices); rollbackErr != nil {
+					return fmt.Errorf("%w; failed to roll back partial service updates: %v", err, rollbackErr)
+				}
 				return err
 			}
-			updatedServices = append(updatedServices, service.Spec.Name)
+			updatedServices = append(updatedServices, serviceRollback{
+				id:                    service.ID,
+				name:                  service.Spec.Name,
+				originalSecrets:       cloneMatchingSecretReferences(containerSpec.Secrets, oldSecretName, oldSecretID),
+				originalRotationLabel: originalRotationLabel,
+				hadRotationLabel:      hadRotationLabel,
+				appliedRotationLabel:  appliedRotationLabel,
+				newSecretID:           newSecretID,
+			})
 		}
 	}
 
 	if len(updatedServices) > 0 {
-		log.Infof("Updated services to use new secret %s: %v", newSecretName, updatedServices)
+		updatedServiceNames := make([]string, len(updatedServices))
+		for i := range updatedServices {
+			updatedServiceNames[i] = updatedServices[i].name
+		}
+		log.Infof("Updated services to use new secret %s: %v", newSecretName, updatedServiceNames)
 		return nil
 	}
 	return fmt.Errorf("no services reference secret %s", oldSecretName)
+}
+
+type serviceRollback struct {
+	id                    string
+	name                  string
+	originalSecrets       []*swarm.SecretReference
+	originalRotationLabel string
+	hadRotationLabel      bool
+	appliedRotationLabel  string
+	newSecretID           string
+}
+
+func (d *SecretsDriver) rollbackServiceUpdates(updatedServices []serviceRollback) error {
+	if len(updatedServices) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	services, err := d.dockerClient.ServiceList(ctx, swarm.ServiceListOptions{})
+	if err != nil {
+		return fmt.Errorf("list services for rollback: %w", err)
+	}
+
+	currentByID := make(map[string]swarm.Service, len(services))
+	for _, service := range services {
+		currentByID[service.ID] = service
+	}
+
+	var rollbackErrors []error
+	for i := len(updatedServices) - 1; i >= 0; i-- {
+		rollback := updatedServices[i]
+		current, found := currentByID[rollback.id]
+		if !found {
+			rollbackErrors = append(rollbackErrors, fmt.Errorf("service %s no longer exists", rollback.name))
+			continue
+		}
+		if current.Spec.TaskTemplate.ContainerSpec == nil {
+			rollbackErrors = append(rollbackErrors, fmt.Errorf("service %s has no container spec", rollback.name))
+			continue
+		}
+
+		rollbackSpec := cloneServiceSpec(current.Spec)
+		restoredSecrets, secretsChanged, err := restoreSecretReferences(
+			current.Spec.TaskTemplate.ContainerSpec.Secrets,
+			rollback.originalSecrets,
+			rollback.newSecretID,
+		)
+		if err != nil {
+			rollbackErrors = append(rollbackErrors, fmt.Errorf("restore service %s secrets: %w", rollback.name, err))
+			continue
+		}
+		if secretsChanged {
+			rollbackSpec.TaskTemplate.ContainerSpec.Secrets = restoredSecrets
+		}
+
+		labelChanged := false
+		if rollbackSpec.Labels["vault.secret.rotated"] == rollback.appliedRotationLabel {
+			if rollback.hadRotationLabel {
+				rollbackSpec.Labels["vault.secret.rotated"] = rollback.originalRotationLabel
+			} else {
+				delete(rollbackSpec.Labels, "vault.secret.rotated")
+			}
+			labelChanged = true
+		}
+		if !secretsChanged && !labelChanged {
+			continue
+		}
+
+		response, err := d.dockerClient.ServiceUpdate(
+			ctx,
+			rollback.id,
+			current.Version,
+			rollbackSpec,
+			swarm.ServiceUpdateOptions{},
+		)
+		if err != nil {
+			rollbackErrors = append(rollbackErrors, fmt.Errorf("restore service %s: %w", rollback.name, err))
+			continue
+		}
+		if len(response.Warnings) > 0 {
+			log.Warnf("Service rollback warnings for %s: %v", rollback.name, response.Warnings)
+		}
+	}
+
+	return errors.Join(rollbackErrors...)
+}
+
+func cloneMatchingSecretReferences(secretRefs []*swarm.SecretReference, secretName, secretID string) []*swarm.SecretReference {
+	var matching []*swarm.SecretReference
+	for _, secretRef := range secretRefs {
+		if secretReferenceMatches(secretRef, secretName, secretID) {
+			matching = append(matching, cloneSecretReference(secretRef))
+		}
+	}
+	return matching
+}
+
+func restoreSecretReferences(
+	currentRefs []*swarm.SecretReference,
+	originalRefs []*swarm.SecretReference,
+	newSecretID string,
+) ([]*swarm.SecretReference, bool, error) {
+	restored := cloneSecretReferences(currentRefs)
+	used := make([]bool, len(originalRefs))
+	changed := false
+	for i, currentRef := range currentRefs {
+		if !secretReferenceMatches(currentRef, "", newSecretID) {
+			continue
+		}
+		originalIndex := -1
+		for j, originalRef := range originalRefs {
+			if !used[j] && sameSecretTarget(currentRef.File, originalRef.File) {
+				originalIndex = j
+				break
+			}
+		}
+		if originalIndex == -1 {
+			return nil, false, fmt.Errorf("no original reference for target used by secret %s", newSecretID)
+		}
+		restored[i] = cloneSecretReference(originalRefs[originalIndex])
+		used[originalIndex] = true
+		changed = true
+	}
+	return restored, changed, nil
+}
+
+func sameSecretTarget(first, second *swarm.SecretReferenceFileTarget) bool {
+	if first == nil || second == nil {
+		return first == nil && second == nil
+	}
+	return first.Name == second.Name && first.UID == second.UID && first.GID == second.GID && first.Mode == second.Mode
+}
+
+func secretReferenceMatches(secretRef *swarm.SecretReference, secretName, secretID string) bool {
+	return secretRef != nil && ((secretID != "" && secretRef.SecretID == secretID) || (secretName != "" && secretRef.SecretName == secretName))
 }
 
 func buildUpdatedSecretReferences(
@@ -562,7 +734,7 @@ func buildUpdatedSecretReferences(
 			continue
 		}
 
-		if (oldSecretID != "" && secretRef.SecretID == oldSecretID) || secretRef.SecretName == oldSecretName {
+		if secretReferenceMatches(secretRef, oldSecretName, oldSecretID) {
 			// Update to use the new secret name and ID.
 			updatedSecrets[i] = &swarm.SecretReference{
 				File:       secretRef.File,
@@ -583,11 +755,11 @@ func (d *SecretsDriver) applyServiceSecretUpdate(
 	ctx context.Context,
 	service swarm.Service,
 	updatedSecrets []*swarm.SecretReference,
-) error {
-	serviceSpec := service.Spec
+) (string, error) {
+	serviceSpec := cloneServiceSpec(service.Spec)
 	if serviceSpec.TaskTemplate.ContainerSpec == nil {
 		log.Warnf("Skipping secret update for service %s: TaskTemplate.ContainerSpec is nil", service.Spec.Name)
-		return nil
+		return "", nil
 	}
 
 	// Update service with new secret references.
@@ -598,18 +770,50 @@ func (d *SecretsDriver) applyServiceSecretUpdate(
 	}
 
 	// Add/update a label to force the update.
-	serviceSpec.Labels["vault.secret.rotated"] = fmt.Sprintf("%d", time.Now().Unix())
+	rotationLabel := fmt.Sprintf("%d", time.Now().UnixNano())
+	serviceSpec.Labels["vault.secret.rotated"] = rotationLabel
 
 	updateResponse, err := d.dockerClient.ServiceUpdate(ctx, service.ID, service.Version, serviceSpec, swarm.ServiceUpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
+		return "", fmt.Errorf("failed to update service %s: %v", service.Spec.Name, err)
 	}
 
 	if len(updateResponse.Warnings) > 0 {
 		log.Warnf("Service update warnings for %s: %v", service.Spec.Name, updateResponse.Warnings)
 	}
 
-	return nil
+	return rotationLabel, nil
+}
+
+func cloneServiceSpec(spec swarm.ServiceSpec) swarm.ServiceSpec {
+	cloned := spec
+	cloned.Labels = maps.Clone(spec.Labels)
+	if spec.TaskTemplate.ContainerSpec != nil {
+		containerSpec := *spec.TaskTemplate.ContainerSpec
+		containerSpec.Secrets = cloneSecretReferences(spec.TaskTemplate.ContainerSpec.Secrets)
+		cloned.TaskTemplate.ContainerSpec = &containerSpec
+	}
+	return cloned
+}
+
+func cloneSecretReferences(secretRefs []*swarm.SecretReference) []*swarm.SecretReference {
+	cloned := make([]*swarm.SecretReference, len(secretRefs))
+	for i, secretRef := range secretRefs {
+		cloned[i] = cloneSecretReference(secretRef)
+	}
+	return cloned
+}
+
+func cloneSecretReference(secretRef *swarm.SecretReference) *swarm.SecretReference {
+	if secretRef == nil {
+		return nil
+	}
+	cloned := *secretRef
+	if secretRef.File != nil {
+		file := *secretRef.File
+		cloned.File = &file
+	}
+	return &cloned
 }
 
 // Stop gracefully stops the monitoring and cleans up resources

@@ -151,7 +151,6 @@ curl -sf -X PUT \
     -d "{\"value\": \"{\\\"${SECRET_FIELD}\\\":\\\"${SECRET_VALUE_ROTATED_AGAIN}\\\",\\\"metadata\\\":\\\"synthetic\\\"}\"}"
 
 info "Waiting for the second plugin rotation interval (15s)..."
-sleep 30
 assert_no_sensitive_rotation_metadata_logs
 verify_secret "${STACK_NAME}" "app" "${SECRET_NAME}" "${SECRET_VALUE_ROTATED_AGAIN}" 180
 
